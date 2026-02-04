@@ -98,32 +98,43 @@ export const useOrdenStore = create((set, get) => ({
   },
 }));
 
-export const useAuthStore = create((set) => ({
-  usuario: localStorage.getItem('usuario')
-    ? JSON.parse(localStorage.getItem('usuario'))
-    : null,
-  token: localStorage.getItem('token') || null,
-  
-  setUsuario: (usuario, token) => {
-    if (usuario) {
-      localStorage.setItem('usuario', JSON.stringify(usuario));
-      if (usuario.sedeId) {
-        localStorage.setItem('sedeId', usuario.sedeId);
-      }
+export const useAuthStore = create((set) => {
+  // Rehidratar usuario y token desde localStorage siempre que se inicializa el store
+  const getUsuario = () => {
+    try {
+      const raw = localStorage.getItem('usuario');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
     }
-    if (token) localStorage.setItem('token', token);
-    set({ usuario, token });
-  },
-  
-  logout: () => {
-    localStorage.removeItem('usuario');
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    set({ usuario: null, token: null });
-  },
-  
-  isAuthenticated: () => !!localStorage.getItem('token'),
-}));
+  };
+  const getToken = () => localStorage.getItem('token') || null;
+
+  return {
+    usuario: getUsuario(),
+    token: getToken(),
+
+    setUsuario: (usuario, token) => {
+      if (usuario) {
+        localStorage.setItem('usuario', JSON.stringify(usuario));
+        if (usuario.sedeId) {
+          localStorage.setItem('sedeId', usuario.sedeId);
+        }
+      }
+      if (token) localStorage.setItem('token', token);
+      set({ usuario, token });
+    },
+
+    logout: () => {
+      localStorage.removeItem('usuario');
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      set({ usuario: null, token: null });
+    },
+
+    isAuthenticated: () => !!getToken(),
+  };
+});
 
 export const useMesasStore = create((set, get) => ({
   mesas: [],
