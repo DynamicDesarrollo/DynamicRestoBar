@@ -23,6 +23,8 @@ exports.seed = async (knex) => {
     await knex.raw('TRUNCATE TABLE sedes CASCADE');
     await knex.raw('TRUNCATE TABLE categorias CASCADE');
     await knex.raw('TRUNCATE TABLE productos CASCADE');
+    await knex.raw('TRUNCATE TABLE unidad_medida CASCADE');
+    await knex.raw('TRUNCATE TABLE canales CASCADE');
   }
 
   // ========================================
@@ -431,83 +433,7 @@ exports.seed = async (knex) => {
     { sede_id: sedes[0].id, nombre: 'Combos', descripcion: 'Ofertas y paquetes', orden: 7 },
   ];
 
-  // ========================================
-  // 21. ÓRDENES DE PRUEBA PARA DASHBOARD
-  // ========================================
-  // Obtener IDs necesarios
-  const mesaId = (await knex('mesas').where({ sede_id: sedes[0].id }).first()).id;
-  const usuarioId = (await knex('usuarios').where({ email: 'juan@dynamicrestobar.com' }).first()).id;
-  const canalId = (await knex('canales').where({ nombre: 'mostrador' }).first()).id;
-  const producto = (await knex('productos').where({ nombre: 'Costilla BBQ' }).first());
-  const metodoPagoId = (await knex('metodos_pago').where({ nombre: 'Efectivo' }).first()).id;
 
-  // Crear 3 órdenes entregadas
-  const ordenesData = [
-    {
-      sede_id: sedes[0].id,
-      mesa_id: mesaId,
-      usuario_id: usuarioId,
-      canal_id: canalId,
-      estado: 'entregada',
-      numero_orden: 'ORD-1001',
-      created_at: new Date(),
-      total: 52000,
-    },
-    {
-      sede_id: sedes[0].id,
-      mesa_id: mesaId,
-      usuario_id: usuarioId,
-      canal_id: canalId,
-      estado: 'entregada',
-      numero_orden: 'ORD-1002',
-      created_at: new Date(),
-      total: 48000,
-    },
-    {
-      sede_id: sedes[0].id,
-      mesa_id: mesaId,
-      usuario_id: usuarioId,
-      canal_id: canalId,
-      estado: 'entregada',
-      numero_orden: 'ORD-1003',
-      created_at: new Date(),
-      total: 6000,
-    },
-  ];
-  const ordenes = await knex('ordenes').insert(ordenesData).returning('*');
-
-  // Crear items para cada orden
-  for (let i = 0; i < ordenes.length; i++) {
-    await knex('orden_items').insert({
-      orden_id: ordenes[i].id,
-      producto_id: producto.id,
-      cantidad: 1,
-      precio_unitario: producto.precio_venta,
-      subtotal: producto.precio_venta,
-      estado: 'entregado',
-    });
-  }
-
-  // Crear facturas y pagos para cada orden
-  for (let i = 0; i < ordenes.length; i++) {
-    const factura = await knex('facturas').insert({
-      sede_id: sedes[0].id,
-      orden_id: ordenes[i].id,
-      numero_factura: `FACT-100${i+1}`,
-      estado: 'emitida',
-      fecha_emision: new Date(),
-      subtotal: ordenes[i].total,
-      iva: Math.round(ordenes[i].total * 0.19),
-      descuento_total: 0,
-      total: ordenes[i].total,
-    }).returning('*');
-    await knex('pago_facturas').insert({
-      factura_id: factura[0].id,
-      metodo_pago_id: metodoPagoId,
-      monto: ordenes[i].total,
-      fecha_pago: new Date(),
-    });
-  }
 
   const categorias = await knex('categorias').insert(categoriasData).returning('*');
   const categoriaMap = categorias.reduce((acc, c) => {
@@ -666,64 +592,8 @@ exports.seed = async (knex) => {
   ];
 
   const productos = await knex('productos').insert(productosData).returning('*');
+
   console.log('✅ Productos creados:', productos.length, 'productos');
-
-  // ========================================
-  // 14. MODIFICADORES
-  // ========================================
-  const modificadoresData = [
-    {
-      sede_id: sedes[0].id,
-      nombre: 'Adiciones Proteína',
-      tipo: 'adicional',
-      requerido: false,
-      maxima_seleccion: 1,
-    },
-    {
-      sede_id: sedes[0].id,
-      nombre: 'Término de Carne',
-      tipo: 'sustitución',
-      requerido: true,
-      maxima_seleccion: 1,
-    },
-    {
-      sede_id: sedes[0].id,
-      nombre: 'Sin Ingredientes',
-      tipo: 'exclusión',
-      requerido: false,
-      maxima_seleccion: 3,
-    },
-  ];
-
-  const modificadores = await knex('modificadores').insert(modificadoresData).returning('*');
-  const modificadorMap = modificadores.reduce((acc, m) => {
-    acc[m.nombre] = m.id;
-    return acc;
-  }, {});
-
-  // ========================================
-  // 15. OPCIONES DE MODIFICADORES
-  // ========================================
-  const opcionesData = [
-    // Adiciones
-    { modificador_id: modificadorMap['Adiciones Proteína'], nombre: 'Extra Queso', precio_adicional: 5000 },
-    { modificador_id: modificadorMap['Adiciones Proteína'], nombre: 'Doble Proteína', precio_adicional: 8000 },
-    { modificador_id: modificadorMap['Adiciones Proteína'], nombre: 'Aguacate', precio_adicional: 6000 },
-
-    // Término
-    { modificador_id: modificadorMap['Término de Carne'], nombre: 'Rojo (Rare)', precio_adicional: 0 },
-    { modificador_id: modificadorMap['Término de Carne'], nombre: 'Tres Cuartos', precio_adicional: 0 },
-    { modificador_id: modificadorMap['Término de Carne'], nombre: 'Medio', precio_adicional: 0 },
-    { modificador_id: modificadorMap['Término de Carne'], nombre: 'Bien Cocido', precio_adicional: 0 },
-
-    // Sin
-    { modificador_id: modificadorMap['Sin Ingredientes'], nombre: 'Sin Cebolla', precio_adicional: 0 },
-    { modificador_id: modificadorMap['Sin Ingredientes'], nombre: 'Sin Picante', precio_adicional: 0 },
-    { modificador_id: modificadorMap['Sin Ingredientes'], nombre: 'Sin Mayonesa', precio_adicional: 0 },
-  ];
-
-  await knex('modificador_opciones').insert(opcionesData);
-  console.log('✅ Modificadores y opciones creados');
 
   // ========================================
   // 16. MÉTODOS DE PAGO
@@ -801,6 +671,97 @@ exports.seed = async (knex) => {
   // ========================================
   // 20. CONFIGURACIÓN GENERAL
   // ========================================
+
+  // 21. ÓRDENES DE PRUEBA PARA DASHBOARD (MOVED HERE)
+  // Obtener IDs necesarios
+  const mesaObj = await knex('mesas').where({ sede_id: sedes[0].id }).first();
+  const usuarioObj = await knex('usuarios').where({ email: 'juan@dynamicrestobar.com' }).first();
+  const canalObj = await knex('canales').where({ nombre: 'mostrador' }).first();
+  const productoObj = await knex('productos').where({ nombre: 'Costilla BBQ' }).first();
+  const metodoPagoObj = await knex('metodos_pago').where({ nombre: 'Efectivo' }).first();
+
+  if (!mesaObj) throw new Error('No se encontró una mesa para la sede principal');
+  if (!usuarioObj) throw new Error('No se encontró el usuario juan@dynamicrestobar.com');
+  if (!canalObj) throw new Error('No se encontró el canal mostrador');
+  if (!productoObj) throw new Error('No se encontró el producto Costilla BBQ');
+  if (!metodoPagoObj) throw new Error('No se encontró el método de pago Efectivo');
+
+  const mesaId = mesaObj.id;
+  const usuarioId = usuarioObj.id;
+
+  const canalId = canalObj.id;
+  const producto = productoObj;
+  const metodoPagoId = metodoPagoObj.id;
+
+  // Crear 3 órdenes entregadas
+  const ordenesData = [
+    {
+      sede_id: sedes[0].id,
+      mesa_id: mesaId,
+      usuario_id: usuarioId,
+      canal_id: canalId,
+      estado: 'entregada',
+      numero_orden: 'ORD-1001',
+      created_at: new Date(),
+      total: 52000,
+    },
+    {
+      sede_id: sedes[0].id,
+      mesa_id: mesaId,
+      usuario_id: usuarioId,
+      canal_id: canalId,
+      estado: 'entregada',
+      numero_orden: 'ORD-1002',
+      created_at: new Date(),
+      total: 48000,
+    },
+    {
+      sede_id: sedes[0].id,
+      mesa_id: mesaId,
+      usuario_id: usuarioId,
+      canal_id: canalId,
+      estado: 'entregada',
+      numero_orden: 'ORD-1003',
+      created_at: new Date(),
+      total: 6000,
+    },
+  ];
+  const ordenes = await knex('ordenes').insert(ordenesData).returning('*');
+
+  // Crear items para cada orden
+  for (let i = 0; i < ordenes.length; i++) {
+    await knex('orden_items').insert({
+      orden_id: ordenes[i].id,
+      producto_id: producto.id,
+      cantidad: 1,
+      precio_unitario: producto.precio_venta,
+      subtotal: producto.precio_venta,
+      estado: 'entregado',
+    });
+  }
+
+  // Crear facturas y pagos para cada orden
+  for (let i = 0; i < ordenes.length; i++) {
+    const factura = await knex('facturas').insert({
+      sede_id: sedes[0].id,
+      orden_id: ordenes[i].id,
+      numero_factura: `FACT-100${i+1}`,
+      estado: 'emitida',
+      fecha_emision: new Date(),
+      subtotal: ordenes[i].total,
+      iva: Math.round(ordenes[i].total * 0.19),
+      descuento_total: 0,
+      total: ordenes[i].total,
+    }).returning('*');
+    await knex('pago_facturas').insert({
+      factura_id: factura[0].id,
+      metodo_pago_id: metodoPagoId,
+      monto: ordenes[i].total,
+      fecha_pago: new Date(),
+    });
+  }
+
+  // Configuración general
   const configuracionData = [
     {
       sede_id: sedes[0].id,

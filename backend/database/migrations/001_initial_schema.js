@@ -441,6 +441,25 @@ exports.up = async (knex) => {
     table.timestamps();
   });
 
+  // Tabla: proveedores (MOVIDA ANTES DE INSUMOS)
+  await knex.schema.createTable('proveedores', (table) => {
+    table.increments('id').primary();
+    table.integer('sede_id').unsigned();
+    table.string('nombre', 255).notNullable();
+    table.string('contacto', 255);
+    table.string('email', 255);
+    table.string('telefono', 20);
+    table.string('direccion', 500);
+    table.string('rut', 50);
+    table.string('ciudad', 100);
+    table.text('observaciones');
+    table.boolean('activo').defaultTo(true);
+    table.timestamps();
+    table.datetime('deleted_at');
+    table.foreign('sede_id').references('id').inTable('sedes').onDelete('CASCADE');
+    table.index('nombre');
+  });
+
   // Tabla: insumos
   await knex.schema.createTable('insumos', (table) => {
     table.increments('id').primary();
@@ -451,8 +470,8 @@ exports.up = async (knex) => {
     table.integer('unidad_medida_id').unsigned().notNullable();
     table.integer('proveedor_principal_id').unsigned();
     table.decimal('stock_actual', 12, 2).defaultTo(0);
-    table.decimal('stock_minimo', 12, 2).defaultTo(0);
-    table.decimal('stock_maximo', 12, 2).defaultTo(0);
+    table.decimal('cantidad_minima', 12, 2).defaultTo(0);
+    table.decimal('cantidad_maxima', 12, 2).defaultTo(0);
     table.decimal('costo_unitario', 10, 2).defaultTo(0);
     table.decimal('costo_promedio', 10, 2).defaultTo(0);
     table.timestamps();
@@ -511,28 +530,7 @@ exports.up = async (knex) => {
     table.index('tipo');
   });
 
-  // ========================================
-  // 6. TABLAS DE PROVEEDORES
-  // ========================================
 
-  // Tabla: proveedores
-  await knex.schema.createTable('proveedores', (table) => {
-    table.increments('id').primary();
-    table.integer('sede_id').unsigned();
-    table.string('nombre', 255).notNullable();
-    table.string('contacto', 255);
-    table.string('email', 255);
-    table.string('telefono', 20);
-    table.string('direccion', 500);
-    table.string('rut', 50);
-    table.string('ciudad', 100);
-    table.text('observaciones');
-    table.boolean('activo').defaultTo(true);
-    table.timestamps();
-    table.datetime('deleted_at');
-    table.foreign('sede_id').references('id').inTable('sedes').onDelete('CASCADE');
-    table.index('nombre');
-  });
 
   // Tabla: compras
   await knex.schema.createTable('compras', (table) => {
