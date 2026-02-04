@@ -17,6 +17,7 @@ import ProductoModal from '../components/ProductoModal';
 import ResumenOrden from '../components/ResumenOrden';
 import { formatMoney } from '../utils/formatters';
 import './Orden.css';
+import { canalesService } from '../services/api';
 
 export default function Orden() {
   console.log('Renderizando Orden para mesa:', window.location.pathname);
@@ -47,19 +48,25 @@ export default function Orden() {
   const setMesaActual = useOrdenStore((state) => state.setMesaActual);
 
   const sedeId = usuario?.sede_id || localStorage.getItem('sedeId') || 1;
+  const [canalId, setCanalId] = useState(null);
 
   const cargarDatos = useCallback(async () => {
     try {
       setLoading(true);
-      const [categoriasRes, productosRes, ordenesRes] = await Promise.all([
+      const [categoriasRes, productosRes, ordenesRes, canalesRes] = await Promise.all([
         productosService.getCategorias(sedeId),
         productosService.getAll(sedeId),
         ordenesService.getByMesa(mesaId),
+        canalesService.getAll(),
       ]);
 
       setCategorias(categoriasRes.data.data || []);
       setProductos(productosRes.data.data || []);
       setCategoriaSeleccionada(categoriasRes.data.data?.[0]?.id);
+
+      // Buscar canal 'mostrador'
+      const canalMostrador = (canalesRes.data.data || []).find(c => c.nombre === 'mostrador');
+      setCanalId(canalMostrador ? canalMostrador.id : null);
 
       // Si hay orden existente y AÚN NO se han cargado los datos, cargar sus items
       if (ordenesRes.data.data && ordenesRes.data.data.length > 0 && !datoCargado) {
@@ -129,6 +136,7 @@ export default function Orden() {
         mesa_id: parseInt(mesaId),
         usuario_id: usuario.id,
         sede_id: usuario.sede_id || parseInt(sedeId),
+        canal_id: canalId, // Usar el id real
         items: items.map((item) => ({
           producto_id: item.producto.id,
           cantidad: item.cantidad,

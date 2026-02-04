@@ -126,4 +126,8 @@ export const cajaService = {
     apiClient.post('/caja/devoluciones', data),
 };
 
+export const canalesService = {
+  getAll: () => apiClient.get('/canales'),
+};
+
 export default apiClient;
