@@ -36,6 +36,17 @@ function App() {
           }
         />
 
+
+        {/* Orden - Mesero y Repartidor */}
+        <Route
+          path="/orden/:mesaId"
+          element={
+            <ProtectedRoute requiredRoles={['Mesero', 'Repartidor']}>
+              <Orden />
+            </ProtectedRoute>
+          }
+        />
+
         {/* KDS - Cocina y Bar */}
         <Route
           path="/kds"
