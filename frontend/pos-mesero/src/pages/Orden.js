@@ -19,6 +19,7 @@ import { formatMoney } from '../utils/formatters';
 import './Orden.css';
 
 export default function Orden() {
+  console.log('Renderizando Orden para mesa:', window.location.pathname);
   const { mesaId } = useParams();
   const navigate = useNavigate();
   const usuario = useAuthStore((state) => state.usuario);

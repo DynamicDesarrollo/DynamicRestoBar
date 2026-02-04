@@ -36,6 +36,7 @@ export default function Mesas() {
   }, [cargarMesas]);
 
   const handleSelectMesa = (mesa) => {
+    console.log('Seleccionando mesa:', mesa);
     localStorage.setItem('mesaActual', JSON.stringify(mesa));
     navigate(`/orden/${mesa.id}`);
   };
