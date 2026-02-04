@@ -418,7 +418,7 @@ exports.seed = async (knex) => {
       canal_id: canalId,
       estado: 'entregada',
       numero_orden: 'ORD-1001',
-      fecha_creacion: new Date(),
+      created_at: new Date(),
       total: 52000,
     },
     {
@@ -428,7 +428,7 @@ exports.seed = async (knex) => {
       canal_id: canalId,
       estado: 'entregada',
       numero_orden: 'ORD-1002',
-      fecha_creacion: new Date(),
+      created_at: new Date(),
       total: 48000,
     },
     {
@@ -438,7 +438,7 @@ exports.seed = async (knex) => {
       canal_id: canalId,
       estado: 'entregada',
       numero_orden: 'ORD-1003',
-      fecha_creacion: new Date(),
+      created_at: new Date(),
       total: 6000,
     },
   ];
