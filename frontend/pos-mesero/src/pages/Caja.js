@@ -136,7 +136,7 @@ export default function Caja() {
     try {
       setProcesando(true);
       const res = await cajaService.abrirCaja({
-        saldo_inicial: parseFloat(saldoInicial) || 0,
+        monto_inicial: parseFloat(saldoInicial) || 0,
       });
       
       toast.success('Caja abierta');
