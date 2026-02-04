@@ -461,10 +461,11 @@ class CajaController {
         },
       });
     } catch (err) {
-      console.error('❌ Error en cerrarCaja:', err.message);
+      console.error('❌ Error en cerrarCaja:', err);
       return res.status(500).json({
         error: 'Error al cerrar caja',
         message: err.message,
+        stack: err.stack,
       });
     }
   }
