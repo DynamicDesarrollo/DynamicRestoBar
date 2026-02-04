@@ -3,9 +3,13 @@ import { Modal, Button } from 'react-bootstrap';
 import { useReactToPrint } from 'react-to-print';
 import './FacturaTirilla.css';
 
+
 export default function FacturaTirilla({ show, onHide, factura, orden, pagos }) {
   const componentRef = useRef();
+  const printReadyRef = useRef(false);
+  const [canPrint, setCanPrint] = React.useState(false);
 
+  // Solo permitir imprimir cuando el contenido está montado
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
     documentTitle: `Factura-${factura?.numero_factura || 'N/A'}`,
@@ -21,7 +25,15 @@ export default function FacturaTirilla({ show, onHide, factura, orden, pagos }) 
         }
       }
     `,
+    removeAfterPrint: true,
   });
+
+  // Cuando el modal termina de entrar, habilitar impresión
+  const handleModalEntered = () => {
+    setTimeout(() => {
+      setCanPrint(!!componentRef.current);
+    }, 100); // pequeño delay para asegurar render
+  };
 
   const formatDate = (date) => {
     if (!date) return '';
@@ -53,7 +65,7 @@ export default function FacturaTirilla({ show, onHide, factura, orden, pagos }) 
   const cambio = montoPagado - total;
 
   return (
-    <Modal show={show} onHide={onHide} size="sm" centered>
+    <Modal show={show} onHide={onHide} size="sm" centered onEntered={handleModalEntered}>
       <Modal.Header closeButton className="bg-primary text-white">
         <Modal.Title>Factura Generada</Modal.Title>
       </Modal.Header>
@@ -205,6 +217,7 @@ export default function FacturaTirilla({ show, onHide, factura, orden, pagos }) 
           variant="primary" 
           onClick={handlePrint}
           style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }}
+          disabled={!canPrint}
         >
           🖨️ Imprimir Factura
         </Button>
