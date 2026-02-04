@@ -6,7 +6,11 @@ export default function ProtectedRoute({ children, requiredRoles = [] }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
   const usuario = useAuthStore((state) => state.usuario);
 
+  // Log para depuración
+  console.log('[ProtectedRoute] Render:', { isAuthenticated, usuario, requiredRoles });
+
   if (!isAuthenticated) {
+    console.warn('[ProtectedRoute] No autenticado, redirigiendo a /login');
     return <Navigate to="/login" replace />;
   }
 
@@ -14,6 +18,7 @@ export default function ProtectedRoute({ children, requiredRoles = [] }) {
   if (requiredRoles.length > 0) {
     const tieneRol = requiredRoles.includes(usuario?.rol?.nombre);
     if (!tieneRol) {
+      console.warn('[ProtectedRoute] Usuario sin rol requerido, redirigiendo a /inicio', usuario?.rol?.nombre);
       return <Navigate to="/inicio" replace />;
     }
   }
