@@ -1,0 +1,35 @@
+.login-container {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  min-height: 100vh;
+}
+
+.login-card {
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.numeric-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.numeric-btn {
+  font-size: 18px;
+  font-weight: bold;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.numeric-btn:nth-child(10) {
+  grid-column: 2;
+}
+
+.numeric-btn:nth-child(11) {
+  grid-column: 3;
+}
+
+.tracking-widest {
+  letter-spacing: 1.2em;
+}

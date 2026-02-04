@@ -1,0 +1,181 @@
+/* ===================================
+   DYNAMICRESTOBAR - TEMA AZUL
+   =================================== */
+
+/* Variables de color - Paleta Azul */
+:root {
+  --primary-blue: #2563eb;
+  --primary-blue-dark: #1e40af;
+  --primary-blue-light: #3b82f6;
+  --secondary-blue: #60a5fa;
+  --accent-blue: #93c5fd;
+  --white: #ffffff;
+  --light-bg: #f8f9fa;
+  --text-dark: #1e293b;
+}
+
+/* Botones Bootstrap Override */
+.btn-primary,
+.bg-primary {
+  background-color: var(--primary-blue) !important;
+  border-color: var(--primary-blue) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: var(--primary-blue-dark) !important;
+  border-color: var(--primary-blue-dark) !important;
+}
+
+.btn-outline-primary {
+  color: var(--primary-blue) !important;
+  border-color: var(--primary-blue) !important;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--primary-blue) !important;
+  border-color: var(--primary-blue) !important;
+  color: white !important;
+}
+
+/* Texto primario */
+.text-primary {
+  color: var(--primary-blue) !important;
+}
+
+/* Badges y Pills */
+.badge.bg-primary {
+  background-color: var(--primary-blue) !important;
+}
+
+/* Borders */
+.border-primary {
+  border-color: var(--primary-blue) !important;
+}
+
+/* Links */
+a {
+  color: var(--primary-blue);
+}
+
+a:hover {
+  color: var(--primary-blue-dark);
+}
+
+/* Spinners */
+.spinner-border.text-primary {
+  color: var(--primary-blue) !important;
+}
+
+/* Progress Bars */
+.progress-bar {
+  background-color: var(--primary-blue) !important;
+}
+
+/* Forms */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--primary-blue) !important;
+  box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.25) !important;
+}
+
+.form-check-input:checked {
+  background-color: var(--primary-blue) !important;
+  border-color: var(--primary-blue) !important;
+}
+
+/* Tabs */
+.nav-tabs .nav-link.active {
+  color: var(--primary-blue) !important;
+  border-color: #dee2e6 #dee2e6 #fff !important;
+}
+
+.nav-tabs .nav-link:hover {
+  border-color: #e9ecef #e9ecef #dee2e6 !important;
+  color: var(--primary-blue) !important;
+}
+
+/* Alerts */
+.alert-primary {
+  background-color: rgba(37, 99, 235, 0.1) !important;
+  border-color: var(--primary-blue) !important;
+  color: var(--primary-blue-dark) !important;
+}
+
+/* Cards con header azul */
+.card-header.bg-primary {
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%) !important;
+  color: white !important;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--secondary-blue);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-blue);
+}
+
+/* Tooltips */
+.tooltip-inner {
+  background-color: var(--primary-blue-dark) !important;
+}
+
+/* Dropdowns */
+.dropdown-item.active,
+.dropdown-item:active {
+  background-color: var(--primary-blue) !important;
+}
+
+/* Pagination */
+.page-link {
+  color: var(--primary-blue) !important;
+}
+
+.page-item.active .page-link {
+  background-color: var(--primary-blue) !important;
+  border-color: var(--primary-blue) !important;
+}
+
+/* List Group */
+.list-group-item.active {
+  background-color: var(--primary-blue) !important;
+  border-color: var(--primary-blue) !important;
+}
+
+/* Modals */
+.modal-header {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
+  color: white !important;
+  border-bottom: none !important;
+}
+
+.modal-header .btn-close {
+  filter: brightness(0) invert(1);
+}
+
+.modal-title {
+  color: white !important;
+}
+
+/* Tables */
+.table-primary {
+  background-color: rgba(37, 99, 235, 0.1) !important;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(37, 99, 235, 0.05) !important;
+}

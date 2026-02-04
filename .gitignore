@@ -1,0 +1,79 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.lock
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+
+# Temp files
+tmp/
+temp/
+*.tmp
+
+# Database
+*.sql
+!database/schema.sql
+!database/migrations/
+!database/seeds/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Testing
+coverage/
+.nyc_output/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Package managers
+.npm/
+
+# Backups
+*.bak
+*.backup
+
+# SSL Certificates
+*.pem
+*.key
+*.crt
+
+# IDEs
+.vscode/settings.json
+.vscode/launch.json
+
+# Dependencies lock (except root)
+frontend/pos-mesero/package-lock.json
+frontend/kds-produccion/package-lock.json
+frontend/caja-admin/package-lock.json

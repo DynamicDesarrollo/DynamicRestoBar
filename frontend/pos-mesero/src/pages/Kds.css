@@ -1,0 +1,149 @@
+/* KDS Page Styles */
+
+.kds-page {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.kds-header {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  border-bottom: none;
+  color: white;
+}
+
+.kds-header h2 {
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.comanda-card {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.comanda-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.comanda-card.border-danger {
+  border-left: 5px solid #2563eb !important;
+}
+
+.comanda-card.border-warning {
+  border-left: 5px solid #3b82f6 !important;
+}
+
+.comanda-card.border-success {
+  border-left: 5px solid #28a745 !important;
+}
+
+.comanda-card.border-secondary {
+  border-left: 5px solid #6c757d !important;
+}
+
+.comanda-card h5 {
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.items-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.item-card {
+  border-left: 3px solid #007bff;
+}
+
+.item-card h6 {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.item-card .text-warning {
+  font-style: italic;
+}
+
+/* Estados con colores */
+.bg-danger {
+  background-color: #2563eb !important;
+}
+
+.bg-warning {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}
+
+.bg-success {
+  background-color: #28a745 !important;
+}
+
+.bg-secondary {
+  background-color: #6c757d !important;
+}
+
+/* Botones de estado */
+.btn-outline-primary {
+  border-color: #007bff;
+  color: #007bff;
+}
+
+.btn-outline-primary:hover {
+  background-color: #007bff;
+  border-color: #007bff;
+  color: white;
+}
+
+.btn-success {
+  background-color: #28a745;
+  border-color: #28a745;
+  font-weight: 600;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
+
+/* Badges */
+.badge {
+  font-size: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .kds-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .comanda-card {
+    margin-bottom: 1rem;
+  }
+
+  .items-list {
+    max-height: 300px;
+  }
+}
+
+/* Animación de actualización */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.kds-page.updating {
+  animation: pulse 0.5s ease-in-out;
+}

@@ -1,0 +1,82 @@
+.mesas-page {
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.mesas-header {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  border-bottom: none;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+  color: white;
+}
+
+.mesas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+@media (max-width: 768px) {
+  .mesas-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+  }
+}
+
+.mesa-card-wrapper {
+  perspective: 1000px;
+}
+
+.mesa-card {
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  height: 100%;
+}
+
+.mesa-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.mesa-card.disponible {
+  border-color: #28a745;
+  background-color: #f0fdf4;
+}
+
+.mesa-card.disponible:hover {
+  border-color: #28a745;
+  box-shadow: 0 8px 16px rgba(40, 167, 69, 0.3);
+}
+
+.mesa-card.ocupada {
+  border-color: #ffc107;
+  background-color: #fffbf0;
+}
+
+.mesa-card.ocupada:hover {
+  border-color: #ffc107;
+  box-shadow: 0 8px 16px rgba(255, 193, 7, 0.3);
+}
+
+.mesa-card.en_precuenta {
+  border-color: #17a2b8;
+  background-color: #f0f9fc;
+}
+
+.mesa-card.en_precuenta:hover {
+  border-color: #17a2b8;
+  box-shadow: 0 8px 16px rgba(23, 162, 184, 0.3);
+}
+
+.mesa-numero {
+  font-size: 28px;
+  font-weight: bold;
+  color: #333;
+}
+
+.mesa-info {
+  color: #666;
+  font-size: 12px;
+}
