@@ -14,6 +14,14 @@ import { useAuthStore } from '../stores';
 export default function ProtectedRoute({ children, requiredRoles = [] }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
   const usuario = useAuthStore((state) => state.usuario);
+  React.useEffect(() => {
+    const usuarioLS = localStorage.getItem('usuario');
+    const tokenLS = localStorage.getItem('token');
+    if (!usuario && usuarioLS && tokenLS) {
+      useAuthStore.getState().setUsuario(JSON.parse(usuarioLS), tokenLS);
+      console.log('[ProtectedRoute] Rehidratando usuario/token desde localStorage');
+    }
+  }, [usuario]);
 
   // Log para depuración
   console.log('[ProtectedRoute] Render:', { isAuthenticated, usuario, requiredRoles });
