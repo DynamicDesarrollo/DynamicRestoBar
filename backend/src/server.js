@@ -15,6 +15,7 @@ const ordenesRoutes = require('./routes/ordenesRoutes');
 const kdsRoutes = require('./routes/kdsRoutes');
 const cajaRoutes = require('./routes/cajaRoutes');
 const adminRoutes = require('./routes/admin/adminRoutes');
+const canalesRoutes = require('./routes/canalesRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -109,7 +110,7 @@ app.use('/api/v1/ordenes', ordenesRoutes);
 app.use('/api/v1/kds', kdsRoutes);
 app.use('/api/v1/caja', cajaRoutes);
 app.use('/api/v1/admin', adminRoutes);
-// app.use('/api/v1/comandas', comandasRoutes);
+app.use('/api/v1/canales', canalesRoutes);
 
 // ========================================
 // SOCKET.IO
