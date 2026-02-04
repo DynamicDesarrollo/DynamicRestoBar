@@ -138,16 +138,21 @@ class InformesController {
       const { sedeId: sede_id } = req.usuario;
       const { fecha } = req.query;
 
-      let query = db('aperturas_caja').where('sede_id', sede_id);
 
-      if (fecha) {
-        query = query.where(db.raw('DATE(created_at)'), fecha);
-      } else {
-        // Por defecto, mostrar la apertura más reciente
-        query = query.orderBy('created_at', 'desc').limit(1);
+      // Buscar primero apertura abierta
+      let apertura = await db('aperturas_caja')
+        .where('sede_id', sede_id)
+        .where('estado', 'abierta')
+        .orderBy('created_at', 'desc')
+        .first();
+
+      // Si no hay abierta, mostrar la más reciente
+      if (!apertura) {
+        apertura = await db('aperturas_caja')
+          .where('sede_id', sede_id)
+          .orderBy('created_at', 'desc')
+          .first();
       }
-
-      const apertura = await query.first();
 
       if (!apertura) {
         return res.json({
