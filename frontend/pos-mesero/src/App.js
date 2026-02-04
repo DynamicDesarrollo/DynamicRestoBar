@@ -1,17 +1,5 @@
 // Dummy change for redeploy - 2026-02-04
 // Cambio dummy para forzar redeploy en Vercel
-// Autor: sirjhan.betancourt@gmail.com
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import ProtectedRoute from './components/ProtectedRoute';
-import Login from './components/Login';
-import Mesas from './pages/Mesas';
-import Orden from './pages/Orden';
-import Kds from './pages/Kds';
-import Caja from './pages/Caja';
-// Dummy change for redeploy - 2026-02-04
-// Cambio dummy para forzar redeploy en Vercel
 // Autor: sirjhan@gmail.com
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
