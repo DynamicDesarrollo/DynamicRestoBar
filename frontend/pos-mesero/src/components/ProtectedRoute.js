@@ -1,13 +1,4 @@
 import React, { useEffect } from 'react';
-  // Forzar sincronización con localStorage si el usuario/token no están en el store
-  useEffect(() => {
-    const usuarioLS = localStorage.getItem('usuario');
-    const tokenLS = localStorage.getItem('token');
-    if (!usuario && usuarioLS && tokenLS) {
-      useAuthStore.getState().setUsuario(JSON.parse(usuarioLS), tokenLS);
-      console.log('[ProtectedRoute] Rehidratando usuario/token desde localStorage');
-    }
-  }, []);
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores';
 
