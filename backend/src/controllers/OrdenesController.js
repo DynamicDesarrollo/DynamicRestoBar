@@ -23,7 +23,7 @@ class OrdenesController {
    */
   static async crear(req, res) {
     try {
-      const { mesa_id, usuario_id, sede_id, items, total } = req.body;
+      const { mesa_id, usuario_id, sede_id, items, total, canal_id } = req.body;
 
       console.log(`\n📋 CREAR ORDEN - Mesa: ${mesa_id}, Items: ${items.length}, Total: ${total}`);
       items.forEach((it, i) => console.log(`  ${i+1}. Producto ${it.producto_id} x${it.cantidad}`));
@@ -105,7 +105,7 @@ class OrdenesController {
           mesa_id,
           usuario_id,
           sede_id,
-          canal_id: 1,
+          canal_id: canal_id || 1,
           estado: 'abierta',
           total,
           created_at: new Date(),
