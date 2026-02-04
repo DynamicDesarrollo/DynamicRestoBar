@@ -423,15 +423,17 @@ class CajaController {
       const totalEsperado = apertura.monto_inicial + totalVendido - egresos;
       const diferencia = (parseFloat(saldo_final) || 0) - totalEsperado;
 
-      // Crear cierre
+      // Crear cierre (usando los nombres y campos correctos)
       const cierreProcesado = await db('cierres_caja').insert({
         apertura_caja_id: apertura.id,
-        total_vendido: totalVendido,
-        total_efectivo: saldo_final || 0,
-        diferencia,
         usuario_id,
+        monto_inicial: apertura.monto_inicial,
+        total_ingresos: ingresos,
+        total_egresos: egresos,
+        monto_esperado: totalEsperado,
+        monto_contado: saldo_final || 0,
+        diferencia,
         observaciones: observaciones || null,
-        estado: 'cerrado',
       }).returning('*');
 
       const cierre = Array.isArray(cierreProcesado) ? cierreProcesado[0] : cierreProcesado;
