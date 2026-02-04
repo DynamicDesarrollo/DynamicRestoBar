@@ -282,6 +282,38 @@ exports.seed = async (knex) => {
   }, {});
 
   console.log('✅ Unidades de medida creadas');
+  // ========================================
+  // 7. INSUMOS
+  // ========================================
+  const insumosData = [
+    {
+      sede_id: sedes[0].id,
+      nombre: 'Harina de Trigo',
+      unidad_medida_id: unidadMap['Kilogramo'],
+      stock_actual: 50,
+      stock_minimo: 10,
+      costo_unitario: 2500,
+    },
+    {
+      sede_id: sedes[0].id,
+      nombre: 'Azúcar',
+      unidad_medida_id: unidadMap['Kilogramo'],
+      stock_actual: 20,
+      stock_minimo: 5,
+      costo_unitario: 1800,
+    },
+    {
+      sede_id: sedes[0].id,
+      nombre: 'Leche',
+      unidad_medida_id: unidadMap['Litro'],
+      stock_actual: 30,
+      stock_minimo: 8,
+      costo_unitario: 3200,
+    },
+    // ...agrega más insumos según tu modelo...
+  ];
+  await knex('insumos').insert(insumosData);
+  console.log('✅ Insumos creados:', insumosData.length);
 
   // ========================================
   // 7. ZONAS (dentro de la sede)
