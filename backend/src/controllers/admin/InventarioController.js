@@ -59,7 +59,7 @@ class InventarioController {
       const sede = sedeId || 1;
 
       let query = db('kardex_movimientos')
-        .where('sede_id', sede)
+        .where('kardex_movimientos.sede_id', sede)
         .leftJoin('insumos', 'kardex_movimientos.insumo_id', 'insumos.id')
         .select(
           'kardex_movimientos.*',
