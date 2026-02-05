@@ -23,8 +23,8 @@ class InventarioController {
 
       // Movimientos recientes
       const movimientosRecientes = await db('kardex_movimientos')
-        .where('sede_id', sede)
-        .orderBy('created_at', 'desc')
+        .where('kardex_movimientos.sede_id', sede)
+        .orderBy('kardex_movimientos.created_at', 'desc')
         .limit(10)
         .leftJoin('insumos', 'kardex_movimientos.insumo_id', 'insumos.id')
         .select(
