@@ -10,6 +10,15 @@ const ConfiguracionInsumos = () => {
   const [proveedores, setProveedores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+
+  // Recargar unidades al abrir el modal si están vacías
+  useEffect(() => {
+    if (showModal && unidades.length === 0) {
+      axios.get('/admin/insumos/unidades').then(res => {
+        if (res.data.success) setUnidades(res.data.data);
+      });
+    }
+  }, [showModal]);
   const [showModalProveedor, setShowModalProveedor] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [filtroStock, setFiltroStock] = useState('todos');
