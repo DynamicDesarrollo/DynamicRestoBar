@@ -88,6 +88,7 @@ const ConfiguracionInsumos = () => {
         return;
       }
 
+      const sedeId = localStorage.getItem('sedeId') || 1;
       const data = {
         nombre: formData.nombre,
         codigo_sku: formData.codigo_sku || null,
@@ -97,6 +98,7 @@ const ConfiguracionInsumos = () => {
         stock_maximo: parseFloat(formData.stock_maximo) || null,
         costo_unitario: parseFloat(formData.costo_unitario),
         proveedor_principal_id: formData.proveedor_principal_id ? parseInt(formData.proveedor_principal_id) : null,
+        sede_id: parseInt(sedeId),
       };
 
       if (editingId) {
