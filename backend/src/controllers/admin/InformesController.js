@@ -190,7 +190,7 @@ class InformesController {
             monto_inicial: parseFloat(apertura.monto_inicial),
             ingresos: ingresos,
             egresos: egresos,
-            total_en_caja: parseFloat(apertura.monto_inicial) + ingresos - egresos,
+            total_en_caja: ingresos - egresos,
             diferencia: cierre?.diferencia || null,
             estado_cierre: cierre?.estado || null,
           },
