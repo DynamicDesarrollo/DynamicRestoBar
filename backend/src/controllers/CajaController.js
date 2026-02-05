@@ -100,15 +100,16 @@ class CajaController {
         .orderBy('created_at', 'desc');
 
       // Calcular totales
-      const ingresos = movimientos
-        .filter(m => m.tipo === 'ingreso')
-        .reduce((sum, m) => sum + parseFloat(m.monto || 0), 0);
+    const ingresos = movimientos
+    .filter(m => m.tipo === 'ingreso')
+    .reduce((sum, m) => sum + parseFloat(m.monto || 0), 0);
 
-      const egresos = movimientos
-        .filter(m => m.tipo === 'egreso')
-        .reduce((sum, m) => sum + parseFloat(m.monto || 0), 0);
+    const egresos = movimientos
+    .filter(m => m.tipo === 'egreso')
+    .reduce((sum, m) => sum + parseFloat(m.monto || 0), 0);
 
-      const totalCaja = apertura.monto_inicial + ingresos - egresos;
+    // El monto inicial ya está incluido como ingreso (apertura de caja), no se suma dos veces
+    const totalCaja = ingresos - egresos;
 
       return res.json({
         success: true,
