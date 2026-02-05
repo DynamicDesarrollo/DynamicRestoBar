@@ -295,6 +295,7 @@ exports.seed = async (knex) => {
       stock_actual: 50,
       stock_minimo: 10,
       costo_unitario: 2500,
+      activo: true,
     },
     {
       sede_id: sedes[0].id,
@@ -303,6 +304,7 @@ exports.seed = async (knex) => {
       stock_actual: 20,
       stock_minimo: 5,
       costo_unitario: 1800,
+      activo: true,
     },
     {
       sede_id: sedes[0].id,
@@ -311,6 +313,7 @@ exports.seed = async (knex) => {
       stock_actual: 30,
       stock_minimo: 8,
       costo_unitario: 3200,
+      activo: true,
     },
     // ...agrega más insumos según tu modelo...
   ];
