@@ -24,11 +24,11 @@ COPY . .
 RUN mkdir -p logs
 
 # Exponer puerto
-EXPOSE 5051
+EXPOSE 5081
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+  CMD node -e "const p=process.env.PORT||5081;require('http').get('http://localhost:'+p+'/health',(r)=>{if(r.statusCode!==200)process.exit(1)}).on('error',()=>process.exit(1))"
 
 # Default command
-CMD ["npm", "run", "dev"]
+CMD ["sh", "-c", "npm run migrate && npm start"]
