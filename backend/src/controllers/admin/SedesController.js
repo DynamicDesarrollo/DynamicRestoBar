@@ -2,6 +2,8 @@
 // Controlador para CRUD de sedes
 const db = require('../../config/database');
 
+const getClienteIdColumnSupported = async () => db.schema.hasColumn('sedes', 'cliente_id');
+
 const SedesController = {
   async getSedes(req, res) {
     try {
@@ -10,7 +12,8 @@ const SedesController = {
         clienteId = req.usuario.cliente_id;
       }
       let query = db('sedes');
-      if (clienteId) query = query.where('cliente_id', clienteId);
+      const soportaClienteId = await getClienteIdColumnSupported();
+      if (clienteId && soportaClienteId) query = query.where('cliente_id', clienteId);
       const sedes = await query;
       res.json(sedes);
     } catch (err) {
@@ -33,7 +36,12 @@ const SedesController = {
     try {
       const { nombre, cliente_id, direccion, ciudad, telefono, email, descripcion, activa } = req.body;
       if (!nombre || !cliente_id) return res.status(400).json({ error: 'nombre y cliente_id requeridos' });
-      const [inserted] = await db('sedes').insert({ nombre, cliente_id, direccion, ciudad, telefono, email, descripcion, activa }).returning('id');
+      const soportaClienteId = await getClienteIdColumnSupported();
+      const payload = { nombre, direccion, ciudad, telefono, email, descripcion, activa };
+      if (soportaClienteId) {
+        payload.cliente_id = cliente_id;
+      }
+      const [inserted] = await db('sedes').insert(payload).returning('id');
       const sede = await db('sedes').where({ id: inserted.id }).first();
       res.status(201).json(sede);
     } catch (err) {
