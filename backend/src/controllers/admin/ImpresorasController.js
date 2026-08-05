@@ -1,5 +1,5 @@
 const db = require('../../config/database');
-const { imprimirPrueba } = require('../../services/PrinterService');
+const PrintDispatchService = require('../../services/PrintDispatchService');
 
 class ImpresorasController {
 
@@ -112,7 +112,19 @@ class ImpresorasController {
         return res.status(400).json({ error: 'La impresora no tiene IP configurada' });
       }
 
-      await imprimirPrueba(impresora);
+      const dispatch = await PrintDispatchService.dispatchPrueba({
+        impresora,
+        sedeId: impresora.sede_id,
+        clienteId: req.usuario?.cliente_id || null,
+      });
+
+      if (dispatch.mode === 'bridge') {
+        return res.json({
+          success: true,
+          message: `Prueba encolada para bridge (job #${dispatch.jobId})`,
+        });
+      }
+
       return res.json({ success: true, message: `Prueba enviada a ${impresora.ip_address}:${impresora.puerto}` });
     } catch (err) {
       console.error('❌ testImpresora:', err.message);

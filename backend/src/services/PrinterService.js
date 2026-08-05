@@ -39,32 +39,52 @@ const money = (value = 0) => `$${Number(value || 0).toLocaleString('es-CO')}`;
 function sendToSocket(ip, port, data) {
   return new Promise((resolve, reject) => {
     const socket = new net.Socket();
-    const timeout = 5000;
+    const timeout = 7000;
+    let settled = false;
+
+    const finishOk = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+
+    const finishError = (err) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
+
+    const safePort = parseInt(port, 10);
+    if (!ip || Number.isNaN(safePort) || safePort <= 0) {
+      return finishError(new Error(`Configuracion de impresora invalida: ${ip}:${port}`));
+    }
 
     socket.setTimeout(timeout);
+    socket.setNoDelay(true);
 
-    socket.connect(port, ip, () => {
-      socket.write(data, (err) => {
+    socket.connect(safePort, ip, () => {
+      socket.end(data, (err) => {
         if (err) {
           socket.destroy();
-          return reject(err);
+          return finishError(err);
         }
-        // Pequeño delay antes de cerrar para que la impresora reciba todo
-        setTimeout(() => {
-          socket.destroy();
-          resolve();
-        }, 200);
       });
     });
 
     socket.on('timeout', () => {
       socket.destroy();
-      reject(new Error(`Timeout conectando a ${ip}:${port}`));
+      finishError(new Error(`Timeout conectando a ${ip}:${safePort}`));
     });
 
     socket.on('error', (err) => {
       socket.destroy();
-      reject(err);
+      finishError(err);
+    });
+
+    socket.on('close', (hadError) => {
+      if (!hadError) {
+        finishOk();
+      }
     });
   });
 }

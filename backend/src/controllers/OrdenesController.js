@@ -10,7 +10,7 @@
  */
 
 const db = require('../config/database');
-const { imprimirComanda } = require('../services/PrinterService');
+const PrintDispatchService = require('../services/PrintDispatchService');
 
 class OrdenesController {
   static async obtenerEstacionPorProducto(productoId, sedeId) {
@@ -144,7 +144,7 @@ class OrdenesController {
     return [];
   }
 
-  static async imprimirTicketsPorComanda({ orden, mesa, usuario, tickets }) {
+  static async imprimirTicketsPorComanda({ orden, mesa, usuario, tickets, clienteId = null }) {
     const trabajos = [];
     const ticketsAgrupados = Array.from(
       tickets.reduce((acc, ticket) => {
@@ -187,7 +187,12 @@ class OrdenesController {
 
       for (const impresora of impresoras) {
         trabajos.push(
-          imprimirComanda(impresora, payload).catch((err) => {
+          PrintDispatchService.dispatchComanda({
+            impresora,
+            payload,
+            sedeId: orden.sede_id,
+            clienteId,
+          }).catch((err) => {
             console.error(`❌ Error imprimiendo en ${impresora.nombre}:`, err.message);
           })
         );
@@ -446,6 +451,7 @@ class OrdenesController {
             mesa: mesaCompleta,
             usuario,
             tickets: ticketsParaImprimir,
+            clienteId: req.usuario?.cliente_id || null,
           });
         }
       } catch (printErr) {

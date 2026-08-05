@@ -18,6 +18,7 @@ const adminRoutes = require('./routes/admin/adminRoutes');
 const clientesRoutes = require('./routes/clientesRoutes');
 const canalesRoutes = require('./routes/canalesRoutes');
 const activacionRoutes = require('./routes/activacionRoutes');
+const bridgeRoutes = require('./routes/bridgeRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -134,6 +135,7 @@ app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/clientes', clientesRoutes);
 app.use('/api/v1/canales', canalesRoutes);
 app.use('/api/v1/activar-cuenta', activacionRoutes);
+app.use('/api/v1/bridge', bridgeRoutes);
 const sedesRoutes = require('./routes/sedesRoutes');
 app.use('/api/v1/sedes', sedesRoutes);
 const adminEmpresaRoutes = require('./routes/adminEmpresaRoutes');
