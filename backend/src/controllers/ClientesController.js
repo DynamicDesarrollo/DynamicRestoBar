@@ -41,7 +41,6 @@ const ClientesController = {
         email,
         descripcion: 'Sede principal creada automáticamente',
         activa: true,
-        cliente_id: cliente.id,
         created_at: db.fn.now(),
         updated_at: db.fn.now()
       })
@@ -129,7 +128,10 @@ const ClientesController = {
   async metricasCliente(req, res) {
     const { id } = req.params;
     // Ejemplo: contar sedes y usuarios activos
-    const sedes = await db('sedes').where({ cliente_id: id });
+    const tieneClienteIdEnSedes = await db.schema.hasColumn('sedes', 'cliente_id');
+    const sedes = tieneClienteIdEnSedes
+      ? await db('sedes').where({ cliente_id: id })
+      : [];
     // Puedes agregar más métricas aquí
     res.json({
       sedes: sedes.length,

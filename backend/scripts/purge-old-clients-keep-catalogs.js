@@ -5,6 +5,7 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const db = require('../src/config/database');
 
 const CONFIRM_PHRASE = 'PURGE_CLIENTES_KEEP_CATALOGOS';
+const CONFIRM_CORE_PHRASE = 'PURGE_CLIENTES_Y_CORE';
 
 const OPERATIONAL_TABLES = [
   'print_jobs',
@@ -27,10 +28,23 @@ const OPERATIONAL_TABLES = [
   'pagos_clientes',
 ];
 
+const CORE_WIPE_TABLES = [
+  'receta_insumos',
+  'recetas',
+  'producto_variante',
+  'producto_modificador',
+  'combo_items',
+  'combos',
+  'productos',
+  'insumos',
+  'mesas',
+];
+
 function parseArgs(argv) {
   const args = {
     execute: false,
     confirm: '',
+    wipeCore: false,
   };
 
   for (const raw of argv) {
@@ -41,6 +55,11 @@ function parseArgs(argv) {
 
     if (raw.startsWith('--confirm=')) {
       args.confirm = raw.split('=')[1] || '';
+      continue;
+    }
+
+    if (raw === '--wipe-core') {
+      args.wipeCore = true;
       continue;
     }
   }
@@ -73,6 +92,7 @@ function printHeader(args) {
   console.log('==========================================================');
   console.log(`NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
   console.log(`Modo    : ${args.execute ? 'EJECUTAR' : 'DRY-RUN'}`);
+  console.log(`Core    : ${args.wipeCore ? 'BORRAR productos/insumos/recetas/mesas' : 'Conservar catalogos core'}`);
   console.log('');
 }
 
@@ -84,15 +104,17 @@ function printUsageAndExit(message = '') {
   console.log('Uso:');
   console.log('  node scripts/purge-old-clients-keep-catalogs.js');
   console.log('  node scripts/purge-old-clients-keep-catalogs.js --execute --confirm=PURGE_CLIENTES_KEEP_CATALOGOS');
+  console.log('  node scripts/purge-old-clients-keep-catalogs.js --wipe-core --execute --confirm=PURGE_CLIENTES_Y_CORE');
   console.log('');
   console.log('Este script:');
   console.log('  1) Limpia datos operativos transaccionales.');
   console.log('  2) Elimina registros de clientes anteriores.');
   console.log('  3) Conserva catalogos (productos, categorias, insumos, recetas, etc).');
+  console.log('  4) Con --wipe-core, tambien borra productos, insumos, recetas y mesas.');
   process.exit(message ? 1 : 0);
 }
 
-async function getSummary() {
+async function getSummary(args) {
   const summary = {};
 
   if (await tableExists('clientes')) {
@@ -116,11 +138,20 @@ async function getSummary() {
     summary[tableName] = Number(row?.total || 0);
   }
 
+  if (args.wipeCore) {
+    for (const tableName of await existingTables(CORE_WIPE_TABLES)) {
+      // eslint-disable-next-line no-await-in-loop
+      const row = await db(tableName).count('* as total').first();
+      summary[`${tableName}_core`] = Number(row?.total || 0);
+    }
+  }
+
   return summary;
 }
 
-async function runPurge() {
+async function runPurge(args) {
   const existingOperationalTables = await existingTables(OPERATIONAL_TABLES);
+  const existingCoreTables = args.wipeCore ? await existingTables(CORE_WIPE_TABLES) : [];
   const hasClientes = await tableExists('clientes');
   const sedesHasClienteId = await columnExists('sedes', 'cliente_id');
   const usuariosHasClienteId = await columnExists('usuarios', 'cliente_id');
@@ -134,6 +165,14 @@ async function runPurge() {
       // eslint-disable-next-line no-await-in-loop
       await trx.raw(`TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE`);
       console.log(`   ✅ ${tableName} truncada`);
+    }
+
+    if (args.wipeCore) {
+      for (const tableName of existingCoreTables) {
+        // eslint-disable-next-line no-await-in-loop
+        await trx.raw(`TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE`);
+        console.log(`   ✅ ${tableName} truncada (core)`);
+      }
     }
 
     if (sedesHasClienteId) {
@@ -160,7 +199,7 @@ async function runPurge() {
     console.log(`   ✅ clientes eliminados: ${deletedClientes}`);
 
     const hasMesas = await trx.schema.hasTable('mesas');
-    if (hasMesas) {
+    if (hasMesas && !args.wipeCore) {
       const mesasUpdated = await trx('mesas').update({ estado: 'disponible', updated_at: new Date() });
       console.log(`   ✅ mesas en disponible: ${mesasUpdated}`);
     }
@@ -177,24 +216,26 @@ async function main() {
 
   printHeader(args);
 
-  const summary = await getSummary();
+  const summary = await getSummary(args);
   console.log('Resumen previo:');
   Object.entries(summary).forEach(([k, v]) => console.log(`  - ${k}: ${v}`));
   console.log('');
 
   if (!args.execute) {
+    const expectedConfirm = args.wipeCore ? CONFIRM_CORE_PHRASE : CONFIRM_PHRASE;
     console.log('DRY-RUN completado. No se realizaron cambios.');
-    console.log(`Para ejecutar usa: --execute --confirm=${CONFIRM_PHRASE}`);
+    console.log(`Para ejecutar usa: --execute --confirm=${expectedConfirm}`);
     return;
   }
 
-  if (args.confirm !== CONFIRM_PHRASE) {
-    printUsageAndExit(`Confirmacion invalida. Debe ser: ${CONFIRM_PHRASE}`);
+  const expectedConfirm = args.wipeCore ? CONFIRM_CORE_PHRASE : CONFIRM_PHRASE;
+  if (args.confirm !== expectedConfirm) {
+    printUsageAndExit(`Confirmacion invalida. Debe ser: ${expectedConfirm}`);
     return;
   }
 
   console.log('⚠️ Ejecutando purga real...');
-  await runPurge();
+  await runPurge(args);
   console.log('');
   console.log('🎉 Purga completada. Puedes crear cliente nuevo desde cero.');
 }
