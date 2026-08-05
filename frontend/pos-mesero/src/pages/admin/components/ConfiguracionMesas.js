@@ -6,6 +6,7 @@ import '../admin.css';
 const ConfiguracionMesas = () => {
   const [mesas, setMesas] = useState([]);
   const [zonas, setZonas] = useState([]);
+  const [sedes, setSedes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -13,10 +14,12 @@ const ConfiguracionMesas = () => {
     numero: '',
     zona_id: '',
     capacidad: 4,
+    sede_id: '',
   });
 
   useEffect(() => {
     cargarDatos();
+    cargarSedes();
   }, []);
 
   const cargarDatos = async () => {
@@ -37,6 +40,7 @@ const ConfiguracionMesas = () => {
   };
 
   const cargarMesas = async () => {
+    setLoading(true);
     try {
       const response = await axios.get('/admin/mesas');
       if (response.data.success) {
@@ -53,6 +57,20 @@ const ConfiguracionMesas = () => {
       }
     } catch (err) {
       console.error('Error al cargar mesas:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cargarMesasPorSede = async (sedeId) => {
+    setLoading(true);
+    try {
+      const response = await axios.get('/admin/mesas', { params: { sedeId } });
+      if (response.data.success) {
+        setMesas(response.data.data);
+      }
+    } catch (err) {
+      console.error('Error al cargar mesas por sede:', err);
     } finally {
       setLoading(false);
     }
@@ -134,6 +152,22 @@ const ConfiguracionMesas = () => {
     setFormData({ numero: '', zona_id: 1, capacidad: 4 });
   };
 
+  const cargarSedes = async () => {
+    try {
+      const res = await axios.get('/admin/sedes');
+      if (Array.isArray(res.data)) {
+        setSedes(res.data);
+      } else if (res.data.success && Array.isArray(res.data.data)) {
+        setSedes(res.data.data);
+      } else {
+        setSedes([]);
+      }
+    } catch (err) {
+      console.error('Error al cargar sedes:', err);
+      setSedes([]);
+    }
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -147,12 +181,26 @@ const ConfiguracionMesas = () => {
       <div className="admin-section">
         <div className="section-header">
           <h2>🪑 Configuración de Mesas</h2>
-          <button
-            className="btn btn-primary"
-            onClick={abrirModalNuevaMesa}
-          >
-            + Agregar Mesa
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <label style={{ fontWeight: 500, marginRight: 8 }}>Sede:</label>
+            <select
+              value={formData.sede_id || ''}
+              onChange={e => {
+                const sedeId = e.target.value;
+                setFormData(prev => ({ ...prev, sede_id: sedeId }));
+                cargarMesasPorSede(sedeId);
+              }}
+              style={{ minWidth: 120, marginRight: 16 }}
+            >
+              <option value="">Todas</option>
+              {sedes.map(sede => (
+                <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+              ))}
+            </select>
+            <button className="btn btn-primary" onClick={abrirModalNuevaMesa}>
+              + Agregar Mesa
+            </button>
+          </div>
         </div>
 
         <div className="mesas-grid">

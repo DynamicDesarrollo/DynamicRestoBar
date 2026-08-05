@@ -1,4 +1,17 @@
+
 import axios from 'axios';
+// Servicio para sedes (admin)
+export const sedesService = {
+  listar: (params) => apiClient.get('/admin/sedes', { params }),
+  obtener: (id) => apiClient.get(`/admin/sedes/${id}`),
+  crear: (data) => apiClient.post('/admin/sedes', data),
+  actualizar: (id, data) => apiClient.put(`/admin/sedes/${id}`, data),
+  eliminar: (id) => apiClient.delete(`/admin/sedes/${id}`),
+  tieneAsociados: async (id) => {
+    const res = await apiClient.get(`/sedes/${id}/tiene-asociados`);
+    return res.data.tieneAsociados;
+  },
+};
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -128,6 +141,17 @@ export const cajaService = {
 
 export const canalesService = {
   getAll: () => apiClient.get('/canales'),
+};
+
+export const clientesService = {
+  listar: () => apiClient.get('/clientes'),
+  crear: (data) => apiClient.post('/clientes', data),
+  obtener: (id) => apiClient.get(`/clientes/${id}`),
+  actualizar: (id, data) => apiClient.put(`/clientes/${id}`, data),
+  eliminar: (id) => apiClient.delete(`/clientes/${id}`),
+  cambiarEstado: (id, estado) => apiClient.put(`/clientes/${id}/estado`, { estado }),
+  metricas: (id) => apiClient.get(`/clientes/${id}/metricas`),
+  tokenActivacion: (usuarioId) => apiClient.get(`/token-activacion/${usuarioId}`),
 };
 
 export default apiClient;

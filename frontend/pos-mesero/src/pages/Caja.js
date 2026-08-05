@@ -1,3 +1,4 @@
+import { toast } from 'react-toastify';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,7 +14,6 @@ import {
   Badge,
   Table,
 } from 'react-bootstrap';
-import toast from 'react-hot-toast';
 import { cajaService, ordenesService } from '../services/api';
 import { useAuthStore } from '../stores';
 import FacturaTirilla from '../components/FacturaTirilla';
@@ -193,6 +193,7 @@ export default function Caja() {
       
       // Si el pago está completo, mostrar factura
       if (res.data.data?.orden?.pagado) {
+        toast.success('Factura enviada a impresora de red de Caja/Bar');
         // Obtener datos completos para la factura
         const facturaData = res.data.data.factura;
         const ordenData = res.data.data.orden;
@@ -201,7 +202,8 @@ export default function Caja() {
         setOrdenFactura({
           ...ordenSeleccionada,
           ...ordenData,
-          usuario_nombre: usuario?.nombre,
+          mesa_numero: ordenData?.mesa_numero || ordenSeleccionada?.mesa_numero || null,
+          usuario_nombre: ordenData?.usuario_nombre || ordenSeleccionada?.usuario_nombre || usuario?.nombre || null,
           items: ordenData.items || [],
         });
         

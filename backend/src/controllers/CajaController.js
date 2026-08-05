@@ -10,6 +10,7 @@
  */
 
 const db = require('../config/database');
+const { imprimirFactura } = require('../services/PrinterService');
 
 class CajaController {
   /**
@@ -52,6 +53,8 @@ class CajaController {
         monto: monto_inicial,
         concepto: `Apertura de caja - Saldo inicial: $${monto_inicial}`,
         usuario_id,
+        created_at: new Date(),
+        updated_at: new Date(),
       });
 
       console.log(`🟢 CAJA ABIERTA - Usuario: ${usuario_id}, Saldo inicial: $${monto_inicial}`);
@@ -142,6 +145,7 @@ class CajaController {
     try {
       const { userId: usuario_id, sedeId: sede_id } = req.usuario;
       const { orden_id, monto, metodo_pago_id, referencia, es_abono = false } = req.body;
+      const now = new Date();
 
       if (!orden_id || !monto || !metodo_pago_id) {
         return res.status(400).json({
@@ -166,6 +170,15 @@ class CajaController {
         return res.status(404).json({ error: 'Orden no encontrada' });
       }
 
+      const mesaInfo = orden.mesa_id
+        ? await db('mesas').select('numero').where('id', orden.mesa_id).first()
+        : null;
+      const meseroInfo = orden.usuario_id
+        ? await db('usuarios').select('nombre').where('id', orden.usuario_id).first()
+        : null;
+      const mesaNumero = mesaInfo?.numero ? String(mesaInfo.numero) : '';
+      const meseroNombre = meseroInfo?.nombre || req.usuario?.nombre || '';
+
       const montoPago = parseFloat(monto);
       const totalOrden = parseFloat(orden.total);
 
@@ -188,7 +201,9 @@ class CajaController {
           subtotal: totalOrden,
           total: totalOrden,
           estado: 'emitida',
-          fecha_emision: new Date(),
+          fecha_emision: now,
+          created_at: now,
+          updated_at: now,
         }).returning('*');
         factura = Array.isArray(resultFactura) ? resultFactura[0] : resultFactura;
       }
@@ -199,7 +214,9 @@ class CajaController {
         metodo_pago_id,
         monto: montoPago,
         referencia: referencia || null,
-        fecha_pago: new Date(),
+        fecha_pago: now,
+        created_at: now,
+        updated_at: now,
       }).returning('*');
 
       const pago = Array.isArray(pagoProcesado) ? pagoProcesado[0] : pagoProcesado;
@@ -245,29 +262,125 @@ class CajaController {
         metodo_pago_id,
         orden_id,
         usuario_id,
+        created_at: new Date(),
+        updated_at: new Date(),
       });
 
       console.log(`💰 ${es_abono ? 'ABONO' : 'PAGO'} REGISTRADO - Orden: ${orden.numero_orden}, Monto: $${montoPago}, Saldo: $${Math.max(0, totalOrden - montoPagadoTotal)}`);
 
+      const sede = await db('sedes')
+        .where('id', sede_id)
+        .whereNull('deleted_at')
+        .first();
+
+      const configRows = await db('configuracion')
+        .select('clave', 'valor')
+        .where('sede_id', sede_id)
+        .whereIn('clave', ['nombre_negocio', 'nit', 'numero_nit', 'numero_resolucion', 'web']);
+
+      const config = configRows.reduce((acc, row) => {
+        acc[row.clave] = row.valor;
+        return acc;
+      }, {});
+
+      const clienteEmpresa = await db('clientes')
+        .whereNull('deleted_at')
+        .where((qb) => qb.where('sede_id', sede_id).orWhereNull('sede_id'))
+        .orderByRaw('CASE WHEN sede_id = ? THEN 0 ELSE 1 END', [sede_id])
+        .orderBy('id', 'asc')
+        .first();
+
+      const datosNegocioBase = {
+        nombre: config.nombre_negocio || sede?.nombre || clienteEmpresa?.nombre || 'DynamicRestoBar',
+        direccion: sede?.direccion || '',
+        ciudad: sede?.ciudad || '',
+        telefono: sede?.telefono || clienteEmpresa?.telefono || '',
+        email: sede?.email || clienteEmpresa?.email || '',
+        nit: config.nit || config.numero_nit || clienteEmpresa?.documento || '',
+        resolucion: config.numero_resolucion || '',
+        web: config.web || 'www.dynamicrestobar.com',
+      };
+
+      const pagosFactura = await db('pago_facturas as pf')
+        .select('pf.monto', 'pf.referencia', 'mp.nombre as metodo_nombre')
+        .leftJoin('metodos_pago as mp', 'pf.metodo_pago_id', 'mp.id')
+        .where('pf.factura_id', factura.id)
+        .orderBy('pf.fecha_pago', 'asc');
+
+      const itemsParaImpresion = await db('orden_items')
+        .select(
+          'orden_items.*',
+          'productos.nombre as producto_nombre'
+        )
+        .leftJoin('productos', 'orden_items.producto_id', 'productos.id')
+        .where('orden_items.orden_id', orden_id);
+
+      for (let item of itemsParaImpresion) {
+        const modificadores = await db('orden_item_modificador')
+          .select('orden_item_modificador.*', 'modificador_opciones.nombre')
+          .leftJoin('modificador_opciones', 'orden_item_modificador.modificador_opcion_id', 'modificador_opciones.id')
+          .where('orden_item_modificador.orden_item_id', item.id);
+        item.modificadores = modificadores;
+      }
+
+      const impresoraCaja = await db('impresoras')
+        .where('sede_id', sede_id)
+        .whereNull('deleted_at')
+        .where('estado', 'activa')
+        .whereRaw('LOWER(nombre) LIKE ?', ['%bar%'])
+        .orderBy('id', 'asc')
+        .first();
+
+      if (impresoraCaja?.ip_address) {
+        try {
+          const fechaFactura = pago?.created_at || factura.created_at || now;
+          const fechaStr = new Date(fechaFactura).toLocaleString('es-CO', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+
+          const subtotalFactura = parseFloat(factura.subtotal ?? totalOrden ?? 0);
+          const totalFactura = parseFloat(factura.total ?? totalOrden ?? 0);
+          const impuestosFactura = 0;
+          const montoPagadoFactura = pagosFactura.reduce((sum, p) => sum + parseFloat(p.monto || 0), 0);
+          const cambioFactura = Math.max(0, montoPagadoFactura - totalFactura);
+          const saldoPendienteFactura = Math.max(0, totalFactura - montoPagadoFactura);
+
+          await imprimirFactura(impresoraCaja, {
+            tipoDocumento: facturaPagada ? 'FACTURA' : 'RECIBO ABONO',
+            numeroFactura: factura.numero_factura,
+            fecha: fechaStr,
+            ordenNumero: `#${orden.numero_orden}`,
+            mesa: mesaNumero,
+            mesero: meseroNombre,
+            negocio: datosNegocioBase,
+            items: itemsParaImpresion,
+            subtotal: subtotalFactura,
+            impuestos: impuestosFactura,
+            total: totalFactura,
+            montoPagado: montoPagadoFactura,
+            cambio: cambioFactura,
+            saldoPendiente: saldoPendienteFactura,
+            pagos: pagosFactura,
+          });
+
+          console.log(`🧾 ${facturaPagada ? 'FACTURA' : 'RECIBO ABONO'} IMPRESO EN RED - ${impresoraCaja.nombre} (${impresoraCaja.ip_address}:${impresoraCaja.puerto || 9100})`);
+        } catch (printError) {
+          console.error('⚠️ No se pudo imprimir documento de caja en red:', printError.message);
+        }
+      } else {
+        console.warn(`⚠️ Sin impresora activa para caja en sede ${sede_id}.`);
+      }
+
       // Si está pagada completamente, obtener items de la orden para la factura
       let ordenConItems = null;
+      let datosNegocio = null;
       if (facturaPagada) {
-        ordenConItems = await db('orden_items')
-          .select(
-            'orden_items.*',
-            'productos.nombre as producto_nombre'
-          )
-          .leftJoin('productos', 'orden_items.producto_id', 'productos.id')
-          .where('orden_items.orden_id', orden_id);
-
-        // Obtener modificadores de cada item
-        for (let item of ordenConItems) {
-          const modificadores = await db('orden_item_modificador')
-            .select('orden_item_modificador.*', 'modificador_opciones.nombre')
-            .leftJoin('modificador_opciones', 'orden_item_modificador.modificador_opcion_id', 'modificador_opciones.id')
-            .where('orden_item_modificador.orden_item_id', item.id);
-          item.modificadores = modificadores;
-        }
+        ordenConItems = itemsParaImpresion;
+        datosNegocio = datosNegocioBase;
       }
 
       return res.json({
@@ -275,10 +388,18 @@ class CajaController {
         message: facturaPagada ? 'Pago completado' : 'Abono registrado',
         data: {
           pago,
-          factura: facturaPagada ? factura : null,
+          factura: facturaPagada
+            ? {
+                ...factura,
+                negocio: datosNegocio,
+                fecha_hora: pago?.created_at || factura.created_at || now,
+              }
+            : null,
           orden: {
             id: orden.id,
             numero_orden: orden.numero_orden,
+            mesa_numero: mesaNumero || null,
+            usuario_nombre: meseroNombre || null,
             total: totalOrden,
             pagado: facturaPagada,
             saldo_pendiente: Math.max(0, totalOrden - montoPagadoTotal),
@@ -363,6 +484,8 @@ class CajaController {
         concepto: `Devolución Orden #${orden.numero_orden} - Motivo: ${motivo}`,
         orden_id,
         usuario_id,
+        created_at: new Date(),
+        updated_at: new Date(),
       });
 
       console.log(`🔄 DEVOLUCIÓN PROCESADA - Orden: ${orden.numero_orden}, Monto: $${montoDevolucion}, Motivo: ${motivo}`);

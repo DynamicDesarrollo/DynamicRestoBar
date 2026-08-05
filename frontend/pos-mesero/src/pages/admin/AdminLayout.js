@@ -1,6 +1,6 @@
+import { toast } from 'react-toastify';
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
 import { useAuthStore } from '../../stores';
 import './AdminLayout.css';
 
@@ -19,12 +19,15 @@ const AdminLayout = ({ children }) => {
 
   const menuItems = [
     { path: '/admin', label: 'Dashboard', emoji: '📊' },
+    { path: '/admin/sedes', label: 'Sedes', emoji: '🏢' },
     { path: '/admin/mesas', label: 'Mesas', emoji: '🪑' },
     { path: '/admin/productos', label: 'Productos', emoji: '🍽️' },
     { path: '/admin/insumos', label: 'Insumos', emoji: '📦' },
     { path: '/admin/recetas', label: 'Recetas', emoji: '🍳' },
     { path: '/admin/inventario', label: 'Inventario', emoji: '📊' },
     { path: '/admin/informes', label: 'Informes', emoji: '📈' },
+    { path: '/admin/impresoras', label: 'Impresoras', emoji: '🖨️' },
+    { path: '/admin/usuarios', label: 'Usuarios', emoji: '👤' },
   ];
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');

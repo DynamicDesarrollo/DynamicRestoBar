@@ -10,8 +10,193 @@
  */
 
 const db = require('../config/database');
+const { imprimirComanda } = require('../services/PrinterService');
 
 class OrdenesController {
+  static async obtenerEstacionPorProducto(productoId, sedeId) {
+    const producto = await db('productos as p')
+      .leftJoin('estaciones as e', 'p.estacion_id', 'e.id')
+      .select(
+        'p.id as producto_id',
+        'p.nombre as producto_nombre',
+        'p.estacion_id',
+        'e.nombre as estacion_nombre',
+        'e.tipo as estacion_tipo'
+      )
+      .where('p.id', productoId)
+      .first();
+
+    if (!producto) {
+      return null;
+    }
+
+    if (producto.estacion_id) {
+      return producto;
+    }
+
+    const estacionFallback = await db('estaciones')
+      .where('sede_id', sedeId)
+      .where('activa', true)
+      .andWhere(function() {
+        this.where('tipo', producto.estacion_tipo || 'cocina');
+      })
+      .first();
+
+    if (estacionFallback) {
+      return {
+        ...producto,
+        estacion_id: estacionFallback.id,
+        estacion_nombre: estacionFallback.nombre,
+        estacion_tipo: estacionFallback.tipo,
+      };
+    }
+
+    const estacionGenerica = await db('estaciones')
+      .where('sede_id', sedeId)
+      .where('activa', true)
+      .first();
+
+    if (!estacionGenerica) {
+      return null;
+    }
+
+    return {
+      ...producto,
+      estacion_id: estacionGenerica.id,
+      estacion_nombre: estacionGenerica.nombre,
+      estacion_tipo: estacionGenerica.tipo,
+    };
+  }
+
+  static async obtenerOCrearComanda({ ordenId, estacionId, numeroOrden, tiempoPreparacion = 15 }) {
+    let comanda = await db('comandas')
+      .where('orden_id', ordenId)
+      .where('estacion_id', estacionId)
+      .whereNot('estado', 'entregada')
+      .first();
+
+    if (comanda) {
+      return comanda;
+    }
+
+    const numeroComanda = `CMD-${Date.now()}-${estacionId}`;
+    const comandaResult = await db('comandas').insert({
+      numero_comanda: numeroComanda,
+      orden_id: ordenId,
+      estacion_id: estacionId,
+      estado: 'pendiente',
+      tiempo_preparacion_estimado: tiempoPreparacion,
+      created_at: new Date(),
+      updated_at: new Date(),
+    }).returning('*');
+
+    comanda = Array.isArray(comandaResult) ? comandaResult[0] : comandaResult;
+    console.log(`✅ Comanda creada para orden ${numeroOrden}: ${comanda.numero_comanda} (estación ${estacionId})`);
+    return comanda;
+  }
+
+  static async obtenerImpresorasPorEstacion(sedeId, estacionId) {
+    const impresorasRelacionadas = await db('impresoras as i')
+      .select('i.id', 'i.nombre', 'i.ip_address', 'i.puerto')
+      .join('sede_estacion_impresora as sei', 'sei.impresora_id', 'i.id')
+      .where('sei.sede_id', sedeId)
+      .where('sei.estacion_id', estacionId)
+      .where('i.estado', 'activa')
+      .whereNull('i.deleted_at');
+
+    if (impresorasRelacionadas.length > 0) {
+      return impresorasRelacionadas;
+    }
+
+    const estacion = await db('estaciones').where('id', estacionId).first();
+    const nombreEstacion = (estacion?.nombre || estacion?.tipo || '').toLowerCase();
+
+    const fallbackQuery = db('impresoras as i')
+      .select('i.id', 'i.nombre', 'i.ip_address', 'i.puerto')
+      .where('i.sede_id', sedeId)
+      .where('i.estado', 'activa')
+      .whereNull('i.deleted_at');
+
+    if (nombreEstacion.includes('cocina')) {
+      fallbackQuery.andWhere(function() {
+        this.whereRaw('LOWER(i.nombre) like ?', ['%cocina%'])
+          .orWhereRaw('LOWER(i.modelo) like ?', ['%cocina%']);
+      });
+      const impresorasFallback = await fallbackQuery.orderBy('i.id', 'asc');
+      if (impresorasFallback.length > 0) {
+        return impresorasFallback;
+      }
+    }
+
+    if (nombreEstacion.includes('bar')) {
+      return db('impresoras as i')
+        .select('i.id', 'i.nombre', 'i.ip_address', 'i.puerto')
+        .where('i.sede_id', sedeId)
+        .where('i.estado', 'activa')
+        .whereNull('i.deleted_at')
+        .where(function() {
+          this.whereRaw('LOWER(i.nombre) like ?', ['%bar%'])
+            .orWhereRaw('LOWER(i.modelo) like ?', ['%bar%']);
+        })
+        .orderBy('i.id', 'asc');
+    }
+
+    return [];
+  }
+
+  static async imprimirTicketsPorComanda({ orden, mesa, usuario, tickets }) {
+    const trabajos = [];
+    const ticketsAgrupados = Array.from(
+      tickets.reduce((acc, ticket) => {
+        const key = `${ticket.estacion_id}-${ticket.comanda_id}`;
+        if (!acc.has(key)) {
+          acc.set(key, {
+            ...ticket,
+            items: [],
+          });
+        }
+
+        const existente = acc.get(key);
+        existente.items.push(...ticket.items);
+        return acc;
+      }, new Map()).values()
+    );
+
+    for (const ticket of ticketsAgrupados) {
+      const impresoras = await OrdenesController.obtenerImpresorasPorEstacion(orden.sede_id, ticket.estacion_id);
+
+      if (!impresoras.length) {
+        console.log(`⚠️ No hay impresoras configuradas para la estación ${ticket.estacion_nombre}`);
+        continue;
+      }
+
+      const payload = {
+        numero_orden: orden.numero_orden,
+        mesa: mesa?.numero || mesa?.id || '',
+        zona: mesa?.zona_nombre || '',
+        mesero: usuario?.nombre || '',
+        estacion: ticket.estacion_nombre || 'COMANDA',
+        items: ticket.items.map((item) => ({
+          nombre: item.nombre,
+          cantidad: item.cantidad,
+          modificadores: item.modificadores || [],
+          observaciones: item.notas_especiales || item.observaciones || '',
+        })),
+        observaciones: orden.observaciones || '',
+      };
+
+      for (const impresora of impresoras) {
+        trabajos.push(
+          imprimirComanda(impresora, payload).catch((err) => {
+            console.error(`❌ Error imprimiendo en ${impresora.nombre}:`, err.message);
+          })
+        );
+      }
+    }
+
+    await Promise.allSettled(trabajos);
+  }
+
   /**
    * POST /ordenes
    * Crear nueva orden
@@ -55,47 +240,14 @@ class OrdenesController {
       let ordenId;
       let comandaId;
       let esOrdenNueva = false;
+      const ticketsParaImprimir = [];
 
       if (ordenExistente) {
         // Orden ya existe en la mesa, agregar items
         ordenId = ordenExistente.id;
         console.log(`📦 Orden existente encontrada: ${ordenId}`);
 
-        // Obtener comanda existente (debería haber una por orden abierta)
-        const comandaExistente = await db('comandas')
-          .where('orden_id', ordenId)
-          .whereNot('estado', 'entregada')
-          .first();
-
-        if (!comandaExistente) {
-          console.log(`⚠️  No hay comanda abierta para orden ${ordenId}, creando nueva comanda`);
-          // Crear nueva comanda si todas están entregadas
-          
-          // Obtener la primera estación disponible
-          const estacionDisponible = await db('estaciones').first('id');
-          if (!estacionDisponible) {
-            console.error('❌ No hay estaciones disponibles');
-            return res.status(400).json({
-              error: 'No hay estaciones configuradas en el sistema'
-            });
-          }
-          
-          const numeroComanda = `CMD-${Date.now()}`;
-          const comandaResult = await db('comandas').insert({
-            numero_comanda: numeroComanda,
-            orden_id: ordenId,
-            estacion_id: estacionDisponible.id,
-            estado: 'pendiente',
-            tiempo_preparacion_estimado: 15,
-            created_at: new Date(),
-            updated_at: new Date(),
-          }).returning('id');
-          comandaId = Array.isArray(comandaResult) ? comandaResult[0].id : comandaResult.id;
-          console.log(`✅ Nueva comanda creada: ${comandaId}`);
-        } else {
-          comandaId = comandaExistente.id;
-          console.log(`✅ Comanda existente: ${comandaId}`);
-        }
+        // Las comandas ahora se crean por estación/item, no una sola para toda la orden.
       } else {
         // Crear nueva orden
         esOrdenNueva = true;
@@ -113,51 +265,6 @@ class OrdenesController {
         }).returning('id');
         ordenId = Array.isArray(ordenResult) ? ordenResult[0].id : ordenResult.id;
 
-        // Determinar estación basada en los productos
-        let estacionId;
-        
-        // Buscar estación del primer producto
-        if (items && items.length > 0) {
-          const primerProducto = await db('productos')
-            .where('id', items[0].producto_id)
-            .first();
-          
-          if (primerProducto && primerProducto.estacion_id) {
-            estacionId = primerProducto.estacion_id;
-            console.log(`🏪 Estación obtenida del producto: ${estacionId}`);
-          }
-        }
-        
-        // Si no hay estación asignada, usar la primera disponible
-        if (!estacionId) {
-          const estacionDisponible = await db('estaciones')
-            .where('sede_id', sede_id)
-            .where('activa', true)
-            .first();
-          
-          if (!estacionDisponible) {
-            console.error('❌ No hay estaciones disponibles');
-            return res.status(400).json({
-              error: 'No hay estaciones configuradas en el sistema'
-            });
-          }
-          estacionId = estacionDisponible.id;
-          console.log(`🏪 Estación por defecto: ${estacionId}`);
-        }
-
-        // Crear nueva comanda
-        const numeroComanda = `CMD-${Date.now()}`;
-        const comandaResult = await db('comandas').insert({
-          numero_comanda: numeroComanda,
-          orden_id: ordenId,
-          estacion_id: estacionId,
-          estado: 'pendiente',
-          tiempo_preparacion_estimado: 15,
-          created_at: new Date(),
-          updated_at: new Date(),
-        }).returning('id');
-        comandaId = Array.isArray(comandaResult) ? comandaResult[0].id : comandaResult.id;
-
         // Actualizar estado de mesa a ocupada
         try {
           const updateResult = await db('mesas').where('id', mesa_id).update({
@@ -174,6 +281,23 @@ class OrdenesController {
       for (const item of items) {
         console.log(`📦 Procesando item: ${item.producto_id}, Orden: ${ordenId}, Cantidad solicitada: ${item.cantidad}`);
         
+        const productoConEstacion = await OrdenesController.obtenerEstacionPorProducto(item.producto_id, sede_id);
+        if (!productoConEstacion?.estacion_id) {
+          return res.status(400).json({
+            error: `No se pudo determinar la estación para el producto ${item.producto_id}`,
+          });
+        }
+
+        const comandaEstacion = await OrdenesController.obtenerOCrearComanda({
+          ordenId,
+          estacionId: productoConEstacion.estacion_id,
+          numeroOrden: esOrdenNueva ? 'NUEVA' : ordenExistente?.numero_orden || ordenId,
+        });
+
+        if (!comandaId) {
+          comandaId = comandaEstacion.id;
+        }
+
         let itemId;
         
         // Si la orden ya existe, verificar si este producto_id ya está en ella
@@ -204,6 +328,29 @@ class OrdenesController {
               });
               
               console.log(`✅ Item ${item.producto_id} actualizado. Nuevo total orden: ${nuevaOrdenTotal}`);
+
+              await db('comanda_items')
+                .where('orden_item_id', itemExistente.id)
+                .where('comanda_id', comandaEstacion.id)
+                .update({
+                  cantidad: item.cantidad,
+                  notas_especiales: item.observaciones || null,
+                  estado: 'pendiente',
+                  updated_at: new Date(),
+                });
+
+              ticketsParaImprimir.push({
+                estacion_id: productoConEstacion.estacion_id,
+                estacion_nombre: productoConEstacion.estacion_nombre || productoConEstacion.estacion_tipo || 'Comanda',
+                comanda_id: comandaEstacion.id,
+                items: [{
+                  nombre: productoConEstacion.producto_nombre || `Producto ${item.producto_id}`,
+                  cantidad: item.cantidad,
+                  modificadores: item.modificadores?.map((m) => m.nombre) || [],
+                  notas_especiales: item.observaciones || null,
+                  observaciones: item.observaciones || null,
+                }],
+              });
             } else {
               console.log(`⏭️  Item ${item.producto_id} ya existe con misma cantidad, sin cambios`);
             }
@@ -250,7 +397,7 @@ class OrdenesController {
           .join(' | ');
 
         await db('comanda_items').insert({
-          comanda_id: comandaId,
+          comanda_id: comandaEstacion.id,
           orden_item_id: itemId,
           producto_id: item.producto_id,
           cantidad: item.cantidad,
@@ -258,6 +405,19 @@ class OrdenesController {
           estado: 'pendiente',
           created_at: new Date(),
           updated_at: new Date(),
+        });
+
+        ticketsParaImprimir.push({
+          estacion_id: productoConEstacion.estacion_id,
+          estacion_nombre: productoConEstacion.estacion_nombre || productoConEstacion.estacion_tipo || 'Comanda',
+          comanda_id: comandaEstacion.id,
+          items: [{
+            nombre: productoConEstacion.producto_nombre || `Producto ${item.producto_id}`,
+            cantidad: item.cantidad,
+            modificadores: item.modificadores?.map((m) => m.nombre) || [],
+            notas_especiales: notasCompletas || null,
+            observaciones: item.observaciones || null,
+          }],
         });
       }
 
@@ -277,12 +437,28 @@ class OrdenesController {
         });
       }
 
+      try {
+        const ordenCompleta = await db('ordenes').where('id', ordenId).first();
+        if (ticketsParaImprimir.length > 0) {
+          const mesaCompleta = await db('mesas').where('id', mesa_id).first();
+          await OrdenesController.imprimirTicketsPorComanda({
+            orden: ordenCompleta,
+            mesa: mesaCompleta,
+            usuario,
+            tickets: ticketsParaImprimir,
+          });
+        }
+      } catch (printErr) {
+        console.error('❌ Error imprimiendo tickets de comanda:', printErr.message);
+      }
+
       return res.json({
         success: true,
         message: esOrdenNueva ? 'Orden creada exitosamente' : 'Items agregados a la orden existente',
         data: {
           orden_id: ordenId,
           comanda_id: comandaId,
+          comanda_ids: [...new Set(ticketsParaImprimir.map((ticket) => ticket.comanda_id))],
           es_nueva: esOrdenNueva,
           total: nuevoTotal,
           items_count: items.length,
@@ -348,7 +524,7 @@ class OrdenesController {
       const ordenes = await db('ordenes')
         .select('*')
         .where('mesa_id', mesaId)
-        .where('estado', 'abierta')
+        .whereIn('estado', ['abierta', 'enviada_produccion', 'en_preparacion', 'lista_entrega'])
         .orderBy('created_at', 'desc');
 
       // Obtener items para cada orden con sus modificadores
@@ -399,7 +575,10 @@ class OrdenesController {
    */
   static async getPendientes(req, res) {
     try {
-      const ordenes = await db('ordenes')
+      const { sedeId } = req.query;
+      const clienteId = req.usuario?.cliente_id || req.query.clienteId;
+
+      let query = db('ordenes')
         .select(
           'ordenes.*',
           'mesas.numero as mesa_numero',
@@ -411,8 +590,17 @@ class OrdenesController {
             0) as monto_pagado`)
         )
         .leftJoin('mesas', 'ordenes.mesa_id', '=', 'mesas.id')
-        .whereIn('ordenes.estado', ['abierta', 'lista'])
-        .orderBy('ordenes.created_at', 'desc');
+        .whereIn('ordenes.estado', ['abierta', 'lista']);
+
+      // Filtrar por sede si está presente
+      if (sedeId) {
+        query = query.andWhere('ordenes.sede_id', sedeId);
+      }
+
+      // Nota: la tabla `ordenes` puede tener cliente_id nulo,
+      // por eso no filtramos por cliente automáticamente aquí.
+
+      const ordenes = await query.orderBy('ordenes.created_at', 'desc');
 
       return res.json({
         success: true,
@@ -539,8 +727,9 @@ class OrdenesController {
   static async getBySedeAbiertas(req, res) {
     try {
       const { sedeId } = req.params;
+      const clienteId = req.usuario?.cliente_id || req.query.clienteId;
 
-      const ordenes = await db('ordenes')
+      let query = db('ordenes')
         .select(
           'ordenes.*',
           'mesas.numero as mesa_numero',
@@ -549,8 +738,14 @@ class OrdenesController {
         .leftJoin('mesas', 'ordenes.mesa_id', 'mesas.id')
         .leftJoin('usuarios', 'ordenes.usuario_id', 'usuarios.id')
         .where('ordenes.sede_id', sedeId)
-        .where('ordenes.estado', 'abierta')
-        .orderBy('ordenes.created_at', 'desc');
+        .where('ordenes.estado', 'abierta');
+
+      // Filtrar por cliente si está presente
+      if (clienteId) {
+        query = query.andWhere('ordenes.cliente_id', clienteId);
+      }
+
+      const ordenes = await query.orderBy('ordenes.created_at', 'desc');
 
       return res.json({
         success: true,

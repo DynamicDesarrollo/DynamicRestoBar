@@ -10,18 +10,10 @@ const ConfiguracionInsumos = () => {
   const [proveedores, setProveedores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-
-  // Recargar unidades al abrir el modal si están vacías
-  useEffect(() => {
-    if (showModal && unidades.length === 0) {
-      axios.get('/admin/insumos/unidades').then(res => {
-        if (res.data.success) setUnidades(res.data.data);
-      });
-    }
-  }, [showModal]);
   const [showModalProveedor, setShowModalProveedor] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [filtroStock, setFiltroStock] = useState('todos');
+  const [filtroSede, setFiltroSede] = useState('');
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -32,6 +24,7 @@ const ConfiguracionInsumos = () => {
     stock_maximo: '',
     costo_unitario: '',
     proveedor_principal_id: '',
+    sede_id: '',
   });
 
   const [formProveedor, setFormProveedor] = useState({
@@ -42,8 +35,11 @@ const ConfiguracionInsumos = () => {
     direccion: '',
   });
 
+  const [sedes, setSedes] = useState([]);
+
   useEffect(() => {
     cargarDatos();
+    cargarSedes();
   }, []);
 
   const cargarDatos = async () => {
@@ -64,6 +60,22 @@ const ConfiguracionInsumos = () => {
       console.error('Error al cargar datos:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cargarSedes = async () => {
+    try {
+      const res = await axios.get('/admin/sedes');
+      if (Array.isArray(res.data)) {
+        setSedes(res.data);
+      } else if (res.data.success && Array.isArray(res.data.data)) {
+        setSedes(res.data.data);
+      } else {
+        setSedes([]);
+      }
+    } catch (err) {
+      console.error('Error al cargar sedes:', err);
+      setSedes([]);
     }
   };
 
@@ -88,7 +100,7 @@ const ConfiguracionInsumos = () => {
         return;
       }
 
-      const sedeId = localStorage.getItem('sedeId') || 1;
+      const sedeId = formData.sede_id || (sedes.length === 1 ? sedes[0].id : null);
       const data = {
         nombre: formData.nombre,
         codigo_sku: formData.codigo_sku || null,
@@ -126,6 +138,7 @@ const ConfiguracionInsumos = () => {
       stock_maximo: '',
       costo_unitario: '',
       proveedor_principal_id: '',
+      sede_id: '',
     });
     setEditingId(null);
   };
@@ -141,6 +154,7 @@ const ConfiguracionInsumos = () => {
       stock_maximo: insumo.stock_maximo || '',
       costo_unitario: insumo.costo_unitario || '',
       proveedor_principal_id: insumo.proveedor_principal_id || '',
+      sede_id: insumo.sede_id || '',
     });
     setShowModal(true);
   };
@@ -204,6 +218,18 @@ const ConfiguracionInsumos = () => {
     return true;
   });
 
+  const cargarInsumosPorSede = async (sedeId) => {
+    setLoading(true);
+    try {
+      const res = await axios.get('/admin/insumos', { params: { sedeId } });
+      if (res.data.success) setInsumos(res.data.data);
+    } catch (err) {
+      console.error('Error al cargar insumos por sede:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -219,12 +245,26 @@ const ConfiguracionInsumos = () => {
       <div className="admin-section">
         <div className="section-header">
           <h2>📦 Gestión de Insumos</h2>
-          <button className="btn btn-primary" onClick={() => {
-            resetFormulario();
-            setShowModal(true);
-          }}>
-            + Insumo
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <label style={{ fontWeight: 500, marginRight: 8 }}>Sede:</label>
+            <select
+              value={filtroSede || ''}
+              onChange={e => {
+                const sedeId = e.target.value;
+                setFiltroSede(sedeId);
+                cargarInsumosPorSede(sedeId);
+              }}
+              style={{ minWidth: 120, marginRight: 16 }}
+            >
+              <option value="">Todas</option>
+              {sedes.map(sede => (
+                <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+              ))}
+            </select>
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+              + Insumo
+            </button>
+          </div>
         </div>
 
         {/* Filtros */}
@@ -333,130 +373,137 @@ const ConfiguracionInsumos = () => {
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Nombre *</label>
-                <input
-                  type="text"
-                  name="nombre"
-                  value={formData.nombre}
-                  onChange={handleInputChange}
-                  placeholder="Nombre del insumo"
-                  required
-                />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Código SKU</label>
-                  <input
-                    type="text"
-                    name="codigo_sku"
-                    value={formData.codigo_sku}
-                    onChange={handleInputChange}
-                    placeholder="SKU (opcional)"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Unidad Medida *</label>
-                  <select
-                    name="unidad_medida_id"
-                    value={formData.unidad_medida_id}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="">Seleccionar...</option>
-                    {unidades.map(u => (
-                      <option key={u.id} value={u.id}>{u.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Stock Actual</label>
-                  <input
-                    type="number"
-                    name="stock_actual"
-                    value={formData.stock_actual || ''}
-                    onChange={handleInputChange}
-                    placeholder="0"
-                    step="0.01"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Stock Mínimo</label>
-                  <input
-                    type="number"
-                    name="stock_minimo"
-                    value={formData.stock_minimo}
-                    onChange={handleInputChange}
-                    placeholder="0"
-                    step="0.01"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Stock Máximo</label>
-                  <input
-                    type="number"
-                    name="stock_maximo"
-                    value={formData.stock_maximo}
-                    onChange={handleInputChange}
-                    placeholder="Sin límite"
-                    step="0.01"
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Costo Unitario *</label>
-                  <input
-                    type="number"
-                    name="costo_unitario"
-                    value={formData.costo_unitario}
-                    onChange={handleInputChange}
-                    placeholder="0.00"
-                    step="0.01"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Proveedor Principal</label>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
-                    <select
-                      name="proveedor_principal_id"
-                      value={formData.proveedor_principal_id}
+              <div className="form-two-cols">
+                <div>
+                  <div className="form-group">
+                    <label>Nombre *</label>
+                    <input
+                      type="text"
+                      name="nombre"
+                      value={formData.nombre}
                       onChange={handleInputChange}
-                      style={{ flex: 1 }}
+                      placeholder="Nombre del insumo"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Código SKU</label>
+                    <input
+                      type="text"
+                      name="codigo_sku"
+                      value={formData.codigo_sku}
+                      onChange={handleInputChange}
+                      placeholder="SKU (opcional)"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Unidad Medida *</label>
+                    <select
+                      name="unidad_medida_id"
+                      value={formData.unidad_medida_id}
+                      onChange={handleInputChange}
+                      required
                     >
-                      <option value="">Sin proveedor</option>
-                      {proveedores.map(p => (
-                        <option key={p.id} value={p.id}>{p.nombre}</option>
+                      <option value="">Seleccionar...</option>
+                      {unidades.map(u => (
+                        <option key={u.id} value={u.id}>{u.nombre}</option>
                       ))}
                     </select>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-primary"
-                      onClick={() => setShowModalProveedor(true)}
-                      style={{ whiteSpace: 'nowrap' }}
+                  </div>
+                  <div className="form-group">
+                    <label>Sede *</label>
+                    <select
+                      name="sede_id"
+                      value={formData.sede_id || (sedes.length === 1 ? sedes[0].id : '')}
+                      onChange={handleInputChange}
+                      required
+                      disabled={sedes.length === 1}
                     >
-                      + Nuevo
-                    </button>
+                      <option value="">Seleccione una sede</option>
+                      {sedes.map(sede => (
+                        <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <div className="form-group">
+                    <label>Stock Actual</label>
+                    <input
+                      type="number"
+                      name="stock_actual"
+                      value={formData.stock_actual || ''}
+                      onChange={handleInputChange}
+                      placeholder="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Stock Mínimo</label>
+                    <input
+                      type="number"
+                      name="stock_minimo"
+                      value={formData.stock_minimo}
+                      onChange={handleInputChange}
+                      placeholder="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Stock Máximo</label>
+                    <input
+                      type="number"
+                      name="stock_maximo"
+                      value={formData.stock_maximo}
+                      onChange={handleInputChange}
+                      placeholder="Sin límite"
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Costo Unitario *</label>
+                    <input
+                      type="number"
+                      name="costo_unitario"
+                      value={formData.costo_unitario}
+                      onChange={handleInputChange}
+                      placeholder="0.00"
+                      step="0.01"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Proveedor Principal</label>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+                      <select
+                        name="proveedor_principal_id"
+                        value={formData.proveedor_principal_id}
+                        onChange={handleInputChange}
+                        style={{ flex: 1 }}
+                      >
+                        <option value="">Sin proveedor</option>
+                        {proveedores.map(p => (
+                          <option key={p.id} value={p.id}>{p.nombre}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => setShowModalProveedor(true)}
+                        style={{ whiteSpace: 'nowrap' }}
+                      >
+                        + Nuevo
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              <div className="form-actions">
+              <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
                   Cancelar
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  {editingId ? 'Actualizar Insumo' : 'Crear Insumo'}
+                  {editingId ? 'Actualizar' : 'Crear'} Insumo
                 </button>
               </div>
             </form>

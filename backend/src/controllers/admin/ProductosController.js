@@ -24,7 +24,7 @@ class ProductosController {
   // Crear categoría
   static async crearCategoria(req, res) {
     try {
-      const { nombre, descripcion, icono } = req.body;
+      const { nombre, descripcion, icono, sede_id } = req.body;
 
       if (!nombre) {
         return res.status(400).json({
@@ -36,6 +36,7 @@ class ProductosController {
         nombre,
         descripcion: descripcion || null,
         icono_url: icono || null,
+        sede_id: sede_id || null,
       }).returning('*');
 
       const categoria = Array.isArray(result) ? result[0] : result;
@@ -60,7 +61,7 @@ class ProductosController {
   static async actualizarCategoria(req, res) {
     try {
       const { id } = req.params;
-      const { nombre, descripcion, icono } = req.body;
+      const { nombre, descripcion, icono, sede_id } = req.body;
 
       if (!nombre) {
         return res.status(400).json({
@@ -72,6 +73,7 @@ class ProductosController {
       if (nombre) updateData.nombre = nombre;
       if (descripcion !== undefined) updateData.descripcion = descripcion || null;
       if (icono !== undefined) updateData.icono_url = icono || null;
+      if (sede_id !== undefined) updateData.sede_id = sede_id || null;
 
       const result = await db('categorias').where('id', id).update(updateData).returning('*');
       const categoria = Array.isArray(result) ? result[0] : result;
@@ -129,7 +131,9 @@ class ProductosController {
   // Obtener productos
   static async getProductos(req, res) {
     try {
-      const productos = await db('productos')
+      const { sedeId } = req.query;
+
+      let query = db('productos')
         .leftJoin('categorias', 'productos.categoria_id', 'categorias.id')
         .select(
           'productos.id',
@@ -139,8 +143,14 @@ class ProductosController {
           'productos.estacion_id',
           'categorias.nombre as categoria',
         )
-        .whereNull('productos.deleted_at')
-        .orderBy('productos.nombre', 'asc');
+        .whereNull('productos.deleted_at');
+
+      // Filtrar por sede si está presente
+      if (sedeId) {
+        query = query.andWhere('productos.sede_id', sedeId);
+      }
+
+      const productos = await query.orderBy('productos.nombre', 'asc');
 
       return res.json({
         success: true,
@@ -158,7 +168,7 @@ class ProductosController {
   // Crear producto
   static async crearProducto(req, res) {
     try {
-      const { nombre, descripcion, categoria_id, precio_venta, estacion_id } = req.body;
+      const { nombre, descripcion, categoria_id, precio_venta, estacion_id, sede_id } = req.body;
 
       if (!nombre || !precio_venta || !estacion_id) {
         return res.status(400).json({
@@ -172,6 +182,7 @@ class ProductosController {
         categoria_id: categoria_id || null,
         precio_venta: parseFloat(precio_venta),
         estacion_id: parseInt(estacion_id),
+        sede_id: sede_id || null,
       }).returning('*');
 
       const producto = Array.isArray(result) ? result[0] : result;
@@ -196,7 +207,7 @@ class ProductosController {
   static async actualizarProducto(req, res) {
     try {
       const { id } = req.params;
-      const { nombre, descripcion, categoria_id, precio_venta, estacion_id } = req.body;
+      const { nombre, descripcion, categoria_id, precio_venta, estacion_id, sede_id } = req.body;
 
       const producto = await db('productos')
         .where('id', id)
@@ -212,6 +223,7 @@ class ProductosController {
       if (categoria_id !== undefined && categoria_id) updateData.categoria_id = categoria_id;
       if (precio_venta !== undefined) updateData.precio_venta = parseFloat(precio_venta);
       if (estacion_id !== undefined) updateData.estacion_id = parseInt(estacion_id);
+      if (sede_id !== undefined) updateData.sede_id = sede_id || null;
       
       // Solo actualizar si hay cambios
       if (Object.keys(updateData).length === 0) {

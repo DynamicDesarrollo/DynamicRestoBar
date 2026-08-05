@@ -1,0 +1,368 @@
+#sede-modal-dialog, #sede-modal-content {
+  max-width: 1100px !important;
+  width: 95vw !important;
+  margin: 40px auto !important;
+  background: #fff !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+#sede-modal-content h3 {
+  background: #2979ff !important;
+  color: #fff !important;
+  padding: 24px 32px 18px 32px !important;
+  border-radius: 12px 12px 0 0 !important;
+  margin: 0 !important;
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+}
+#sede-modal-content .custom-modal-body {
+  padding: 32px 32px 12px 32px !important;
+  background: #fff !important;
+}
+#sede-form .custom-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 24px 32px !important;
+}
+@media (max-width: 900px) {
+  #sede-form .custom-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+#sede-form .custom-form-group {
+  display: flex !important;
+  flex-direction: column !important;
+}
+#sede-form .custom-form-group label {
+  font-weight: 500 !important;
+  margin-bottom: 6px !important;
+}
+#sede-form .custom-form-group input,
+#sede-form .custom-form-group textarea {
+  border: 1.5px solid #d1d5db !important;
+  border-radius: 7px !important;
+  padding: 12px 16px !important;
+  font-size: 1.08rem !important;
+  background: #f9fafb !important;
+  transition: border 0.2s !important;
+}
+#sede-form .custom-form-group input:focus,
+#sede-form .custom-form-group textarea:focus {
+  border: 1.5px solid #2979ff !important;
+  outline: none !important;
+  background: #fff !important;
+}
+#sede-form .custom-form-group--full {
+  grid-column: 1 / span 3 !important;
+}
+#sede-form .custom-form-check {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-top: 10px !important;
+}
+#sede-modal-content .custom-modal-footer {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 16px !important;
+  padding: 24px 32px 24px 32px !important;
+  background: #fff !important;
+  border-radius: 0 0 12px 12px !important;
+}
+/* --- Rediseño definitivo formulario sedes --- */
+.custom-modal-dialog, .custom-modal-content {
+  max-width: 1100px !important;
+  width: 95vw !important;
+  margin: 40px auto !important;
+  background: #fff !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+.custom-modal-header {
+  background: #2979ff !important;
+  color: #fff !important;
+  padding: 24px 32px 18px 32px !important;
+  border-radius: 12px 12px 0 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+.custom-modal-header h3 {
+  margin: 0 !important;
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+}
+.custom-modal-body {
+  padding: 32px 32px 12px 32px !important;
+  background: #fff !important;
+}
+.custom-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 24px 32px !important;
+}
+@media (max-width: 900px) {
+  .custom-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+.custom-form-group {
+  display: flex !important;
+  flex-direction: column !important;
+}
+.custom-form-group label {
+  font-weight: 500 !important;
+  margin-bottom: 6px !important;
+}
+.custom-form-group input,
+.custom-form-group textarea {
+  border: 1.5px solid #d1d5db !important;
+  border-radius: 7px !important;
+  padding: 12px 16px !important;
+  font-size: 1.08rem !important;
+  background: #f9fafb !important;
+  transition: border 0.2s !important;
+}
+.custom-form-group input:focus,
+.custom-form-group textarea:focus {
+  border: 1.5px solid #2979ff !important;
+  outline: none !important;
+  background: #fff !important;
+}
+.custom-form-group--full {
+  grid-column: 1 / span 3 !important;
+}
+.custom-form-check {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-top: 10px !important;
+}
+.custom-modal-footer {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 16px !important;
+  padding: 24px 32px 24px 32px !important;
+  background: #fff !important;
+  border-radius: 0 0 12px 12px !important;
+}
+/* --- Rediseño modal y formulario de sedes (forzar prioridad) --- */
+.custom-modal-dialog {
+  max-width: 1100px !important;
+  width: 95vw !important;
+  margin: 40px auto !important;
+  background: #fff !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+.custom-modal-header {
+  background: #2979ff !important;
+  color: #fff !important;
+  padding: 24px 32px 18px 32px !important;
+  border-radius: 12px 12px 0 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+.custom-modal-header h3 {
+  margin: 0 !important;
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+}
+.custom-modal-body {
+  padding: 32px 32px 12px 32px !important;
+  background: #fff !important;
+}
+.custom-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 24px 32px !important;
+}
+@media (max-width: 900px) {
+  .custom-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+.custom-form-group {
+  display: flex !important;
+  flex-direction: column !important;
+}
+.custom-form-group label {
+  font-weight: 500 !important;
+  margin-bottom: 6px !important;
+}
+.custom-form-group input,
+.custom-form-group textarea {
+  border: 1.5px solid #d1d5db !important;
+  border-radius: 7px !important;
+  padding: 12px 16px !important;
+  font-size: 1.08rem !important;
+  background: #f9fafb !important;
+  transition: border 0.2s !important;
+}
+.custom-form-group input:focus,
+.custom-form-group textarea:focus {
+  border: 1.5px solid #2979ff !important;
+  outline: none !important;
+  background: #fff !important;
+}
+.custom-form-group--full {
+  grid-column: 1 / span 3 !important;
+}
+.custom-form-check {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-top: 10px !important;
+}
+.custom-modal-footer {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 16px !important;
+  padding: 24px 32px 24px 32px !important;
+  background: #fff !important;
+  border-radius: 0 0 12px 12px !important;
+}
+.modal {
+  width: 100vw !important;
+  min-height: 100vh !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 1050 !important;
+  background: rgba(0,0,0,0.01);
+}
+.modal-dialog {
+  max-width: 100vw !important;
+  min-width: 100vw !important;
+  width: 100vw !important;
+  margin: 0 !important;
+}
+.modal-content {
+  width: 100vw !important;
+  min-width: 100vw !important;
+  max-width: 100vw !important;
+  margin: 0 !important;
+}
+.modal-body {
+  width: 100vw !important;
+  min-width: 100vw !important;
+  max-width: 100vw !important;
+  margin: 0 !important;
+}
+.admin-section .modal .modal-body .form-grid-3cols {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 16px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border: 2px dashed #e74c3c !important; /* DEPURACIÓN: eliminar después */
+  background: #fff !important;
+  align-items: start !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+/* Mejorar separación visual entre campos */
+.form-grid-3cols .form-group {
+  margin-bottom: 18px;
+}
+/* El label no debe ser grid, solo block */
+.form-grid-3cols label {
+  font-weight: 500;
+  margin-bottom: 4px;
+  display: block;
+}
+.form-grid-3cols input,
+.form-grid-3cols textarea {
+  width: 100%;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  padding: 8px 10px;
+  font-size: 1rem;
+  background: #f9fafb;
+  transition: border 0.2s;
+}
+.form-grid-3cols input:focus,
+.form-grid-3cols textarea:focus {
+  border: 1.5px solid #007bff;
+  outline: none;
+  background: #fff;
+}
+.form-grid-3cols textarea {
+  min-height: 38px;
+  resize: vertical;
+}
+.form-grid-3cols .form-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.modal-dialog {
+  max-width: 98vw !important;
+  min-width: 1200px !important;
+  width: 98vw !important;
+}
+.modal-content {
+  width: 100% !important;
+  min-width: 1200px !important;
+  max-width: 98vw !important;
+}
+.modal-body {
+  width: 100% !important;
+  min-width: 1100px !important;
+  max-width: 96vw !important;
+}
+/* Inputs y textarea más amplios en el formulario de sedes */
+.row .form-control,
+.row textarea.form-control {
+  font-size: 1.08rem;
+  padding-left: 18px;
+  padding-right: 18px;
+  height: 44px;
+}
+.form-grid-3cols > div {
+  min-width: 0;
+}
+
+/* Ya cubierto por input y textarea arriba */
+
+/* Mejorar separación visual entre campos */
+.form-grid-3cols .form-group {
+  margin-bottom: 18px;
+/* Eliminar llave sobrante */
+}
+
+.form-grid-3cols .form-actions {
+  grid-column: 1 / span 3;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-content {
+  width: 100%;
+}
+.modal-body {
+  width: 100%;
+  padding: 24px 24px 8px 24px;
+  overflow: visible !important;
+}
+@media (max-width: 1100px) {
+  .modal-dialog {
+    min-width: 100vw;
+    max-width: 100vw;
+  }
+  .form-grid-3cols {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 800px) {
+  .form-grid-3cols {
+    grid-template-columns: 1fr;
+  }
+}

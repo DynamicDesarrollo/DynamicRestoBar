@@ -1,10 +1,12 @@
+import { toast } from 'react-toastify';
+import { useEffect } from 'react';
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Container, Form, Button, Alert, Card, Tabs, Tab } from 'react-bootstrap';
-import toast from 'react-hot-toast';
 import { authService } from '../services/api';
 import { useAuthStore } from '../stores';
 import './Login.css';
+import { Navigate } from 'react-router-dom';
 
 // Mapeo de rutas según rol
 const RUTAS_POR_ROL = {
@@ -17,13 +19,26 @@ const RUTAS_POR_ROL = {
   'Gerente': '/admin',
 };
 
-const obtenerRutaPorRol = (rol) => {
+const obtenerRutaPorRol = (rol, usuario) => {
+  // Si el usuario es Super Admin SaaS (rol_id 8 y cliente_id null), redirigir a /superadmin/clientes
+  if (rol?.id === 8 && (!usuario?.cliente_id || usuario?.cliente_id === null)) {
+    return '/superadmin/clientes';
+  }
+  // Si es Administrador de Empresa (rol_id 8 y cliente_id no null), redirigir a /admin
+  if (rol?.id === 8 && usuario?.cliente_id) {
+    return '/admin';
+  }
   return RUTAS_POR_ROL[rol?.nombre] || '/mesas';
 };
 
+
+
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const usuario = useAuthStore((state) => state.usuario);
   const setUsuario = useAuthStore((state) => state.setUsuario);
+
   const [activeTab, setActiveTab] = useState('email');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -36,6 +51,16 @@ export default function Login() {
 
   // Login por PIN
   const [pin, setPin] = useState('');
+
+  // Redirección automática usando useEffect para evitar bucles infinitos
+  React.useEffect(() => {
+    if (usuario && location.pathname === '/login') {
+      const ruta = obtenerRutaPorRol(usuario.rol, usuario);
+      if (ruta !== '/login') {
+        navigate(ruta, { replace: true });
+      }
+    }
+  }, [usuario, location.pathname, navigate]);
 
   const handleLoginEmail = async (e) => {
     e.preventDefault();
@@ -50,7 +75,9 @@ export default function Login() {
 
       setUsuario(usuario, token);
       toast.success(`¡Bienvenido, ${usuario.nombre}!`);
-      const ruta = obtenerRutaPorRol(usuario.rol);
+      console.log('[LOGIN] usuario recibido:', usuario);
+      // Redirigir al dashboard de métricas si es Super Admin SaaS
+      const ruta = obtenerRutaPorRol(usuario.rol, usuario);
       navigate(ruta);
     } catch (err) {
       console.error('❌ Error completo:', err);
@@ -76,7 +103,8 @@ export default function Login() {
 
       setUsuario(usuario, token);
       toast.success(`¡Bienvenido, ${usuario.nombre}!`);
-      const ruta = obtenerRutaPorRol(usuario.rol);
+      console.log('[LOGIN] usuario recibido:', usuario);
+      const ruta = obtenerRutaPorRol(usuario.rol, usuario);
       navigate(ruta);
     } catch (err) {
       const mensaje = err.response?.data?.message || err.response?.data?.error || 'PIN incorrecto';

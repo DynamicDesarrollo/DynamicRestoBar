@@ -4,7 +4,13 @@ class MesasController {
   // Obtener siguiente número disponible
   static async obtenerSiguienteNumero(req, res) {
     try {
-      const { sedeId: sede_id } = req.usuario;
+      const sede_id = req.usuario?.sedeId || req.query?.sedeId || req.body?.sede_id;
+
+      if (!sede_id) {
+        return res.status(400).json({
+          error: 'Sede no proporcionada en token ni en la petición',
+        });
+      }
 
       // Obtener todos los números existentes (no soft-deleted)
       const mesas = await db('mesas')
@@ -37,13 +43,21 @@ class MesasController {
   // Obtener todas las mesas
   static async getMesas(req, res) {
     try {
-      const { sedeId: sede_id } = req.usuario;
+      const querySedeId = req.query?.sedeId;
+      const sede_id = (querySedeId !== undefined && querySedeId !== '')
+        ? parseInt(querySedeId)
+        : req.usuario?.sedeId || req.body?.sede_id;
 
-      const mesas = await db('mesas')
-        .where('sede_id', sede_id)
+      const query = db('mesas')
         .whereNull('deleted_at')
         .select('*')
         .orderByRaw('CAST(numero AS INTEGER) ASC');
+
+      if (sede_id) {
+        query.andWhere('sede_id', sede_id);
+      }
+
+      const mesas = await query;
 
       return res.json({
         success: true,
@@ -61,8 +75,14 @@ class MesasController {
   // Crear mesa
   static async crearMesa(req, res) {
     try {
-      const { sedeId: sede_id } = req.usuario;
+      const sede_id = req.usuario?.sedeId || req.body?.sede_id;
       const { numero, zona_id, capacidad } = req.body;
+
+      if (!sede_id) {
+        return res.status(400).json({
+          error: 'Sede no proporcionada en token ni en el cuerpo de la petición',
+        });
+      }
 
       if (!numero || !zona_id) {
         return res.status(400).json({
@@ -100,8 +120,14 @@ class MesasController {
   static async actualizarMesa(req, res) {
     try {
       const { id } = req.params;
-      const { sedeId: sede_id } = req.usuario;
+      const sede_id = req.usuario?.sedeId || req.body?.sede_id;
       const { numero, zona_id, capacidad, estado } = req.body;
+
+      if (!sede_id) {
+        return res.status(400).json({
+          error: 'Sede no proporcionada en token ni en el cuerpo de la petición',
+        });
+      }
 
       const mesa = await db('mesas')
         .where('id', id)
@@ -140,7 +166,13 @@ class MesasController {
   static async eliminarMesa(req, res) {
     try {
       const { id } = req.params;
-      const { sedeId: sede_id } = req.usuario;
+      const sede_id = req.usuario?.sedeId || req.body?.sede_id;
+
+      if (!sede_id) {
+        return res.status(400).json({
+          error: 'Sede no proporcionada en token ni en el cuerpo de la petición',
+        });
+      }
 
       const mesa = await db('mesas')
         .where('id', id)

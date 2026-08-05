@@ -18,7 +18,9 @@ const ConfiguracionRecetas = () => {
   const [formData, setFormData] = useState({
     descripcion: '',
     rendimiento: 1,
+    sede_id: '',
   });
+    const [sedes, setSedes] = useState([]);
 
   const [insumosReceta, setInsumosReceta] = useState([]);
   const [nuevoInsumo, setNuevoInsumo] = useState({
@@ -52,6 +54,7 @@ const ConfiguracionRecetas = () => {
 
   useEffect(() => {
     cargarDatos();
+    cargarSedes();
   }, []);
 
   const cargarDatos = async () => {
@@ -71,6 +74,22 @@ const ConfiguracionRecetas = () => {
       console.error('Error al cargar datos:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cargarSedes = async () => {
+    try {
+      const res = await axios.get('/admin/sedes');
+      if (Array.isArray(res.data)) {
+        setSedes(res.data);
+      } else if (res.data.success && Array.isArray(res.data.data)) {
+        setSedes(res.data.data);
+      } else {
+        setSedes([]);
+      }
+    } catch (err) {
+      console.error('Error al cargar sedes:', err);
+      setSedes([]);
     }
   };
 
@@ -174,8 +193,9 @@ const ConfiguracionRecetas = () => {
       const data = {
         producto_id: selectedProducto,
         descripcion: formData.descripcion,
-        rendimiento: parseFloat(formData.rendimiento) || 1,
+        rendimiento: formData.rendimiento,
         insumos: insumosReceta,
+        sede_id: formData.sede_id || (sedes.length === 1 ? sedes[0].id : null),
       };
 
       if (recetaActual?.id) {
@@ -263,6 +283,21 @@ const ConfiguracionRecetas = () => {
                 </h4>
 
                 <div className="form-row">
+                                  <div className="form-group">
+                                    <label>Sede *</label>
+                                    <select
+                                      name="sede_id"
+                                      value={formData.sede_id || (sedes.length === 1 ? sedes[0].id : '')}
+                                      onChange={e => setFormData(prev => ({ ...prev, sede_id: e.target.value }))}
+                                      required
+                                      disabled={sedes.length === 1}
+                                    >
+                                      <option value="">Seleccione una sede</option>
+                                      {sedes.map(sede => (
+                                        <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+                                      ))}
+                                    </select>
+                                  </div>
                   <div className="form-group">
                     <label>Descripción</label>
                     <input

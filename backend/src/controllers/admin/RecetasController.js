@@ -4,7 +4,9 @@ class RecetasController {
   // Obtener todas las recetas con sus insumos
   static async getRecetas(req, res) {
     try {
-      const recetas = await db('recetas')
+      const { sedeId } = req.query;
+
+      let query = db('recetas')
         .leftJoin('productos', 'recetas.producto_id', 'productos.id')
         .select(
           'recetas.id',
@@ -12,8 +14,14 @@ class RecetasController {
           'productos.nombre as producto_nombre',
           'recetas.activa'
         )
-        .where('recetas.activa', true)
-        .orderBy('productos.nombre', 'asc');
+        .where('recetas.activa', true);
+
+      // Filtrar por sede si está presente
+      if (sedeId) {
+        query = query.andWhere('recetas.sede_id', sedeId);
+      }
+
+      const recetas = await query.orderBy('productos.nombre', 'asc');
 
       return res.json({
         success: true,
@@ -124,7 +132,7 @@ class RecetasController {
   // Crear receta
   static async crearReceta(req, res) {
     try {
-      const { producto_id, descripcion, rendimiento, insumos } = req.body;
+      const { producto_id, descripcion, rendimiento, insumos, sede_id } = req.body;
 
       if (!producto_id || !insumos || insumos.length === 0) {
         return res.status(400).json({
@@ -159,6 +167,7 @@ class RecetasController {
         rendimiento: rendimiento || 1,
         costo_total: parseFloat(costo_produccion.toFixed(2)),
         costo_produccion: parseFloat(costo_produccion.toFixed(2)),
+        sede_id: sede_id || null,
         activa: true,
       }).returning('*');
 

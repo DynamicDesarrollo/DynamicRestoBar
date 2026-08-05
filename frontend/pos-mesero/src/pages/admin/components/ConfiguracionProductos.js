@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import axios from '../../../services/api';
 import AdminLayout from '../AdminLayout';
+import { formatMoney } from '../../../utils/formatters';
 import '../admin.css';
+
 
 const ConfiguracionProductos = () => {
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [estaciones, setEstaciones] = useState([]);
+  const [sedes, setSedes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showCategoriaModal, setShowCategoriaModal] = useState(false);
@@ -18,14 +21,18 @@ const ConfiguracionProductos = () => {
     categoria_id: '',
     precio_venta: '',
     estacion_id: '',
+    sede_id: '',
   });
   const [categoriaForm, setCategoriaForm] = useState({
     nombre: '',
     descripcion: '',
+    sede_id: '',
   });
+
 
   useEffect(() => {
     cargarDatos();
+    cargarSedes();
   }, []);
 
   const cargarDatos = async () => {
@@ -40,13 +47,47 @@ const ConfiguracionProductos = () => {
       if (categoriasRes.data.success) setCategorias(categoriasRes.data.data);
       if (estacionesRes.data.success) {
         setEstaciones(estacionesRes.data.data);
-        // Si no hay estacion_id en el form, usar la primera disponible
         if (estacionesRes.data.data.length > 0 && !formData.estacion_id) {
           setFormData(prev => ({ ...prev, estacion_id: estacionesRes.data.data[0].id }));
         }
       }
     } catch (err) {
       console.error('Error al cargar datos:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cargarSedes = async () => {
+    try {
+      const res = await axios.get('/admin/sedes');
+      // Si la respuesta es un array directo:
+      if (Array.isArray(res.data)) {
+        setSedes(res.data);
+      } else if (res.data.success && Array.isArray(res.data.data)) {
+        setSedes(res.data.data);
+      } else {
+        setSedes([]);
+      }
+    } catch (err) {
+      console.error('Error al cargar sedes:', err);
+      setSedes([]);
+    }
+  };
+
+  const cargarDatosPorSede = async (sedeId) => {
+    setLoading(true);
+    try {
+      const [productosRes, categoriasRes, estacionesRes] = await Promise.all([
+        axios.get('/admin/productos', { params: { sedeId } }),
+        axios.get('/admin/categorias', { params: { sedeId } }),
+        axios.get('/admin/estaciones', { params: { sedeId } }),
+      ]);
+      if (productosRes.data.success) setProductos(productosRes.data.data);
+      if (categoriasRes.data.success) setCategorias(categoriasRes.data.data);
+      if (estacionesRes.data.success) setEstaciones(estacionesRes.data.data);
+    } catch (err) {
+      console.error('Error al cargar datos por sede:', err);
     } finally {
       setLoading(false);
     }
@@ -70,6 +111,7 @@ const ConfiguracionProductos = () => {
         descripcion: formData.descripcion,
         precio_venta: parseFloat(formData.precio_venta),
         estacion_id: parseInt(formData.estacion_id),
+        sede_id: formData.sede_id || (sedes.length === 1 ? sedes[0].id : null),
       };
 
       // Solo agregar categoria_id si tiene valor
@@ -95,13 +137,17 @@ const ConfiguracionProductos = () => {
   const handleSubmitCategoria = async (e) => {
     e.preventDefault();
     try {
+      const data = { ...categoriaForm };
+      if (!data.sede_id && sedes.length === 1) {
+        data.sede_id = sedes[0].id;
+      }
       if (editingId) {
-        await axios.put(`/admin/categorias/${editingId}`, categoriaForm);
+        await axios.put(`/admin/categorias/${editingId}`, data);
       } else {
-        await axios.post('/admin/categorias', categoriaForm);
+        await axios.post('/admin/categorias', data);
       }
       setShowCategoriaModal(false);
-      setCategoriaForm({ nombre: '', descripcion: '' });
+      setCategoriaForm({ nombre: '', descripcion: '', sede_id: '' });
       setEditingId(null);
       cargarDatos();
     } catch (err) {
@@ -115,6 +161,7 @@ const ConfiguracionProductos = () => {
     setCategoriaForm({
       nombre: categoria.nombre,
       descripcion: categoria.descripcion || '',
+      sede_id: categoria.sede_id || (sedes.length === 1 ? sedes[0].id : ''),
     });
     setShowCategoriaModal(true);
   };
@@ -138,6 +185,7 @@ const ConfiguracionProductos = () => {
       categoria_id: '',
       precio_venta: '',
       estacion_id: 1,
+      sede_id: sedes.length === 1 ? sedes[0].id : '',
     });
     setEditingId(null);
   };
@@ -150,6 +198,7 @@ const ConfiguracionProductos = () => {
       categoria_id: producto.categoria_id || '',
       precio_venta: producto.precio || producto.precio_venta || '',
       estacion_id: producto.estacion_id || 1,
+      sede_id: producto.sede_id || (sedes.length === 1 ? sedes[0].id : ''),
     });
     setShowModal(true);
   };
@@ -184,7 +233,23 @@ const ConfiguracionProductos = () => {
       <div className="admin-section">
         <div className="section-header">
           <h2>🍽️ Gestión de Productos</h2>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <label style={{ fontWeight: 500, marginRight: 8 }}>Sede:</label>
+            <select
+              value={categoriaFiltro?.sede_id || ''}
+              onChange={e => {
+                const sedeId = e.target.value;
+                setCategoriaFiltro(null);
+                setFormData(prev => ({ ...prev, sede_id: sedeId }));
+                cargarDatosPorSede(sedeId);
+              }}
+              style={{ minWidth: 120, marginRight: 16 }}
+            >
+              <option value="">Todas</option>
+              {sedes.map(sede => (
+                <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+              ))}
+            </select>
             <button className="btn btn-primary" onClick={() => setShowCategoriaModal(true)}>
               + Categoría
             </button>
@@ -299,7 +364,7 @@ const ConfiguracionProductos = () => {
                   </p>
                 )}
 
-                <div className="producto-precio">${parseFloat(producto.precio).toFixed(2)}</div>
+                <div className="producto-precio">{formatMoney(parseFloat(producto.precio || producto.precio_venta || 0), true)}</div>
 
                 <div style={{ fontSize: '12px', color: '#999', marginBottom: '15px' }}>
                   <p>⏱️ Prep: {producto.preparacion_tiempo_estimado} min</p>
@@ -334,71 +399,87 @@ const ConfiguracionProductos = () => {
               </div>
 
               <form onSubmit={handleSubmitProducto}>
-                <div className="form-group">
-                  <label>Nombre *</label>
-                  <input
-                    type="text"
-                    name="nombre"
-                    value={formData.nombre}
-                    onChange={handleInputChange}
-                    required
-                  />
+                <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <div className="form-group">
+                      <label>Nombre *</label>
+                      <input
+                        type="text"
+                        name="nombre"
+                        value={formData.nombre}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Descripción</label>
+                      <textarea
+                        name="descripcion"
+                        value={formData.descripcion}
+                        onChange={handleInputChange}
+                        rows="3"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Categoría</label>
+                      <select
+                        name="categoria_id"
+                        value={formData.categoria_id}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">Sin categoría</option>
+                        {categorias.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <div className="form-group">
+                      <label>Precio *</label>
+                      <input
+                        type="number"
+                        name="precio_venta"
+                        value={formData.precio_venta}
+                        onChange={handleInputChange}
+                        required
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Estación</label>
+                      <select
+                        name="estacion_id"
+                        value={formData.estacion_id}
+                        onChange={handleInputChange}
+                        required
+                      >
+                        <option value="">-- Selecciona una estación --</option>
+                        {estaciones.map(estacion => (
+                          <option key={estacion.id} value={estacion.id}>
+                            {estacion.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Sede *</label>
+                      <select
+                        name="sede_id"
+                        value={formData.sede_id || (sedes.length === 1 ? sedes[0].id : '')}
+                        onChange={handleInputChange}
+                        required
+                        disabled={sedes.length === 1}
+                      >
+                        <option value="">Seleccione una sede</option>
+                        {sedes.map(sede => (
+                          <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
-
-                <div className="form-group">
-                  <label>Descripción</label>
-                  <textarea
-                    name="descripcion"
-                    value={formData.descripcion}
-                    onChange={handleInputChange}
-                    rows="3"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Categoría</label>
-                  <select
-                    name="categoria_id"
-                    value={formData.categoria_id}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Sin categoría</option>
-                    {categorias.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Precio *</label>
-                  <input
-                    type="number"
-                    name="precio_venta"
-                    value={formData.precio_venta}
-                    onChange={handleInputChange}
-                    required
-                    step="0.01"
-                    min="0"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Estación</label>
-                  <select
-                    name="estacion_id"
-                    value={formData.estacion_id}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="">-- Selecciona una estación --</option>
-                    {estaciones.map(estacion => (
-                      <option key={estacion.id} value={estacion.id}>
-                        {estacion.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
                 <div className="modal-footer">
                   <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
                     Cancelar
@@ -441,6 +522,32 @@ const ConfiguracionProductos = () => {
                     onChange={handleCategoriaChange}
                     rows="3"
                   />
+                </div>
+
+                <div className="form-group">
+                  <label>Sede *</label>
+                  {/* Mostrar sedes disponibles */}
+                  {sedes.length > 0 ? (
+                    <ul style={{ paddingLeft: 18, marginBottom: 8, color: '#555', fontSize: 13 }}>
+                      {sedes.map(sede => (
+                        <li key={sede.id}>{sede.nombre}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div style={{ color: '#999', fontSize: 13, marginBottom: 8 }}>No hay sedes registradas</div>
+                  )}
+                  <select
+                    name="sede_id"
+                    value={categoriaForm.sede_id || (sedes.length === 1 ? sedes[0].id : '')}
+                    onChange={handleCategoriaChange}
+                    required
+                    disabled={sedes.length === 1}
+                  >
+                    <option value="">Seleccione una sede</option>
+                    {sedes.map(sede => (
+                      <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="modal-footer">

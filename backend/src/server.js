@@ -15,7 +15,9 @@ const ordenesRoutes = require('./routes/ordenesRoutes');
 const kdsRoutes = require('./routes/kdsRoutes');
 const cajaRoutes = require('./routes/cajaRoutes');
 const adminRoutes = require('./routes/admin/adminRoutes');
+const clientesRoutes = require('./routes/clientesRoutes');
 const canalesRoutes = require('./routes/canalesRoutes');
+const activacionRoutes = require('./routes/activacionRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -70,6 +72,25 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+// Servir archivos estáticos de fotos de clientes con CORS (definitivo)
+const path = require('path');
+app.use('/uploads/clientes', (req, res, next) => {
+  // Middleware previo para CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+app.use('/uploads/clientes', express.static(path.join(__dirname, 'uploads/clientes'), {
+  setHeaders: (res, path, stat) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
 // Logger
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('combined'));
@@ -110,7 +131,22 @@ app.use('/api/v1/ordenes', ordenesRoutes);
 app.use('/api/v1/kds', kdsRoutes);
 app.use('/api/v1/caja', cajaRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/clientes', clientesRoutes);
 app.use('/api/v1/canales', canalesRoutes);
+app.use('/api/v1/activar-cuenta', activacionRoutes);
+const sedesRoutes = require('./routes/sedesRoutes');
+app.use('/api/v1/sedes', sedesRoutes);
+const adminEmpresaRoutes = require('./routes/adminEmpresaRoutes');
+app.use('/api/v1/admin-empresa', adminEmpresaRoutes);
+// Pagos de clientes
+const pagosClientesRoutes = require('./routes/pagosClientesRoutes');
+app.use('/api/v1/pagos-clientes', pagosClientesRoutes);
+const activacionUsuarioRoutes = require('./routes/activacionUsuarioRoutes');
+app.use('/api/v1/usuarios', activacionUsuarioRoutes);
+
+// Token de activación (exponer endpoint para obtener token por usuario)
+const tokenActivacionRoutes = require('./routes/tokenActivacionRoutes');
+app.use('/api/v1/token-activacion', tokenActivacionRoutes);
 
 // ========================================
 // SOCKET.IO
@@ -171,7 +207,7 @@ app.use((err, req, res, next) => {
 // INICIAR SERVIDOR
 // ========================================
 
-const PORT = process.env.PORT || 5051;
+const PORT = process.env.PORT || 5081;
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`

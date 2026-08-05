@@ -8,10 +8,11 @@
   margin: 0 auto;
   padding: 10mm 5mm;
   background: white;
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
+  font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace;
+  font-size: 12px;
   color: #000;
-  line-height: 1.4;
+  line-height: 1.5;
+  font-weight: 500;
 }
 
 /* Header */
@@ -21,25 +22,27 @@
 }
 
 .restaurant-name {
-  font-size: 20px;
-  font-weight: bold;
+  font-size: 22px;
+  font-weight: 800;
   margin: 0 0 8px 0;
   letter-spacing: 1px;
 }
 
 .restaurant-info {
-  font-size: 10px;
+  font-size: 12px;
   margin: 0;
   line-height: 1.5;
+  font-weight: 600;
 }
 
 /* Dividers */
 .tirilla-divider {
   text-align: center;
   margin: 8px 0;
-  font-size: 10px;
+  font-size: 12px;
   overflow: hidden;
-  letter-spacing: -1px;
+  letter-spacing: 0;
+  font-weight: 700;
 }
 
 /* Información de factura */
@@ -48,8 +51,9 @@
 }
 
 .factura-info p {
-  margin: 3px 0;
-  font-size: 11px;
+  margin: 4px 0;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 /* Items */
@@ -60,21 +64,22 @@
 .items-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .items-table thead th {
-  border-bottom: 1px solid #000;
+  border-bottom: 2px solid #000;
   padding: 4px 2px;
   text-align: left;
-  font-weight: bold;
-  font-size: 10px;
+  font-weight: 800;
+  font-size: 12px;
 }
 
 .items-table tbody td {
   padding: 4px 2px;
   vertical-align: top;
-  font-size: 10px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .items-table .text-right {
@@ -82,10 +87,11 @@
 }
 
 .modificadores-print {
-  font-size: 9px;
+  font-size: 11px;
   padding-left: 10px;
-  color: #333;
+  color: #000;
   margin-top: 2px;
+  font-weight: 600;
 }
 
 .mod-item {
@@ -94,11 +100,12 @@
 }
 
 .observaciones-print {
-  font-size: 9px;
+  font-size: 11px;
   font-style: italic;
   padding-left: 10px;
-  color: #666;
+  color: #000;
   margin-top: 2px;
+  font-weight: 600;
 }
 
 /* Totales */
@@ -110,7 +117,8 @@
   display: flex;
   justify-content: space-between;
   padding: 3px 0;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .total-final {
@@ -118,7 +126,8 @@
   border-bottom: 2px solid #000;
   padding: 6px 0;
   margin-top: 5px;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 800;
 }
 
 /* Pago */
@@ -128,20 +137,23 @@
 
 .pago-section p {
   margin: 5px 0;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .pago-detalle {
   display: flex;
   justify-content: space-between;
   padding: 2px 0;
-  font-size: 10px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .pago-referencia {
-  font-size: 9px;
-  color: #666;
+  font-size: 11px;
+  color: #000;
   padding-left: 10px;
+  font-weight: 600;
 }
 
 .pago-total {
@@ -150,14 +162,16 @@
   padding: 5px 0;
   margin-top: 5px;
   border-top: 1px solid #000;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .pago-cambio {
   display: flex;
   justify-content: space-between;
   padding: 5px 0;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 800;
   background: #f0f0f0;
   padding: 5px;
   margin-top: 3px;
@@ -170,34 +184,38 @@
 }
 
 .gracias {
-  font-size: 14px;
-  font-weight: bold;
+  font-size: 16px;
+  font-weight: 800;
   margin: 10px 0 5px 0;
 }
 
 .mensaje {
-  font-size: 12px;
+  font-size: 13px;
   margin: 5px 0;
+  font-weight: 600;
 }
 
 .web {
-  font-size: 10px;
+  font-size: 11px;
   margin: 8px 0;
   font-style: italic;
+  font-weight: 600;
 }
 
 .legal {
-  font-size: 8px;
+  font-size: 10px;
   margin: 10px 0 0 0;
   line-height: 1.4;
-  color: #666;
+  color: #000;
+  font-weight: 600;
 }
 
 .print-timestamp {
   text-align: center;
-  font-size: 8px;
-  color: #999;
+  font-size: 10px;
+  color: #000;
   margin-top: 10px;
+  font-weight: 600;
 }
 
 /* ========================================
@@ -265,20 +283,20 @@
 
 @media (max-width: 576px) {
   .factura-tirilla {
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .restaurant-name {
-    font-size: 18px;
+    font-size: 20px;
   }
 
   .items-table {
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .items-table thead th,
   .items-table tbody td {
-    font-size: 9px;
+    font-size: 11px;
     padding: 3px 1px;
   }
 }

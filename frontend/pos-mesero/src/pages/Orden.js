@@ -1,3 +1,4 @@
+import { toast } from 'react-toastify';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -10,7 +11,6 @@ import {
   Spinner,
   Alert,
 } from 'react-bootstrap';
-import toast from 'react-hot-toast';
 import { productosService, ordenesService } from '../services/api';
 import { useOrdenStore, useAuthStore } from '../stores';
 import ProductoModal from '../components/ProductoModal';
@@ -245,7 +245,7 @@ export default function Orden() {
                       <p className="text-muted small mb-2">
                         {producto.descripcion}
                       </p>
-                      <div className="d-flex justify-content-between align-items-center">
+                      <div className="d-flex justify-content-between align-items-center mb-2">
                         <strong className="text-primary">
                           {formatMoney(producto.precio_venta)}
                         </strong>
@@ -253,6 +253,15 @@ export default function Orden() {
                           <small className="text-muted">
                             ⏱️ {producto.tiempo_preparacion}min
                           </small>
+                        )}
+                      </div>
+                      <div>
+                        {producto.stock_disponible === null ? (
+                          <span className="badge bg-secondary">Sin receta</span>
+                        ) : producto.stock_disponible <= 0 ? (
+                          <span className="badge bg-danger">Agotado</span>
+                        ) : (
+                          <span className="badge bg-success">Disponible: {producto.stock_disponible}</span>
                         )}
                       </div>
                     </Card.Body>

@@ -1,8 +1,30 @@
 const express = require('express');
 const router = express.Router();
-// Gráficos y estadísticas avanzadas
+// Controladores para usuarios y roles
+const UsuariosController = require('../../controllers/admin/UsuariosController');
+const RolesController = require('../../controllers/admin/RolesController');
 const EstadisticasController = require('../../controllers/admin/EstadisticasController');
 const verificarToken = require('../../middleware/verificarToken');
+
+// Middleware de autenticación para todas las rutas admin
+router.use(verificarToken);
+
+// ========================================
+// RUTAS DE USUARIOS
+// ========================================
+router.get('/usuarios', UsuariosController.getUsuarios);
+router.get('/usuarios/:id', UsuariosController.getUsuarioById);
+router.post('/usuarios', UsuariosController.crearUsuario);
+router.put('/usuarios/:id', UsuariosController.actualizarUsuario);
+router.delete('/usuarios/:id', UsuariosController.eliminarUsuario);
+
+// ========================================
+// RUTAS DE ROLES
+// ========================================
+router.get('/roles', RolesController.getRoles);
+
+// Endpoint para gráfico de barras: ventas por día (ahora protegido)
+router.get('/informes/ventas-por-dia', EstadisticasController.ventasPorDia);
 
 // Controllers
 const MesasController = require('../../controllers/admin/MesasController');
@@ -12,6 +34,7 @@ const RecetasController = require('../../controllers/admin/RecetasController');
 const InventarioController = require('../../controllers/admin/InventarioController');
 const InformesController = require('../../controllers/admin/InformesController');
 const ZonasController = require('../../controllers/admin/ZonasController');
+const ImpresorasController = require('../../controllers/admin/ImpresorasController');
 
 // Middleware de autenticación para todas las rutas admin
 router.use(verificarToken);
@@ -94,7 +117,31 @@ router.get('/informes/inventario', InformesController.getReporteInventario);
 router.get('/informes/impacto-ventas', InformesController.getImpactoVentasInventario);
 router.get('/informes/caja', InformesController.getReporteCaja);
 router.get('/informes/metodos-pago', InformesController.getReporteMetodosPago);
+router.get('/informes/utilidad', InformesController.getReporteUtilidad);
 router.get('/informes/estadisticas', InformesController.getEstadisticas);
+
+// ========================================
+// RUTAS DE IMPRESORAS
+// ========================================
+router.get('/impresoras', ImpresorasController.getImpresoras);
+router.post('/impresoras', ImpresorasController.crearImpresora);
+router.put('/impresoras/:id', ImpresorasController.actualizarImpresora);
+router.delete('/impresoras/:id', ImpresorasController.eliminarImpresora);
+router.post('/impresoras/:id/test', ImpresorasController.testImpresora);
+
+// ========================================
+// RUTAS DE ZONAS (primer bloque vacío)
+// ========================================
+
+// ========================================
+// RUTAS DE SEDES
+// ========================================
+const SedesController = require('../../controllers/admin/SedesController');
+router.get('/sedes', SedesController.getSedes);
+router.get('/sedes/:id', SedesController.getSedeById);
+router.post('/sedes', SedesController.crearSede);
+router.put('/sedes/:id', SedesController.actualizarSede);
+router.delete('/sedes/:id', SedesController.eliminarSede);
 
 // ========================================
 // RUTAS DE ZONAS

@@ -35,7 +35,9 @@ const verificarToken = (req, res, next) => {
         userId: decoded.userId,
         email: decoded.email,
         roleId: decoded.roleId,
+        rol: decoded.roleName, // nombre del rol para middleware de roles
         sedeId: decoded.sedeId,
+        cliente_id: decoded.cliente_id,
       };
 
       next();

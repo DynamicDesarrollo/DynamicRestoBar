@@ -1,7 +1,7 @@
+import { toast } from 'react-toastify';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Button, Card, Badge, Spinner, Alert } from 'react-bootstrap';
-import toast from 'react-hot-toast';
 import { mesasService } from '../services/api';
 import { useMesasStore, useAuthStore } from '../stores';
 import './Mesas.css';

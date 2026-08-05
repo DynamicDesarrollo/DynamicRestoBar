@@ -1,21 +1,27 @@
-import React, { useEffect } from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores';
 
 export default function ProtectedRoute({ children, requiredRoles = [] }) {
+  const [cargando, setCargando] = useState(true);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
   const usuario = useAuthStore((state) => state.usuario);
-  React.useEffect(() => {
+  const setUsuario = useAuthStore((state) => state.setUsuario);
+
+  useEffect(() => {
     const usuarioLS = localStorage.getItem('usuario');
     const tokenLS = localStorage.getItem('token');
     if (!usuario && usuarioLS && tokenLS) {
-      useAuthStore.getState().setUsuario(JSON.parse(usuarioLS), tokenLS);
+      setUsuario(JSON.parse(usuarioLS), tokenLS);
       console.log('[ProtectedRoute] Rehidratando usuario/token desde localStorage');
     }
-  }, [usuario]);
+    setCargando(false);
+  }, [usuario, setUsuario]);
 
-  // Log para depuración
-  console.log('[ProtectedRoute] Render:', { isAuthenticated, usuario, requiredRoles });
+  if (cargando) {
+    return <div>Cargando...</div>;
+  }
 
   if (!isAuthenticated) {
     console.warn('[ProtectedRoute] No autenticado, redirigiendo a /login');

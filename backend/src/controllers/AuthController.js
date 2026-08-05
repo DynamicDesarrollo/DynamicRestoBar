@@ -40,6 +40,7 @@ class AuthController {
           'usuarios.rol_id',
           'usuarios.sede_id',
           'usuarios.estado',
+          'usuarios.cliente_id',
           'roles.nombre as rol_nombre'
         )
         .join('roles', 'usuarios.rol_id', 'roles.id')
@@ -76,6 +77,7 @@ class AuthController {
           roleId: usuario.rol_id,
           roleName: usuario.rol_nombre,
           sedeId: usuario.sede_id,
+          cliente_id: usuario.cliente_id,
         },
         process.env.JWT_SECRET || 'secret-key-change-in-prod',
         { expiresIn: '8h' }
@@ -108,6 +110,7 @@ class AuthController {
             nombre: usuario.rol_nombre,
           },
           sedeId: usuario.sede_id,
+          cliente_id: usuario.cliente_id,
         },
       });
     } catch (error) {

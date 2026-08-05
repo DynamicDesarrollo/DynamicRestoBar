@@ -1,3 +1,4 @@
+import { toast } from 'react-toastify';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -12,7 +13,7 @@ import {
   Tabs,
   Tab,
 } from 'react-bootstrap';
-import toast from 'react-hot-toast';
+// import toast from 'react-hot-toast';
 import { kdsService } from '../services/api';
 import { useAuthStore } from '../stores';
 import './Kds.css';

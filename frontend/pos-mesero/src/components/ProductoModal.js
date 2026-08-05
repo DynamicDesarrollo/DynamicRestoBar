@@ -1,6 +1,7 @@
+import { toast } from 'react-toastify';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Modal, Form, Button, Spinner, Alert } from 'react-bootstrap';
-import toast from 'react-hot-toast';
+// import toast from 'react-hot-toast';
 import { productosService } from '../services/api';
 
 export default function ProductoModal({ show, producto, onHide, onAgregar }) {

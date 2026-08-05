@@ -4,7 +4,10 @@ class InsumosController {
   // Obtener todos los insumos
   static async getInsumos(req, res) {
     try {
-      const insumos = await db('insumos')
+      const { sedeId } = req.query;
+      const clienteId = req.usuario?.cliente_id || req.query.clienteId;
+
+      let query = db('insumos')
         .leftJoin('unidad_medida', 'insumos.unidad_medida_id', 'unidad_medida.id')
         .leftJoin('proveedores', 'insumos.proveedor_principal_id', 'proveedores.id')
         .select(
@@ -21,8 +24,17 @@ class InsumosController {
           'unidad_medida.nombre as unidad_medida',
           'proveedores.nombre as proveedor'
         )
-        .where('insumos.activo', true)
-        .orderBy('insumos.nombre', 'asc');
+        .where('insumos.activo', true);
+
+      // Filtrar por sede si está presente
+      if (sedeId) {
+        query = query.andWhere('insumos.sede_id', sedeId);
+      }
+
+      // Nota: la tabla `insumos` no contiene columna `cliente_id` en el esquema.
+      // Evitamos filtrar por cliente aquí para prevenir errores SQL cuando la columna no exista.
+
+      const insumos = await query.orderBy('insumos.nombre', 'asc');
 
       return res.json({
         success: true,
@@ -113,9 +125,10 @@ class InsumosController {
         stock_maximo,
         costo_unitario,
         proveedor_principal_id,
+        sede_id,
       } = req.body;
 
-      if (!nombre || !unidad_medida_id || !costo_unitario) {
+      if (!nombre || !unidad_medida_id || costo_unitario === undefined || costo_unitario === null) {
         return res.status(400).json({
           error: 'Nombre, unidad de medida y costo unitario son requeridos',
         });
@@ -145,6 +158,7 @@ class InsumosController {
         costo_unitario: parseFloat(costo_unitario),
         costo_promedio: parseFloat(costo_unitario),
         proveedor_principal_id: proveedor_principal_id || null,
+        sede_id: sede_id || null,
         activo: true,
       }).returning('*');
 

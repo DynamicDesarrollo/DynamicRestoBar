@@ -5,6 +5,8 @@ import { formatMoney } from '../../../utils/formatters';
 import '../admin.css';
 
 const Inventario = () => {
+    const [sedes, setSedes] = useState([]);
+    const [sedeSeleccionada, setSedeSeleccionada] = useState('');
   const [dashboard, setDashboard] = useState(null);
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,16 +31,40 @@ const Inventario = () => {
   });
 
   useEffect(() => {
-    cargarDatos();
+    cargarSedes();
   }, []);
+
+  const cargarSedes = async () => {
+    try {
+      const res = await axios.get('/admin/sedes');
+      if (Array.isArray(res.data)) {
+        setSedes(res.data);
+      } else if (res.data.success && Array.isArray(res.data.data)) {
+        setSedes(res.data.data);
+      } else {
+        setSedes([]);
+      }
+      // Selecciona la primera sede por defecto
+      if (res.data && (Array.isArray(res.data) ? res.data.length : res.data.data?.length)) {
+        setSedeSeleccionada((Array.isArray(res.data) ? res.data[0]?.id : res.data.data[0]?.id) || '');
+      }
+    } catch (err) {
+      setSedes([]);
+    }
+  };
+
+  useEffect(() => {
+    if (sedeSeleccionada) {
+      cargarDatos();
+    }
+  }, [sedeSeleccionada]);
 
   const cargarDatos = async () => {
     try {
       const [dashboardRes, kardexRes] = await Promise.all([
-        axios.get('/admin/inventario/dashboard'),
-        axios.get('/admin/inventario/kardex'),
+        axios.get(`/admin/inventario/dashboard?sede_id=${sedeSeleccionada}`),
+        axios.get(`/admin/inventario/kardex?sede_id=${sedeSeleccionada}`),
       ]);
-
       if (dashboardRes.data.success) setDashboard(dashboardRes.data.data);
       if (kardexRes.data.success) setMovimientos(kardexRes.data.data);
     } catch (err) {
@@ -117,12 +143,24 @@ const Inventario = () => {
       <div className="admin-section">
         <div className="section-header">
           <h2>📊 Inventario</h2>
-          <button className="btn btn-primary" onClick={() => {
-            setTipoMovimiento('entrada');
-            setShowMovimientoModal(true);
-          }}>
-            + Entrada de Insumos
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <label style={{ fontWeight: 'bold' }}>Sede:</label>
+            <select
+              value={sedeSeleccionada}
+              onChange={e => setSedeSeleccionada(e.target.value)}
+              style={{ minWidth: '180px', padding: '6px', borderRadius: '4px' }}
+            >
+              {sedes.map(sede => (
+                <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+              ))}
+            </select>
+            <button className="btn btn-primary" onClick={() => {
+              setTipoMovimiento('entrada');
+              setShowMovimientoModal(true);
+            }}>
+              + Entrada de Insumos
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}

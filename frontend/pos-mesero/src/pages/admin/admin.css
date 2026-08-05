@@ -201,6 +201,26 @@
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.form-three-cols {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.form-three-cols > div {
+  flex: 1;
+  min-width: 220px;
+}
+
+.form-two-cols {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.form-two-cols > div {
+  flex: 1;
+  min-width: 220px;
+}
+
 .modal-footer {
   padding: 20px;
   border-top: 1px solid #e0e0e0;

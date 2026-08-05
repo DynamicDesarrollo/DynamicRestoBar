@@ -1,0 +1,218 @@
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(34, 51, 107, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalForm {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(34,51,107,0.18);
+  padding: 36px 32px 28px 32px;
+  min-width: 350px;
+  max-width: 95vw;
+  width: 900px;
+  position: relative;
+  animation: modalIn 0.2s ease;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 18px 24px;
+  margin-bottom: 18px;
+}
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+@keyframes modalIn {
+  from { transform: translateY(-40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modalTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #22336b;
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+.formGroup label {
+  font-weight: 600;
+  color: #22336b;
+  margin-bottom: 6px;
+}
+.input {
+  border: 1px solid #e0e7ef;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 1rem;
+  background: #f8fafc;
+  color: #22336b;
+  outline: none;
+  transition: border 0.2s;
+}
+.input:focus {
+  border: 1.5px solid #30488b;
+}
+
+.modalActions {
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+.clientesCard {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px 0 rgba(34,51,107,0.07);
+  padding: 32px 32px 24px 32px;
+  margin-bottom: 32px;
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.clientesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.clientesTitle {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #22336b;
+}
+
+.crearBtn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.crearBtn:hover {
+  background: #1e40af;
+}
+
+.errorMsg {
+  color: #e53935;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.clientesTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 6px 0 rgba(34,51,107,0.06);
+}
+
+.clientesTable th, .clientesTable td {
+  padding: 12px 10px;
+  text-align: left;
+}
+
+.clientesTable th {
+  background: #f4f6fc;
+  color: #22336b;
+  font-size: 1.05rem;
+  font-weight: 700;
+  border-bottom: 2px solid #e0e7ef;
+}
+
+.clientesTable tr {
+  border-bottom: 1px solid #e0e7ef;
+}
+
+.clientesTable tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+}
+.badge-activo { background: #22c55e; }
+.badge-inactivo { background: #e53935; }
+.badge-basico { background: #2563eb; }
+.badge-premium { background: #f59e42; }
+
+ .accionesBtn, .eliminarBtn, .metricasBtn {
+  background: #fff;
+  border: 1.5px solid #e0e7ef;
+  color: #22336b;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-right: 8px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px 0 rgba(34,51,107,0.08);
+  display: inline-flex;
+  align-items: center;
+  transition: background 0.2s, border 0.2s, color 0.2s;
+}
+.accionesBtn:hover, .eliminarBtn:hover, .metricasBtn:hover {
+  background: #f4f6fc;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+.eliminarBtn {
+  border-color: #e53935 !important;
+}
+.eliminarBtn:hover {
+  background: #fff0f0;
+  border-color: #e53935 !important;
+  color: #e53935;
+}
+.metricasBtn {
+  border-color: #43a047 !important;
+}
+.metricasBtn:hover {
+  background: #f0fff4;
+  border-color: #43a047 !important;
+  color: #43a047;
+}
+.accionesBtn {
+  border-color: #2563eb !important;
+}
+.accionesBtn:hover {
+  background: #f4f6fc;
+  border-color: #2563eb !important;
+  color: #2563eb;
+}
+.accionesGroup {
+  display: flex;
+  gap: 4px;
+}

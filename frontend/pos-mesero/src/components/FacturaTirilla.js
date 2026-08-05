@@ -1,39 +1,20 @@
-import React, { useRef } from 'react';
+import React, { useEffect } from 'react';
 import { Modal, Button } from 'react-bootstrap';
-import { useReactToPrint } from 'react-to-print';
 import './FacturaTirilla.css';
 
 
 export default function FacturaTirilla({ show, onHide, factura, orden, pagos }) {
-  const componentRef = useRef();
-  const printReadyRef = useRef(false);
-  const [canPrint, setCanPrint] = React.useState(false);
+  const AUTO_CLOSE_MS = 2000;
 
-  // Solo permitir imprimir cuando el contenido está montado
-  const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
-    documentTitle: `Factura-${factura?.numero_factura || 'N/A'}`,
-    pageStyle: `
-      @page {
-        size: 80mm auto;
-        margin: 0;
-      }
-      @media print {
-        body {
-          margin: 0;
-          padding: 0;
-        }
-      }
-    `,
-    removeAfterPrint: true,
-  });
+  useEffect(() => {
+    if (!show) return undefined;
 
-  // Cuando el modal termina de entrar, habilitar impresión
-  const handleModalEntered = () => {
-    setTimeout(() => {
-      setCanPrint(!!componentRef.current);
-    }, 100); // pequeño delay para asegurar render
-  };
+    const timeoutId = setTimeout(() => {
+      if (typeof onHide === 'function') onHide();
+    }, AUTO_CLOSE_MS);
+
+    return () => clearTimeout(timeoutId);
+  }, [show, onHide]);
 
   const formatDate = (date) => {
     if (!date) return '';
@@ -52,34 +33,41 @@ export default function FacturaTirilla({ show, onHide, factura, orden, pagos }) 
   };
 
   const calcularImpuestos = () => {
-    const subtotal = calcularSubtotal();
-    return subtotal * 0.08; // 8% IVA ejemplo
+    return 0;
   };
 
   if (!factura || !orden) return null;
 
   const subtotal = calcularSubtotal();
   const impuestos = calcularImpuestos();
-  const total = orden.total || subtotal + impuestos;
+  const total = factura?.total || orden.total || subtotal;
   const montoPagado = pagos?.reduce((sum, p) => sum + parseFloat(p.monto), 0) || 0;
   const cambio = montoPagado - total;
+  const negocio = factura?.negocio || {};
+  const nombreNegocio = negocio.nombre || 'DynamicRestoBar';
+  const direccionNegocio = negocio.direccion || '';
+  const ciudadNegocio = negocio.ciudad || '';
+  const telefonoNegocio = negocio.telefono || '';
+  const nitNegocio = negocio.nit || '';
+  const webNegocio = negocio.web || 'www.dynamicrestobar.com';
+  const resolucionNegocio = negocio.resolucion || 'Resolución DIAN #123456 del 01/01/2025';
 
   return (
-    <Modal show={show} onHide={onHide} size="sm" centered onEntered={handleModalEntered}>
+    <Modal show={show} onHide={onHide} size="sm" centered>
       <Modal.Header closeButton className="bg-primary text-white">
         <Modal.Title>Factura Generada</Modal.Title>
       </Modal.Header>
       
       <Modal.Body className="p-0">
-        <div ref={componentRef} className="factura-tirilla">
+        <div className="factura-tirilla">
           {/* Header */}
           <div className="tirilla-header">
-            <h1 className="restaurant-name">DynamicRestoBar</h1>
+            <h1 className="restaurant-name">{nombreNegocio}</h1>
             <p className="restaurant-info">
-              Calle Principal #123<br />
-              Medellín, Colombia<br />
-              Tel: (4) 444-5678<br />
-              NIT: 900.123.456-7
+              {direccionNegocio && <>{direccionNegocio}<br /></>}
+              {ciudadNegocio && <>{ciudadNegocio}<br /></>}
+              {telefonoNegocio && <>Tel: {telefonoNegocio}<br /></>}
+              {nitNegocio && <>NIT: {nitNegocio}</>}
             </p>
           </div>
 
@@ -88,7 +76,7 @@ export default function FacturaTirilla({ show, onHide, factura, orden, pagos }) 
           {/* Información de factura */}
           <div className="factura-info">
             <p><strong>FACTURA:</strong> {factura.numero_factura}</p>
-            <p><strong>FECHA:</strong> {formatDate(factura.created_at)}</p>
+            <p><strong>FECHA:</strong> {formatDate(factura.fecha_hora || factura.created_at || factura.fecha_emision)}</p>
             <p><strong>MESA:</strong> {orden.mesa_numero || 'N/A'}</p>
             <p><strong>ORDEN:</strong> #{orden.numero_orden}</p>
             {orden.usuario_nombre && <p><strong>MESERO:</strong> {orden.usuario_nombre}</p>}
@@ -146,12 +134,6 @@ export default function FacturaTirilla({ show, onHide, factura, orden, pagos }) 
               <span>SUBTOTAL:</span>
               <span>${subtotal.toLocaleString()}</span>
             </div>
-            {impuestos > 0 && (
-              <div className="total-row">
-                <span>IVA (8%):</span>
-                <span>${impuestos.toLocaleString()}</span>
-              </div>
-            )}
             <div className="total-row total-final">
               <span><strong>TOTAL:</strong></span>
               <span><strong>${total.toLocaleString()}</strong></span>
@@ -194,11 +176,11 @@ export default function FacturaTirilla({ show, onHide, factura, orden, pagos }) 
           <div className="tirilla-footer">
             <p className="gracias">¡GRACIAS POR SU VISITA!</p>
             <p className="mensaje">Vuelva pronto</p>
-            <p className="web">www.dynamicrestobar.com</p>
+            <p className="web">{webNegocio}</p>
             <br />
             <p className="legal">
               Factura válida como comprobante de venta<br />
-              Resolución DIAN #123456 del 01/01/2025<br />
+              {resolucionNegocio}<br />
               Rango autorizado: FAC-000001 a FAC-999999
             </p>
           </div>
@@ -210,16 +192,11 @@ export default function FacturaTirilla({ show, onHide, factura, orden, pagos }) 
       </Modal.Body>
 
       <Modal.Footer>
+        <small className="text-muted me-auto">
+          Factura enviada automaticamente a impresora de red. Esta ventana se cerrara en 2 segundos.
+        </small>
         <Button variant="secondary" onClick={onHide}>
           Cerrar
-        </Button>
-        <Button 
-          variant="primary" 
-          onClick={handlePrint}
-          style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }}
-          disabled={!canPrint}
-        >
-          🖨️ Imprimir Factura
         </Button>
       </Modal.Footer>
     </Modal>

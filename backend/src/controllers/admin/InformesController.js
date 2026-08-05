@@ -4,7 +4,7 @@ class InformesController {
   // Reporte de ventas diarias
   static async getReporteVentas(req, res) {
     try {
-      const { sedeId: sede_id } = req.usuario;
+      const sede_id = req.query.sede_id || req.usuario?.sedeId;
       const { fecha_inicio, fecha_fin } = req.query;
 
       let query = db('ordenes')
@@ -45,7 +45,7 @@ class InformesController {
   // Reporte de productos más vendidos
   static async getReporteProductos(req, res) {
     try {
-      const { sedeId: sede_id } = req.usuario;
+      const sede_id = req.query.sede_id || req.usuario?.sedeId;
       const { fecha_inicio, fecha_fin, limite = 10 } = req.query;
 
       let query = db('orden_items')
@@ -90,7 +90,7 @@ class InformesController {
   // Reporte de inventario
   static async getReporteInventario(req, res) {
     try {
-      const { sedeId: sede_id } = req.usuario;
+      const sede_id = req.query.sede_id || req.usuario?.sedeId;
 
       const inventarioData = await db('insumos')
         .where('sede_id', sede_id)
@@ -135,23 +135,60 @@ class InformesController {
   // Reporte de caja
   static async getReporteCaja(req, res) {
     try {
-      const { sedeId: sede_id } = req.usuario;
+      const sede_id = req.query.sede_id || req.usuario?.sedeId;
       const { fecha } = req.query;
 
 
-      // Buscar primero apertura abierta
+      const usuario_id = req.usuario?.userId || req.usuario?.id || null;
+
+      // Buscar primero apertura abierta por sede
       let apertura = await db('aperturas_caja')
         .where('sede_id', sede_id)
         .where('estado', 'abierta')
-        .orderBy('created_at', 'desc')
+        .orderByRaw("COALESCE(created_at, hora_apertura) DESC")
+        .orderBy('id', 'desc')
         .first();
 
-      // Si no hay abierta, mostrar la más reciente
+      // Si no hay abierta por sede, buscar la más reciente por sede
       if (!apertura) {
         apertura = await db('aperturas_caja')
           .where('sede_id', sede_id)
-          .orderBy('created_at', 'desc')
+          .orderByRaw("COALESCE(created_at, hora_apertura) DESC")
+          .orderBy('id', 'desc')
           .first();
+      }
+
+      // Fallback: si no hay apertura por sede, buscar por movimientos de caja de la sede
+      if (!apertura) {
+        const ultimoMovimientoSede = await db('caja_movimientos as cm')
+          .join('aperturas_caja as ac', 'cm.apertura_caja_id', 'ac.id')
+          .where('ac.sede_id', sede_id)
+          .orderBy('cm.id', 'desc')
+          .first('ac.id as apertura_id');
+
+        if (ultimoMovimientoSede?.apertura_id) {
+          apertura = await db('aperturas_caja').where('id', ultimoMovimientoSede.apertura_id).first();
+        }
+      }
+
+      // Fallback: si no hay apertura por sede, buscar por usuario
+      if (!apertura && usuario_id) {
+        apertura = await db('aperturas_caja')
+          .where('usuario_id', usuario_id)
+          .orderByRaw("COALESCE(created_at, hora_apertura) DESC")
+          .orderBy('id', 'desc')
+          .first();
+      }
+
+      // Fallback final: si no hay apertura por usuario, buscar por movimiento de caja reciente
+      if (!apertura && usuario_id) {
+        const movimiento = await db('caja_movimientos')
+          .where('usuario_id', usuario_id)
+          .orderBy('id', 'desc')
+          .first();
+        if (movimiento?.apertura_caja_id) {
+          apertura = await db('aperturas_caja').where('id', movimiento.apertura_caja_id).first();
+        }
       }
 
       if (!apertura) {
@@ -165,8 +202,11 @@ class InformesController {
       // Obtener movimientos
       const movimientos = await db('caja_movimientos')
         .where('apertura_caja_id', apertura.id)
-        .select('*')
-        .orderBy('created_at', 'desc');
+        .select(
+          'caja_movimientos.*',
+          db.raw("COALESCE(caja_movimientos.created_at, caja_movimientos.updated_at) as fecha")
+        )
+        .orderByRaw("COALESCE(caja_movimientos.created_at, caja_movimientos.updated_at) DESC");
 
       // Calcular totales
       const ingresos = movimientos
@@ -205,10 +245,71 @@ class InformesController {
     }
   }
 
+  // Reporte de utilidad
+  static async getReporteUtilidad(req, res) {
+    try {
+      const sede_id = req.query.sede_id || req.usuario?.sedeId;
+      const { periodo = 'diario', fecha_inicio, fecha_fin, categoria_id } = req.query;
+
+      const periodoMap = {
+        diario: `date_trunc('day', ordenes.created_at)` ,
+        semanal: `date_trunc('week', ordenes.created_at)` ,
+        mensual: `date_trunc('month', ordenes.created_at)` ,
+      };
+
+      const periodoSql = periodoMap[periodo] || periodoMap.diario;
+
+      let query = db('orden_items')
+        .leftJoin('ordenes', 'orden_items.orden_id', 'ordenes.id')
+        .leftJoin('productos', 'orden_items.producto_id', 'productos.id')
+        .leftJoin('recetas', function() {
+          this.on('recetas.producto_id', '=', 'productos.id')
+            .andOn('recetas.activa', '=', db.raw('true'));
+        })
+        .leftJoin('receta_insumos', 'recetas.id', 'receta_insumos.receta_id')
+        .leftJoin('insumos', 'receta_insumos.insumo_id', 'insumos.id')
+        .where('ordenes.sede_id', sede_id)
+        .andWhere('ordenes.estado', 'entregada');
+
+      if (categoria_id) {
+        query = query.andWhere('productos.categoria_id', categoria_id);
+      }
+
+      if (fecha_inicio) {
+        query = query.where(db.raw('DATE(ordenes.created_at)'), '>=', fecha_inicio);
+      }
+
+      if (fecha_fin) {
+        query = query.where(db.raw('DATE(ordenes.created_at)'), '<=', fecha_fin);
+      }
+
+      const data = await query
+        .select(
+          db.raw(`${periodoSql} as periodo`),
+          db.raw('SUM(orden_items.cantidad * orden_items.precio_unitario) as ventas'),
+          db.raw('SUM(orden_items.cantidad * COALESCE(insumos.costo_unitario, 0) * receta_insumos.cantidad) as costo'),
+          db.raw('SUM(orden_items.cantidad * orden_items.precio_unitario) - SUM(orden_items.cantidad * COALESCE(insumos.costo_unitario, 0) * receta_insumos.cantidad) as utilidad')
+        )
+        .groupBy('periodo')
+        .orderBy('periodo', 'desc');
+
+      return res.json({
+        success: true,
+        data,
+      });
+    } catch (err) {
+      console.error('❌ Error en getReporteUtilidad:', err.message);
+      return res.status(500).json({
+        error: 'Error al obtener reporte de utilidad',
+        message: err.message,
+      });
+    }
+  }
+
   // Reporte de métodos de pago
   static async getReporteMetodosPago(req, res) {
     try {
-      const { sedeId: sede_id } = req.usuario;
+      const sede_id = req.query.sede_id || req.usuario?.sedeId;
       const { fecha_inicio, fecha_fin } = req.query;
 
       let query = db('pago_facturas')

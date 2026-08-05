@@ -18,7 +18,8 @@ class MesasController {
   static async getAll(req, res) {
     try {
       const { sedeId } = req.query;
-      
+      const clienteId = req.usuario?.cliente_id || req.query.clienteId;
+
       if (!sedeId) {
         return res.status(400).json({
           error: 'sedeId es requerido',
