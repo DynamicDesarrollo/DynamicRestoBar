@@ -11,6 +11,8 @@
     "reset:data:execute": "node scripts/reset-production-data.js --profile=operacion --execute --confirm=RESET_PRODUCCION",
     "reset:sede": "node scripts/reset-sede-data.js",
     "reset:sede:execute": "node scripts/reset-sede-data.js --execute --confirm=RESET_SEDE",
+    "purge:clientes": "node scripts/purge-old-clients-keep-catalogs.js",
+    "purge:clientes:execute": "node scripts/purge-old-clients-keep-catalogs.js --execute --confirm=PURGE_CLIENTES_KEEP_CATALOGOS",
     "migrate": "knex migrate:latest --knexfile src/config/knexfile.js",
     "migrate:rollback": "knex migrate:rollback --knexfile src/config/knexfile.js",
     "migrate:list": "knex migrate:list --knexfile src/config/knexfile.js",
