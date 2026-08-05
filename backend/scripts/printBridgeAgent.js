@@ -1,7 +1,8 @@
 /* eslint-disable no-console */
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-const { imprimirComanda, imprimirPrueba } = require('../src/services/PrinterService');
+const { imprimirComanda, imprimirPrueba, imprimirFactura } = require('../src/services/PrinterService');
 
 const BRIDGE_API_URL = process.env.BRIDGE_API_URL;
 const BRIDGE_TOKEN = process.env.PRINT_BRIDGE_TOKEN;
@@ -52,6 +53,11 @@ async function processJob(job) {
 
   if (job.tipo === 'comanda') {
     await imprimirComanda(impresora, payload.comanda || {});
+    return;
+  }
+
+  if (job.tipo === 'factura') {
+    await imprimirFactura(impresora, payload.factura || {});
     return;
   }
 

@@ -1,4 +1,4 @@
-const { imprimirComanda, imprimirPrueba } = require('./PrinterService');
+const { imprimirComanda, imprimirPrueba, imprimirFactura } = require('./PrinterService');
 const PrintJobService = require('./PrintJobService');
 
 const isBridgeMode = () => (process.env.PRINT_DELIVERY_MODE || '').toLowerCase() === 'bridge';
@@ -37,6 +37,26 @@ class PrintDispatchService {
       payload: {
         impresora,
         comanda: payload,
+      },
+    });
+
+    return { mode: 'bridge', jobId: job.id };
+  }
+
+  static async dispatchFactura({ impresora, payload, sedeId, clienteId = null }) {
+    if (!isBridgeMode()) {
+      await imprimirFactura(impresora, payload);
+      return { mode: 'direct' };
+    }
+
+    const job = await PrintJobService.enqueue({
+      clienteId,
+      sedeId,
+      impresoraId: impresora.id,
+      tipo: 'factura',
+      payload: {
+        impresora,
+        factura: payload,
       },
     });
 

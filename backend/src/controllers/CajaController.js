@@ -10,7 +10,7 @@
  */
 
 const db = require('../config/database');
-const { imprimirFactura } = require('../services/PrinterService');
+const PrintDispatchService = require('../services/PrintDispatchService');
 
 class CajaController {
   /**
@@ -19,7 +19,7 @@ class CajaController {
    */
   static async abrirCaja(req, res) {
     try {
-      const { userId: usuario_id, sedeId: sede_id } = req.usuario;
+      const { userId: usuario_id, sedeId: sede_id, cliente_id = null } = req.usuario;
       const { monto_inicial = 0 } = req.body;
 
       // Verificar si ya hay caja abierta
@@ -143,7 +143,7 @@ class CajaController {
    */
   static async registrarPago(req, res) {
     try {
-      const { userId: usuario_id, sedeId: sede_id } = req.usuario;
+      const { userId: usuario_id, sedeId: sede_id, cliente_id = null } = req.usuario;
       const { orden_id, monto, metodo_pago_id, referencia, es_abono = false } = req.body;
       const now = new Date();
 
@@ -327,7 +327,14 @@ class CajaController {
         .where('sede_id', sede_id)
         .whereNull('deleted_at')
         .where('estado', 'activa')
-        .whereRaw('LOWER(nombre) LIKE ?', ['%bar%'])
+        .where(function() {
+          this.whereRaw('LOWER(nombre) LIKE ?', ['%bar%'])
+            .orWhereRaw('LOWER(modelo) LIKE ?', ['%bar%'])
+            .orWhereRaw('LOWER(nombre) LIKE ?', ['%caja%'])
+            .orWhereRaw('LOWER(modelo) LIKE ?', ['%caja%'])
+            .orWhereRaw('LOWER(nombre) LIKE ?', ['%bebida%'])
+            .orWhereRaw('LOWER(modelo) LIKE ?', ['%bebida%']);
+        })
         .orderBy('id', 'asc')
         .first();
 
@@ -349,7 +356,11 @@ class CajaController {
           const cambioFactura = Math.max(0, montoPagadoFactura - totalFactura);
           const saldoPendienteFactura = Math.max(0, totalFactura - montoPagadoFactura);
 
-          await imprimirFactura(impresoraCaja, {
+          const dispatch = await PrintDispatchService.dispatchFactura({
+            impresora: impresoraCaja,
+            sedeId: sede_id,
+            clienteId: cliente_id,
+            payload: {
             tipoDocumento: facturaPagada ? 'FACTURA' : 'RECIBO ABONO',
             numeroFactura: factura.numero_factura,
             fecha: fechaStr,
@@ -365,9 +376,14 @@ class CajaController {
             cambio: cambioFactura,
             saldoPendiente: saldoPendienteFactura,
             pagos: pagosFactura,
+            },
           });
 
-          console.log(`🧾 ${facturaPagada ? 'FACTURA' : 'RECIBO ABONO'} IMPRESO EN RED - ${impresoraCaja.nombre} (${impresoraCaja.ip_address}:${impresoraCaja.puerto || 9100})`);
+          if (dispatch.mode === 'bridge') {
+            console.log(`🧾 ${facturaPagada ? 'FACTURA' : 'RECIBO ABONO'} ENCOLADO - job #${dispatch.jobId} -> ${impresoraCaja.nombre}`);
+          } else {
+            console.log(`🧾 ${facturaPagada ? 'FACTURA' : 'RECIBO ABONO'} IMPRESO EN RED - ${impresoraCaja.nombre} (${impresoraCaja.ip_address}:${impresoraCaja.puerto || 9100})`);
+          }
         } catch (printError) {
           console.error('⚠️ No se pudo imprimir documento de caja en red:', printError.message);
         }

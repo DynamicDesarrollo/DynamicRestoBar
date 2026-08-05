@@ -16,10 +16,12 @@ class OrdenesController {
   static async obtenerEstacionPorProducto(productoId, sedeId) {
     const producto = await db('productos as p')
       .leftJoin('estaciones as e', 'p.estacion_id', 'e.id')
+      .leftJoin('categorias as c', 'p.categoria_id', 'c.id')
       .select(
         'p.id as producto_id',
         'p.nombre as producto_nombre',
         'p.estacion_id',
+        'c.nombre as categoria_nombre',
         'e.nombre as estacion_nombre',
         'e.tipo as estacion_tipo'
       )
@@ -34,11 +36,16 @@ class OrdenesController {
       return producto;
     }
 
+    const contextoProducto = `${producto.producto_nombre || ''} ${producto.categoria_nombre || ''}`.toLowerCase();
+    const preferirBar = ['bar', 'bebida', 'coctel', 'licor', 'cafeteria', 'cafe', 'jugo', 'gaseosa']
+      .some((tag) => contextoProducto.includes(tag));
+    const tipoEstacionPreferida = preferirBar ? 'bar' : (producto.estacion_tipo || 'cocina');
+
     const estacionFallback = await db('estaciones')
       .where('sede_id', sedeId)
       .where('activa', true)
       .andWhere(function() {
-        this.where('tipo', producto.estacion_tipo || 'cocina');
+        this.where('tipo', tipoEstacionPreferida);
       })
       .first();
 
@@ -109,7 +116,9 @@ class OrdenesController {
     }
 
     const estacion = await db('estaciones').where('id', estacionId).first();
-    const nombreEstacion = (estacion?.nombre || estacion?.tipo || '').toLowerCase();
+    const nombreEstacion = (estacion?.nombre || '').toLowerCase();
+    const tipoEstacion = (estacion?.tipo || '').toLowerCase();
+    const contextoEstacion = `${nombreEstacion} ${tipoEstacion}`.trim();
 
     const fallbackQuery = db('impresoras as i')
       .select('i.id', 'i.nombre', 'i.ip_address', 'i.puerto')
@@ -117,7 +126,7 @@ class OrdenesController {
       .where('i.estado', 'activa')
       .whereNull('i.deleted_at');
 
-    if (nombreEstacion.includes('cocina')) {
+    if (contextoEstacion.includes('cocina')) {
       fallbackQuery.andWhere(function() {
         this.whereRaw('LOWER(i.nombre) like ?', ['%cocina%'])
           .orWhereRaw('LOWER(i.modelo) like ?', ['%cocina%']);
@@ -128,20 +137,82 @@ class OrdenesController {
       }
     }
 
-    if (nombreEstacion.includes('bar')) {
+    const esEstacionCocina = ['cocina', 'parrilla', 'plancha', 'freidora']
+      .some((tag) => contextoEstacion.includes(tag));
+
+    if (esEstacionCocina) {
       return db('impresoras as i')
         .select('i.id', 'i.nombre', 'i.ip_address', 'i.puerto')
         .where('i.sede_id', sedeId)
         .where('i.estado', 'activa')
         .whereNull('i.deleted_at')
         .where(function() {
-          this.whereRaw('LOWER(i.nombre) like ?', ['%bar%'])
-            .orWhereRaw('LOWER(i.modelo) like ?', ['%bar%']);
+          this.whereRaw('LOWER(i.nombre) like ?', ['%cocina%'])
+            .orWhereRaw('LOWER(i.modelo) like ?', ['%cocina%'])
+            .orWhereRaw('LOWER(i.nombre) like ?', ['%kitchen%'])
+            .orWhereRaw('LOWER(i.modelo) like ?', ['%kitchen%']);
         })
         .orderBy('i.id', 'asc');
     }
 
-    return [];
+    const esEstacionBar = ['bar', 'bebida', 'coctel', 'licor', 'cafeteria', 'cafe', 'caja']
+      .some((tag) => contextoEstacion.includes(tag));
+
+    if (esEstacionBar) {
+      const impresorasBar = await db('impresoras as i')
+        .select('i.id', 'i.nombre', 'i.ip_address', 'i.puerto')
+        .where('i.sede_id', sedeId)
+        .where('i.estado', 'activa')
+        .whereNull('i.deleted_at')
+        .where(function() {
+          this.whereRaw('LOWER(i.nombre) like ?', ['%bar%'])
+            .orWhereRaw('LOWER(i.modelo) like ?', ['%bar%'])
+            .orWhereRaw('LOWER(i.nombre) like ?', ['%bebida%'])
+            .orWhereRaw('LOWER(i.modelo) like ?', ['%bebida%'])
+            .orWhereRaw('LOWER(i.nombre) like ?', ['%caja%'])
+            .orWhereRaw('LOWER(i.modelo) like ?', ['%caja%']);
+        })
+        .orderBy('i.id', 'asc');
+
+      if (impresorasBar.length > 0) {
+        return impresorasBar;
+      }
+
+      // Último fallback para bar: usar impresoras activas que no parezcan de cocina.
+      return db('impresoras as i')
+        .select('i.id', 'i.nombre', 'i.ip_address', 'i.puerto')
+        .where('i.sede_id', sedeId)
+        .where('i.estado', 'activa')
+        .whereNull('i.deleted_at')
+        .whereNot(function() {
+          this.whereRaw('LOWER(i.nombre) like ?', ['%cocina%'])
+            .orWhereRaw('LOWER(i.modelo) like ?', ['%cocina%']);
+        })
+        .orderBy('i.id', 'asc');
+    }
+
+    // Fallback general para estaciones no cocina: preferir cualquier impresora activa no cocina.
+    const impresorasNoCocina = await db('impresoras as i')
+      .select('i.id', 'i.nombre', 'i.ip_address', 'i.puerto')
+      .where('i.sede_id', sedeId)
+      .where('i.estado', 'activa')
+      .whereNull('i.deleted_at')
+      .whereNot(function() {
+        this.whereRaw('LOWER(i.nombre) like ?', ['%cocina%'])
+          .orWhereRaw('LOWER(i.modelo) like ?', ['%cocina%']);
+      })
+      .orderBy('i.id', 'asc');
+
+    if (impresorasNoCocina.length > 0) {
+      return impresorasNoCocina;
+    }
+
+    return db('impresoras as i')
+      .select('i.id', 'i.nombre', 'i.ip_address', 'i.puerto')
+      .where('i.sede_id', sedeId)
+      .where('i.estado', 'activa')
+      .whereNull('i.deleted_at')
+      .orderBy('i.id', 'asc');
   }
 
   static async imprimirTicketsPorComanda({ orden, mesa, usuario, tickets, clienteId = null }) {
