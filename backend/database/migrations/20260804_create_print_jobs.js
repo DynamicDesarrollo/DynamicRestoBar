@@ -1,4 +1,6 @@
 exports.up = async function(knex) {
+  const exists = await knex.schema.hasTable('print_jobs');
+  if (exists) return;
   await knex.schema.createTable('print_jobs', (table) => {
     table.increments('id').primary();
     table.integer('cliente_id').nullable().index();
