@@ -3,7 +3,17 @@ const db = require('../../config/database');
 class ZonasController {
   static async getZonas(req, res) {
     try {
-      const { sedeId: sede_id } = req.usuario;
+      const querySedeId = req.query?.sedeId;
+      const sede_id = (querySedeId !== undefined && querySedeId !== '')
+        ? parseInt(querySedeId, 10)
+        : (req.usuario?.sedeId || req.usuario?.sede_id || req.body?.sede_id);
+
+      if (!sede_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Sede no proporcionada en token ni en la petición',
+        });
+      }
       
       const zonas = await db('zonas')
         .where('sede_id', sede_id)

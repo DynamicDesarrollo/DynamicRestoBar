@@ -31,12 +31,17 @@ const verificarToken = (req, res, next) => {
       console.log('✅ [verificarToken] Token válido, payload:', decoded);
 
       // Adjuntar datos al request
+      const sedeId = decoded.sedeId ?? decoded.sede_id ?? null;
+      const roleId = decoded.roleId ?? decoded.rol_id ?? null;
+      const roleName = decoded.roleName ?? decoded.rol ?? null;
+
       req.usuario = {
         userId: decoded.userId,
         email: decoded.email,
-        roleId: decoded.roleId,
-        rol: decoded.roleName, // nombre del rol para middleware de roles
-        sedeId: decoded.sedeId,
+        roleId,
+        rol: roleName, // nombre del rol para middleware de roles
+        sedeId,
+        sede_id: sedeId,
         cliente_id: decoded.cliente_id,
       };
 
