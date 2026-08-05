@@ -14,6 +14,7 @@ const SedesController = {
       let query = db('sedes');
       const soportaClienteId = await getClienteIdColumnSupported();
       if (clienteId && soportaClienteId) query = query.where('cliente_id', clienteId);
+      query = query.whereNull('deleted_at');
       const sedes = await query;
       res.json(sedes);
     } catch (err) {
@@ -24,7 +25,7 @@ const SedesController = {
   async getSedeById(req, res) {
     try {
       const { id } = req.params;
-      const sede = await db('sedes').where({ id }).first();
+      const sede = await db('sedes').where({ id }).whereNull('deleted_at').first();
       if (!sede) return res.status(404).json({ error: 'Sede no encontrada' });
       res.json(sede);
     } catch (err) {
@@ -53,8 +54,8 @@ const SedesController = {
     try {
       const { id } = req.params;
       const { nombre, direccion } = req.body;
-      await db('sedes').where({ id }).update({ nombre, direccion });
-      const sede = await db('sedes').where({ id }).first();
+      await db('sedes').where({ id }).whereNull('deleted_at').update({ nombre, direccion, updated_at: db.fn.now() });
+      const sede = await db('sedes').where({ id }).whereNull('deleted_at').first();
       res.json(sede);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -64,7 +65,11 @@ const SedesController = {
   async eliminarSede(req, res) {
     try {
       const { id } = req.params;
-      await db('sedes').where({ id }).del();
+      const updated = await db('sedes')
+        .where({ id })
+        .whereNull('deleted_at')
+        .update({ deleted_at: db.fn.now(), updated_at: db.fn.now() });
+      if (!updated) return res.status(404).json({ error: 'Sede no encontrada' });
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: err.message });

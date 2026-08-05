@@ -87,18 +87,12 @@ const ConfiguracionSedes = () => {
   const handleDelete = async (sede) => {
     if (!window.confirm('¿Seguro que deseas eliminar esta sede?')) return;
     try {
-      // Verificar si tiene datos asociados (ejemplo: mesas, ordenes, productos, etc.)
-      const tieneAsociados = await sedesService.tieneAsociados(Number(sede.id));
-      if (tieneAsociados) {
-        // Mensaje de error eliminado
-        return;
-      }
       await sedesService.eliminar(Number(sede.id));
       cargarSedes();
-      // Mensaje de éxito eliminado
     } catch (error) {
-      // Puedes agregar manejo de error aquí si lo deseas
       console.error('Error eliminando sede:', error);
+      const mensaje = error?.response?.data?.error || 'No se pudo eliminar la sede';
+      alert(mensaje);
     }
   };
 
