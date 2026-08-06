@@ -156,6 +156,14 @@ export default function Mesas() {
                       <small className="text-muted">
                         👥 {mesa.capacidad} personas
                       </small>
+                      {mesa.mesero_nombre && (
+                        <>
+                          <br />
+                          <small className="text-muted">
+                            👤 Atiende: <strong>{mesa.mesero_nombre}</strong>
+                          </small>
+                        </>
+                      )}
                     </div>
 
                     <Badge

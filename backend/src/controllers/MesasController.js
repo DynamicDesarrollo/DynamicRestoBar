@@ -26,11 +26,29 @@ class MesasController {
         });
       }
 
-      const mesas = await db('mesas')
-        .select('*')
-        .where('sede_id', sedeId)
-        .where('deleted_at', null)
-        .orderBy('numero', 'asc');
+      const mesas = await db('mesas as m')
+        .leftJoin(
+          db.raw(`(
+            SELECT o1.mesa_id, o1.usuario_id
+            FROM ordenes o1
+            INNER JOIN (
+              SELECT mesa_id, MAX(created_at) AS max_created_at
+              FROM ordenes
+              WHERE estado IN ('abierta', 'enviada_produccion', 'en_preparacion', 'lista_entrega', 'en_precuenta')
+              GROUP BY mesa_id
+            ) o2 ON o1.mesa_id = o2.mesa_id AND o1.created_at = o2.max_created_at
+            WHERE o1.estado IN ('abierta', 'enviada_produccion', 'en_preparacion', 'lista_entrega', 'en_precuenta')
+          ) as orden_activa ON orden_activa.mesa_id = m.id`)
+        )
+        .leftJoin('usuarios as u', 'u.id', 'orden_activa.usuario_id')
+        .select(
+          'm.*',
+          db.raw('u.nombre as mesero_nombre'),
+          db.raw('orden_activa.usuario_id as mesero_id')
+        )
+        .where('m.sede_id', sedeId)
+        .whereNull('m.deleted_at')
+        .orderByRaw('CAST(m.numero AS INTEGER) ASC');
 
       return res.json({
         success: true,
