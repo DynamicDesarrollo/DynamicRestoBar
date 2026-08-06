@@ -18,6 +18,7 @@ export default function Mesas() {
   const [mesaOrigen, setMesaOrigen] = useState(null);
   const [mesaDestinoId, setMesaDestinoId] = useState('');
   const [trasladando, setTrasladando] = useState(false);
+  const [reasignarMesero, setReasignarMesero] = useState(true);
 
   const cargarMesas = useCallback(async () => {
     try {
@@ -60,6 +61,7 @@ export default function Mesas() {
 
     setMesaOrigen(mesa);
     setMesaDestinoId(String(disponibles[0].id));
+    setReasignarMesero(true);
     setShowTrasladoModal(true);
   };
 
@@ -75,12 +77,14 @@ export default function Mesas() {
         orden_id: mesaOrigen.orden_activa_id,
         mesa_origen_id: mesaOrigen.id,
         mesa_destino_id: parseInt(mesaDestinoId, 10),
+        reasignar_mesero: reasignarMesero,
       });
 
       toast.success(`Orden trasladada de mesa ${mesaOrigen.numero}`);
       setShowTrasladoModal(false);
       setMesaOrigen(null);
       setMesaDestinoId('');
+      setReasignarMesero(true);
       await cargarMesas();
     } catch (err) {
       const mensaje = err.response?.data?.error || 'No se pudo trasladar la mesa';
@@ -277,9 +281,29 @@ export default function Mesas() {
               ))}
             </Form.Select>
           </Form.Group>
+
+          <Form.Group className="mt-3">
+            <Form.Check
+              type="switch"
+              id="switch-reasignar-mesero"
+              checked={reasignarMesero}
+              onChange={(e) => setReasignarMesero(e.target.checked)}
+              label="Reasignar orden al mesero actual"
+            />
+            <small className="text-muted d-block mt-1">
+              Si se desactiva, la orden conserva el mesero original.
+            </small>
+          </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowTrasladoModal(false)} disabled={trasladando}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setShowTrasladoModal(false);
+              setReasignarMesero(true);
+            }}
+            disabled={trasladando}
+          >
             Cancelar
           </Button>
           <Button variant="primary" onClick={confirmarTraslado} disabled={trasladando || !mesaDestinoId}>

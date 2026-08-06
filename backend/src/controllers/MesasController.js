@@ -195,8 +195,9 @@ class MesasController {
     const trx = await db.transaction();
 
     try {
-      const { orden_id, mesa_origen_id, mesa_destino_id, motivo } = req.body;
+      const { orden_id, mesa_origen_id, mesa_destino_id, motivo, reasignar_mesero } = req.body;
       const usuarioId = req.usuario?.userId || null;
+      const reasignarMesero = reasignar_mesero !== false;
 
       if (!orden_id || !mesa_origen_id || !mesa_destino_id) {
         await trx.rollback();
@@ -271,13 +272,18 @@ class MesasController {
         });
       }
 
+      const updateOrden = {
+        mesa_id: mesa_destino_id,
+        updated_at: new Date(),
+      };
+
+      if (reasignarMesero && usuarioId) {
+        updateOrden.usuario_id = usuarioId;
+      }
+
       await trx('ordenes')
         .where('id', orden_id)
-        .update({
-          mesa_id: mesa_destino_id,
-          usuario_id: usuarioId || orden.usuario_id,
-          updated_at: new Date(),
-        });
+        .update(updateOrden);
 
       await trx('mesas')
         .where('id', mesa_destino_id)
