@@ -318,6 +318,8 @@ class OrdenesController {
       let esOrdenNueva = false;
       const ticketsParaImprimir = [];
       const firmasModsCache = new Map();
+      let ordenItemsPrevios = [];
+      const ordenItemsProcesados = new Set();
 
       const construirNotasCompletas = (item) => ([
         item.observaciones || null,
@@ -410,6 +412,13 @@ class OrdenesController {
         }
       }
 
+      if (!esOrdenNueva) {
+        ordenItemsPrevios = await db('orden_items')
+          .where('orden_id', ordenId)
+          .where('cantidad', '>', 0)
+          .select('*');
+      }
+
       // Agregar items (igual para orden nueva o existente)
       for (const item of items) {
         console.log(`📦 Procesando item: ${item.producto_id}, Orden: ${ordenId}, Cantidad solicitada: ${item.cantidad}`);
@@ -442,6 +451,7 @@ class OrdenesController {
             const cantidadAnterior = Number(itemExistente.cantidad || 0);
             const cantidadNueva = Number(item.cantidad || 0);
             const deltaCantidad = cantidadNueva - cantidadAnterior;
+            ordenItemsProcesados.add(itemExistente.id);
 
             if (cantidadAnterior !== cantidadNueva) {
               console.log(`🔄 Actualizando cantidad del item ${item.producto_id}: ${cantidadAnterior} → ${cantidadNueva}`);
@@ -487,8 +497,37 @@ class OrdenesController {
                   items: [{
                     nombre: productoConEstacion.producto_nombre || `Producto ${item.producto_id}`,
                     cantidad: deltaCantidad,
+                    accion: 'agregado',
                     modificadores: item.modificadores?.map((m) => m.nombre) || [],
                     notas_especiales: notasCompletas || null,
+                    observaciones: item.observaciones || null,
+                  }],
+                });
+              } else if (deltaCantidad < 0) {
+                const cantidadReducida = Math.abs(deltaCantidad);
+                const notaAjuste = `[ACCION:REDUCIDO] ${notasCompletas || ''}`.trim();
+
+                await db('comanda_items').insert({
+                  comanda_id: comandaEstacion.id,
+                  orden_item_id: itemExistente.id,
+                  producto_id: item.producto_id,
+                  cantidad: cantidadReducida,
+                  notas_especiales: notaAjuste,
+                  estado: 'pendiente',
+                  created_at: new Date(),
+                  updated_at: new Date(),
+                });
+
+                ticketsParaImprimir.push({
+                  estacion_id: productoConEstacion.estacion_id,
+                  estacion_nombre: productoConEstacion.estacion_nombre || productoConEstacion.estacion_tipo || 'Comanda',
+                  comanda_id: comandaEstacion.id,
+                  items: [{
+                    nombre: productoConEstacion.producto_nombre || `Producto ${item.producto_id}`,
+                    cantidad: cantidadReducida,
+                    accion: 'reducido',
+                    modificadores: item.modificadores?.map((m) => m.nombre) || [],
+                    notas_especiales: notaAjuste,
                     observaciones: item.observaciones || null,
                   }],
                 });
@@ -515,6 +554,7 @@ class OrdenesController {
         }).returning('id');
         itemId = Array.isArray(itemResult) ? itemResult[0].id : itemResult.id;
         console.log(`✅ Orden_item creado con ID: ${itemId}`);
+        ordenItemsProcesados.add(itemId);
 
         // Guardar modificadores si existen
         if (item.modificadores && Array.isArray(item.modificadores) && item.modificadores.length > 0) {
@@ -549,11 +589,70 @@ class OrdenesController {
           items: [{
             nombre: productoConEstacion.producto_nombre || `Producto ${item.producto_id}`,
             cantidad: item.cantidad,
+            accion: 'agregado',
             modificadores: item.modificadores?.map((m) => m.nombre) || [],
             notas_especiales: notasCompletas || null,
             observaciones: item.observaciones || null,
           }],
         });
+      }
+
+      // Detectar items que fueron eliminados del carrito y emitir ticket de cancelación.
+      if (!esOrdenNueva && ordenItemsPrevios.length > 0) {
+        for (const itemPrevio of ordenItemsPrevios) {
+          if (ordenItemsProcesados.has(itemPrevio.id)) {
+            continue;
+          }
+
+          const cantidadCancelada = Number(itemPrevio.cantidad || 0);
+          if (cantidadCancelada <= 0) {
+            continue;
+          }
+
+          const productoConEstacion = await OrdenesController.obtenerEstacionPorProducto(itemPrevio.producto_id, sede_id);
+          if (!productoConEstacion?.estacion_id) {
+            continue;
+          }
+
+          const comandaEstacion = await OrdenesController.obtenerOCrearComanda({
+            ordenId,
+            estacionId: productoConEstacion.estacion_id,
+            numeroOrden: ordenExistente?.numero_orden || ordenId,
+          });
+
+          const notaCancelacion = `[ACCION:CANCELADO] ${itemPrevio.notas_especiales || ''}`.trim();
+
+          await db('comanda_items').insert({
+            comanda_id: comandaEstacion.id,
+            orden_item_id: itemPrevio.id,
+            producto_id: itemPrevio.producto_id,
+            cantidad: cantidadCancelada,
+            notas_especiales: notaCancelacion,
+            estado: 'pendiente',
+            created_at: new Date(),
+            updated_at: new Date(),
+          });
+
+          await db('orden_items').where('id', itemPrevio.id).update({
+            cantidad: 0,
+            subtotal: 0,
+            updated_at: new Date(),
+          });
+
+          ticketsParaImprimir.push({
+            estacion_id: productoConEstacion.estacion_id,
+            estacion_nombre: productoConEstacion.estacion_nombre || productoConEstacion.estacion_tipo || 'Comanda',
+            comanda_id: comandaEstacion.id,
+            items: [{
+              nombre: productoConEstacion.producto_nombre || `Producto ${itemPrevio.producto_id}`,
+              cantidad: cantidadCancelada,
+              accion: 'cancelado',
+              modificadores: [],
+              notas_especiales: notaCancelacion,
+              observaciones: itemPrevio.notas_especiales || null,
+            }],
+          });
+        }
       }
 
       // Recalcular el total de la orden basado en todos los orden_items actuales
@@ -668,7 +767,8 @@ class OrdenesController {
         ordenes.map(async (orden) => {
           const items = await db('orden_items')
             .select('*')
-            .where('orden_id', orden.id);
+            .where('orden_id', orden.id)
+            .where('cantidad', '>', 0);
 
           // Obtener modificadores para cada item
           const itemsConModificadores = await Promise.all(

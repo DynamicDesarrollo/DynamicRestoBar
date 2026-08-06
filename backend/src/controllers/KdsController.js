@@ -57,11 +57,20 @@ class KdsController {
           const items = await db('comanda_items')
             .select(
               'comanda_items.*',
+              'comanda_items.notas_especiales as comanda_notas_especiales',
               'orden_items.producto_id',
               'orden_items.cantidad',
               'orden_items.precio_unitario',
               'orden_items.subtotal',
-              'orden_items.notas_especiales',
+              'orden_items.notas_especiales as orden_item_notas_especiales',
+              db.raw(`COALESCE(comanda_items.notas_especiales, orden_items.notas_especiales) as notas_especiales`),
+              db.raw(`
+                CASE
+                  WHEN comanda_items.notas_especiales ILIKE '[ACCION:CANCELADO]%' THEN 'cancelado'
+                  WHEN comanda_items.notas_especiales ILIKE '[ACCION:REDUCIDO]%' THEN 'reducido'
+                  ELSE 'agregado'
+                END as accion
+              `),
               'productos.nombre',
               'productos.descripcion'
             )

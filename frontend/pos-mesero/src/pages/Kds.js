@@ -161,6 +161,21 @@ export default function Kds() {
     return transiciones[estado];
   };
 
+  const getAccionBadge = (accion) => {
+    const valor = String(accion || 'agregado').toLowerCase();
+    if (valor === 'cancelado') {
+      return { label: 'X CANCELADO', bg: 'danger' };
+    }
+    if (valor === 'reducido') {
+      return { label: '- REDUCIDO', bg: 'warning' };
+    }
+    return { label: '+ AGREGADO', bg: 'success' };
+  };
+
+  const limpiarNotaAccion = (nota) => String(nota || '')
+    .replace(/^\[ACCION:[A-Z_]+\]\s*/i, '')
+    .trim();
+
   const handleLogout = () => {
     logout();
     toast.success('Sesión cerrada');
@@ -304,10 +319,15 @@ export default function Kds() {
                                     <small className="text-muted">
                                       Cantidad: {item.cantidad}
                                     </small>
-                                    {item.notas_especiales && (
+                                    <div className="mt-1">
+                                      <Badge bg={getAccionBadge(item.accion).bg}>
+                                        {getAccionBadge(item.accion).label}
+                                      </Badge>
+                                    </div>
+                                    {limpiarNotaAccion(item.notas_especiales) && (
                                       <div className="mt-1">
                                         <small className="text-warning">
-                                          📝 {item.notas_especiales}
+                                          📝 {limpiarNotaAccion(item.notas_especiales)}
                                         </small>
                                       </div>
                                     )}
@@ -404,10 +424,15 @@ export default function Kds() {
                                     <small className="text-muted">
                                       Cantidad: {item.cantidad}
                                     </small>
-                                    {item.notas_especiales && (
+                                    <div className="mt-1">
+                                      <Badge bg={getAccionBadge(item.accion).bg}>
+                                        {getAccionBadge(item.accion).label}
+                                      </Badge>
+                                    </div>
+                                    {limpiarNotaAccion(item.notas_especiales) && (
                                       <div className="mt-1">
                                         <small className="text-warning">
-                                          📝 {item.notas_especiales}
+                                          📝 {limpiarNotaAccion(item.notas_especiales)}
                                         </small>
                                       </div>
                                     )}
@@ -479,7 +504,7 @@ export default function Kds() {
                             <ul className="list-unstyled small">
                               {comanda.items.map((item) => (
                                 <li key={item.id}>
-                                  • {item.nombre} x{item.cantidad}
+                                  • {item.nombre} x{item.cantidad} ({getAccionBadge(item.accion).label})
                                 </li>
                               ))}
                             </ul>

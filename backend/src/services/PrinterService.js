@@ -130,8 +130,17 @@ async function imprimirComanda(impresora, comanda) {
 
   // Items
   for (const item of items) {
+    const accion = String(item.accion || '').toLowerCase();
+    const prefijoAccion = accion === 'cancelado'
+      ? 'X CANCELAR '
+      : accion === 'reducido'
+      ? '- AJUSTE '
+      : accion === 'agregado'
+      ? '+ '
+      : '';
+
     chunks.push(BOLD_ON);
-    chunks.push(line(`${item.cantidad}x  ${item.nombre}`));
+    chunks.push(line(`${prefijoAccion}${item.cantidad}x  ${item.nombre}`));
     chunks.push(BOLD_OFF);
     if (item.modificadores && item.modificadores.length > 0) {
       for (const mod of item.modificadores) {
