@@ -317,6 +317,63 @@ class OrdenesController {
       let comandaId;
       let esOrdenNueva = false;
       const ticketsParaImprimir = [];
+      const firmasModsCache = new Map();
+
+      const construirNotasCompletas = (item) => ([
+        item.observaciones || null,
+        item.modificadores && item.modificadores.length > 0
+          ? `Modificadores: ${item.modificadores.map((m) => m.nombre).join(', ')}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' | '));
+
+      const construirFirmaMods = (mods = []) => mods
+        .map((mod) => Number(mod.id || mod.modificador_opcion_id || 0))
+        .filter((id) => id > 0)
+        .sort((a, b) => a - b)
+        .join(',');
+
+      const obtenerFirmaModsOrdenItem = async (ordenItemId) => {
+        if (firmasModsCache.has(ordenItemId)) {
+          return firmasModsCache.get(ordenItemId);
+        }
+
+        const mods = await db('orden_item_modificador')
+          .where('orden_item_id', ordenItemId)
+          .select('modificador_opcion_id');
+
+        const firma = mods
+          .map((mod) => Number(mod.modificador_opcion_id || 0))
+          .filter((id) => id > 0)
+          .sort((a, b) => a - b)
+          .join(',');
+
+        firmasModsCache.set(ordenItemId, firma);
+        return firma;
+      };
+
+      const buscarItemExistenteCompatible = async (ordenIdActual, itemActual) => {
+        const candidatos = await db('orden_items')
+          .where('orden_id', ordenIdActual)
+          .where('producto_id', itemActual.producto_id)
+          .orderBy('id', 'asc');
+
+        if (!candidatos.length) {
+          return null;
+        }
+
+        const firmaEntrada = construirFirmaMods(itemActual.modificadores || []);
+
+        for (const candidato of candidatos) {
+          const firmaCandidato = await obtenerFirmaModsOrdenItem(candidato.id);
+          if (firmaCandidato === firmaEntrada) {
+            return candidato;
+          }
+        }
+
+        return null;
+      };
 
       if (ordenExistente) {
         // Orden ya existe en la mesa, agregar items
@@ -376,23 +433,28 @@ class OrdenesController {
 
         let itemId;
         
-        // Si la orden ya existe, verificar si este producto_id ya está en ella
+        // Si la orden ya existe, verificar si este item (producto + modificadores) ya está en ella
         if (!esOrdenNueva) {
-          const itemExistente = await db('orden_items')
-            .where('orden_id', ordenId)
-            .where('producto_id', item.producto_id)
-            .first();
+          const itemExistente = await buscarItemExistenteCompatible(ordenId, item);
 
           if (itemExistente) {
             // Item existe - ACTUALIZAR cantidad si es diferente
-            if (itemExistente.cantidad !== item.cantidad) {
-              console.log(`🔄 Actualizando cantidad del item ${item.producto_id}: ${itemExistente.cantidad} → ${item.cantidad}`);
-              const subtotalNuevo = item.cantidad * item.precio_unitario;
-              const diferenciaTotalItem = subtotalNuevo - itemExistente.subtotal;
+            const cantidadAnterior = Number(itemExistente.cantidad || 0);
+            const cantidadNueva = Number(item.cantidad || 0);
+            const deltaCantidad = cantidadNueva - cantidadAnterior;
+
+            if (cantidadAnterior !== cantidadNueva) {
+              console.log(`🔄 Actualizando cantidad del item ${item.producto_id}: ${cantidadAnterior} → ${cantidadNueva}`);
+              const precioUnitario = Number(item.precio_unitario || itemExistente.precio_unitario || 0);
+              const subtotalNuevo = cantidadNueva * precioUnitario;
+              const diferenciaTotalItem = subtotalNuevo - Number(itemExistente.subtotal || 0);
+              const notasCompletas = construirNotasCompletas(item);
               
               await db('orden_items').where('id', itemExistente.id).update({
-                cantidad: item.cantidad,
+                cantidad: cantidadNueva,
+                precio_unitario: precioUnitario,
                 subtotal: subtotalNuevo,
+                notas_especiales: item.observaciones || null,
                 updated_at: new Date(),
               });
               
@@ -405,28 +467,32 @@ class OrdenesController {
               
               console.log(`✅ Item ${item.producto_id} actualizado. Nuevo total orden: ${nuevaOrdenTotal}`);
 
-              await db('comanda_items')
-                .where('orden_item_id', itemExistente.id)
-                .where('comanda_id', comandaEstacion.id)
-                .update({
-                  cantidad: item.cantidad,
-                  notas_especiales: item.observaciones || null,
+              if (deltaCantidad > 0) {
+                // Version PRO: enviar a cocina/bar solo el incremento agregado.
+                await db('comanda_items').insert({
+                  comanda_id: comandaEstacion.id,
+                  orden_item_id: itemExistente.id,
+                  producto_id: item.producto_id,
+                  cantidad: deltaCantidad,
+                  notas_especiales: notasCompletas || null,
                   estado: 'pendiente',
+                  created_at: new Date(),
                   updated_at: new Date(),
                 });
 
-              ticketsParaImprimir.push({
-                estacion_id: productoConEstacion.estacion_id,
-                estacion_nombre: productoConEstacion.estacion_nombre || productoConEstacion.estacion_tipo || 'Comanda',
-                comanda_id: comandaEstacion.id,
-                items: [{
-                  nombre: productoConEstacion.producto_nombre || `Producto ${item.producto_id}`,
-                  cantidad: item.cantidad,
-                  modificadores: item.modificadores?.map((m) => m.nombre) || [],
-                  notas_especiales: item.observaciones || null,
-                  observaciones: item.observaciones || null,
-                }],
-              });
+                ticketsParaImprimir.push({
+                  estacion_id: productoConEstacion.estacion_id,
+                  estacion_nombre: productoConEstacion.estacion_nombre || productoConEstacion.estacion_tipo || 'Comanda',
+                  comanda_id: comandaEstacion.id,
+                  items: [{
+                    nombre: productoConEstacion.producto_nombre || `Producto ${item.producto_id}`,
+                    cantidad: deltaCantidad,
+                    modificadores: item.modificadores?.map((m) => m.nombre) || [],
+                    notas_especiales: notasCompletas || null,
+                    observaciones: item.observaciones || null,
+                  }],
+                });
+              }
             } else {
               console.log(`⏭️  Item ${item.producto_id} ya existe con misma cantidad, sin cambios`);
             }
@@ -463,14 +529,7 @@ class OrdenesController {
         }
 
         // Crear comanda_item para este orden_item
-        const notasCompletas = [
-          item.observaciones || null,
-          item.modificadores && item.modificadores.length > 0
-            ? `Modificadores: ${item.modificadores.map((m) => m.nombre).join(', ')}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(' | ');
+        const notasCompletas = construirNotasCompletas(item);
 
         await db('comanda_items').insert({
           comanda_id: comandaEstacion.id,
