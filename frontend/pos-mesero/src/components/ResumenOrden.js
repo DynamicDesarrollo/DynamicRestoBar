@@ -9,6 +9,8 @@ export default function ResumenOrden({
   totalItems,
   onConfirmar,
   onCancelar,
+  bloquearEnvio = false,
+  mensajeBloqueo = '',
 }) {
   const eliminarItem = useOrdenStore((state) => state.eliminarItem);
   const actualizarCantidad = useOrdenStore((state) => state.actualizarCantidad);
@@ -127,11 +129,15 @@ export default function ResumenOrden({
                   variant="primary"
                   size="lg"
                   onClick={onConfirmar}
+                  disabled={bloquearEnvio}
                   className="fw-bold"
                   style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }}
                 >
                   ✅ Enviar Orden
                 </Button>
+                {bloquearEnvio && mensajeBloqueo && (
+                  <small className="text-muted">{mensajeBloqueo}</small>
+                )}
                 <Button variant="outline-secondary" onClick={onCancelar}>
                   ← Cancelar
                 </Button>

@@ -46,9 +46,27 @@ export default function Orden() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const setItems = useOrdenStore((state) => state.setItems);
   const setMesaActual = useOrdenStore((state) => state.setMesaActual);
+  const [tieneOrdenAbierta, setTieneOrdenAbierta] = useState(false);
+  const [firmaBaseOrden, setFirmaBaseOrden] = useState([]);
 
   const sedeId = usuario?.sede_id || localStorage.getItem('sedeId') || 1;
   const [canalId, setCanalId] = useState(null);
+
+  const construirFirmaItems = useCallback((listaItems) => {
+    return (listaItems || [])
+      .map((item) => {
+        const productoId = item.producto?.id || item.producto_id || 'NA';
+        const cantidad = Number(item.cantidad || 0);
+        const observaciones = (item.observacionesEspeciales || item.notas_especiales || '').trim();
+        const mods = (item.modificadores || [])
+          .map((mod) => String(mod.id || mod.modificador_opcion_id || mod.nombre || ''))
+          .sort()
+          .join(',');
+
+        return `${productoId}|${cantidad}|${mods}|${observaciones}`;
+      })
+      .sort();
+  }, []);
 
   const cargarDatos = useCallback(async () => {
     try {
@@ -72,6 +90,7 @@ export default function Orden() {
       if (ordenesRes.data.data && ordenesRes.data.data.length > 0 && !datoCargado) {
         const orden = ordenesRes.data.data[0];
         setMesaActual(mesaId);
+        setTieneOrdenAbierta(true);
         
         // Restaurar items del carrito desde la orden
         if (orden.items && orden.items.length > 0) {
@@ -84,8 +103,14 @@ export default function Orden() {
             observacionesEspeciales: item.notas_especiales || '',
           }));
           setItems(ordenItems);
+          setFirmaBaseOrden(construirFirmaItems(ordenItems));
+        } else {
+          setFirmaBaseOrden([]);
         }
         setDatoCargado(true);
+      } else if (!datoCargado) {
+        setTieneOrdenAbierta(false);
+        setFirmaBaseOrden([]);
       }
     } catch (err) {
       const mensaje = err.response?.data?.message || 'Error al cargar productos';
@@ -95,11 +120,13 @@ export default function Orden() {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sedeId, mesaId, datoCargado]);
+  }, [sedeId, mesaId, datoCargado, construirFirmaItems]);
 
   useEffect(() => {
     // Resetear cuando cambias de mesa
     setDatoCargado(false);
+    setTieneOrdenAbierta(false);
+    setFirmaBaseOrden([]);
     limpiarOrden(); // LIMPIAR el carrito también
   }, [mesaId, limpiarOrden]);
 
@@ -123,9 +150,20 @@ export default function Orden() {
     setShowProductoModal(false);
   };
 
+  const firmaActualOrden = construirFirmaItems(items);
+  const hayCambiosSobreOrdenAbierta =
+    JSON.stringify(firmaActualOrden) !== JSON.stringify(firmaBaseOrden);
+  const puedeEnviarOrden = tieneOrdenAbierta
+    ? hayCambiosSobreOrdenAbierta
+    : items.length > 0;
+
   const handleEnviarOrden = async () => {
-    if (items.length === 0) {
-      toast.error('Agrega productos a la orden');
+    if (!puedeEnviarOrden) {
+      if (tieneOrdenAbierta) {
+        toast.warn('Esta mesa ya tiene una orden abierta. Agrega o edita productos para enviar cambios.');
+      } else {
+        toast.error('Agrega productos a la orden');
+      }
       return;
     }
 
@@ -279,8 +317,16 @@ export default function Orden() {
               items={items}
               total={getTotal()}
               totalItems={getTotalItems()}
-              onConfirmar={() => setShowConfirmModal(true)}
+              onConfirmar={() => {
+                if (!puedeEnviarOrden) {
+                  toast.warn('No hay cambios nuevos para enviar.');
+                  return;
+                }
+                setShowConfirmModal(true);
+              }}
               onCancelar={handleCancelar}
+              bloquearEnvio={!puedeEnviarOrden}
+              mensajeBloqueo={tieneOrdenAbierta ? 'Agrega o edita productos para enviar cambios de esta orden.' : ''}
             />
           </Col>
         </Row>
@@ -317,7 +363,7 @@ export default function Orden() {
           >
             Cancelar
           </Button>
-          <Button variant="primary" onClick={handleEnviarOrden}>
+          <Button variant="primary" onClick={handleEnviarOrden} disabled={!puedeEnviarOrden}>
             ✅ Enviar Orden
           </Button>
         </Modal.Footer>
