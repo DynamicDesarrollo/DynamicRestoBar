@@ -275,6 +275,7 @@ class MesasController {
         .where('id', orden_id)
         .update({
           mesa_id: mesa_destino_id,
+          usuario_id: usuarioId || orden.usuario_id,
           updated_at: new Date(),
         });
 
