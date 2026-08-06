@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 import axios from '../../../services/api';
 import AdminLayout from '../AdminLayout';
 import { formatMoney } from '../../../utils/formatters';
@@ -99,13 +100,13 @@ const Inventario = () => {
       const endpoint = tipoMovimiento === 'entrada' ? '/admin/inventario/entrada' : '/admin/inventario/salida';
       await axios.post(endpoint, data);
 
-      alert(`${tipoMovimiento.charAt(0).toUpperCase() + tipoMovimiento.slice(1)} registrada exitosamente`);
+      toast.success(`${tipoMovimiento.charAt(0).toUpperCase() + tipoMovimiento.slice(1)} registrada exitosamente`);
       setShowMovimientoModal(false);
       setFormMovimiento({ insumo_id: '', cantidad: '', unidad_medida_id: '', costo_unitario: '', documento_id: '', referencia: '' });
       cargarDatos();
     } catch (err) {
       console.error('Error:', err);
-      alert('Error: ' + (err.response?.data?.error || err.message));
+      toast.error('Error: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -120,13 +121,13 @@ const Inventario = () => {
       };
 
       await axios.post('/admin/inventario/ajuste', data);
-      alert('Ajuste registrado exitosamente');
+      toast.success('Ajuste registrado exitosamente');
       setShowMovimientoModal(false);
       setFormAjuste({ insumo_id: '', cantidad: '', tipo_ajuste: 'MERMA', motivo: '' });
       cargarDatos();
     } catch (err) {
       console.error('Error:', err);
-      alert('Error: ' + (err.response?.data?.error || err.message));
+      toast.error('Error: ' + (err.response?.data?.error || err.message));
     }
   };
 

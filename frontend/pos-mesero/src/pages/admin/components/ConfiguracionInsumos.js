@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 import axios from '../../../services/api';
 import AdminLayout from '../AdminLayout';
 import { formatMoney } from '../../../utils/formatters';
@@ -88,15 +89,15 @@ const ConfiguracionInsumos = () => {
     e.preventDefault();
     try {
       if (!formData.nombre.trim()) {
-        alert('El nombre del insumo es requerido');
+        toast.warn('El nombre del insumo es requerido');
         return;
       }
       if (!formData.unidad_medida_id) {
-        alert('Debes seleccionar una unidad de medida');
+        toast.warn('Debes seleccionar una unidad de medida');
         return;
       }
       if (!formData.costo_unitario) {
-        alert('El costo unitario es requerido');
+        toast.warn('El costo unitario es requerido');
         return;
       }
 
@@ -124,7 +125,7 @@ const ConfiguracionInsumos = () => {
       cargarDatos();
     } catch (err) {
       console.error('Error al guardar insumo:', err);
-      alert('Error al guardar insumo: ' + (err.response?.data?.error || err.message));
+      toast.error('Error al guardar insumo: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -166,7 +167,7 @@ const ConfiguracionInsumos = () => {
         cargarDatos();
       } catch (err) {
         console.error('Error al eliminar insumo:', err);
-        alert('Error al eliminar insumo');
+        toast.error('Error al eliminar insumo');
       }
     }
   };
@@ -175,7 +176,7 @@ const ConfiguracionInsumos = () => {
     e.preventDefault();
     try {
       if (!formProveedor.nombre.trim()) {
-        alert('El nombre del proveedor es requerido');
+        toast.warn('El nombre del proveedor es requerido');
         return;
       }
       
@@ -184,11 +185,11 @@ const ConfiguracionInsumos = () => {
         setProveedores([...proveedores, res.data.data]);
         setFormProveedor({ nombre: '', contacto: '', email: '', telefono: '', direccion: '' });
         setShowModalProveedor(false);
-        alert('✅ Proveedor creado exitosamente');
+        toast.success('Proveedor creado exitosamente');
       }
     } catch (err) {
       console.error('Error al guardar proveedor:', err);
-      alert('Error al guardar proveedor');
+      toast.error('Error al guardar proveedor');
     }
   };
 

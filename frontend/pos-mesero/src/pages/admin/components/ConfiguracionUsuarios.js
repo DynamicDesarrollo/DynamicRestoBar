@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 import axios from '../../../services/api';
 import AdminLayout from '../AdminLayout';
 import '../admin.css';
@@ -79,7 +80,7 @@ const ConfiguracionUsuarios = () => {
       const message = err.response?.data?.error || 'Error al guardar usuario';
       const details = err.response?.data?.details ? `\n${err.response.data.details}` : '';
       console.error('Error al guardar usuario:', err.response?.data || err);
-      alert(`${message}${details}`);
+      toast.error(`${message}${details}`);
     }
   };
 
@@ -101,7 +102,7 @@ const ConfiguracionUsuarios = () => {
       await axios.delete(`/admin/usuarios/${id}`);
       cargarUsuarios();
     } catch (err) {
-      alert('Error al eliminar usuario');
+      toast.error('Error al eliminar usuario');
     }
   };
 

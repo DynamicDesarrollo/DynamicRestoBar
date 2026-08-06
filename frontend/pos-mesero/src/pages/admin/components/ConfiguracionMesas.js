@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 import axios from '../../../services/api';
 import AdminLayout from '../AdminLayout';
 import '../admin.css';
@@ -120,7 +121,7 @@ const ConfiguracionMesas = () => {
       cargarMesas();
     } catch (err) {
       console.error('Error al guardar mesa:', err);
-      alert('Error al guardar mesa');
+      toast.error('Error al guardar mesa');
     }
   };
 
@@ -141,7 +142,7 @@ const ConfiguracionMesas = () => {
         cargarMesas();
       } catch (err) {
         console.error('Error al eliminar mesa:', err);
-        alert('Error al eliminar mesa');
+        toast.error('Error al eliminar mesa');
       }
     }
   };

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 import axios from '../../../services/api';
 import AdminLayout from '../AdminLayout';
 import { formatMoney } from '../../../utils/formatters';
@@ -119,7 +120,7 @@ const ConfiguracionRecetas = () => {
 
   const agregarInsumo = () => {
     if (!nuevoInsumo.insumo_id || !nuevoInsumo.cantidad || !nuevoInsumo.unidad_medida_id) {
-      alert('Por favor complete todos los campos');
+      toast.warn('Por favor complete todos los campos');
       return;
     }
 
@@ -128,7 +129,7 @@ const ConfiguracionRecetas = () => {
 
     const yaExiste = insumosReceta.some(i => i.insumo_id === parseInt(nuevoInsumo.insumo_id));
     if (yaExiste) {
-      alert('Este insumo ya está en la receta');
+      toast.warn('Este insumo ya está en la receta');
       return;
     }
 
@@ -180,12 +181,12 @@ const ConfiguracionRecetas = () => {
     e.preventDefault();
 
     if (!selectedProducto) {
-      alert('Seleccione un producto');
+      toast.warn('Seleccione un producto');
       return;
     }
 
     if (insumosReceta.length === 0) {
-      alert('Agregue al menos un insumo');
+      toast.warn('Agregue al menos un insumo');
       return;
     }
 
@@ -204,7 +205,7 @@ const ConfiguracionRecetas = () => {
         await axios.post('/admin/recetas', data);
       }
 
-      alert('Receta guardada exitosamente');
+      toast.success('Receta guardada exitosamente');
       cargarDatos();
       setSelectedProducto(null);
       setRecetaActual(null);
@@ -212,7 +213,7 @@ const ConfiguracionRecetas = () => {
       setFormData({ descripcion: '', rendimiento: 1 });
     } catch (err) {
       console.error('Error al guardar receta:', err);
-      alert('Error al guardar receta: ' + (err.response?.data?.error || err.message));
+      toast.error('Error al guardar receta: ' + (err.response?.data?.error || err.message));
     }
   };
 

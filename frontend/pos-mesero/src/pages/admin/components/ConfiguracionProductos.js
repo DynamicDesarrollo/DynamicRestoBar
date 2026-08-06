@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 import axios from '../../../services/api';
 import AdminLayout from '../AdminLayout';
 import { formatMoney } from '../../../utils/formatters';
@@ -130,7 +131,7 @@ const ConfiguracionProductos = () => {
       cargarDatos();
     } catch (err) {
       console.error('Error al guardar producto:', err);
-      alert('Error al guardar producto');
+      toast.error('Error al guardar producto');
     }
   };
 
@@ -152,7 +153,7 @@ const ConfiguracionProductos = () => {
       cargarDatos();
     } catch (err) {
       console.error('Error al guardar categoría:', err);
-      alert('Error al guardar categoría');
+      toast.error('Error al guardar categoría');
     }
   };
 
@@ -173,7 +174,7 @@ const ConfiguracionProductos = () => {
         cargarDatos();
       } catch (err) {
         console.error('Error al eliminar categoría:', err);
-        alert(err.response?.data?.error || 'Error al eliminar categoría');
+        toast.error(err.response?.data?.error || 'Error al eliminar categoría');
       }
     }
   };
@@ -210,7 +211,7 @@ const ConfiguracionProductos = () => {
         cargarDatos();
       } catch (err) {
         console.error('Error al eliminar producto:', err);
-        alert('Error al eliminar producto');
+        toast.error('Error al eliminar producto');
       }
     }
   };

@@ -1,4 +1,4 @@
-// import { toast } from 'react-toastify';
+import { toast } from 'react-toastify';
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../../stores';
 import { sedesService } from '../../../services/api';
@@ -92,7 +92,7 @@ const ConfiguracionSedes = () => {
     } catch (error) {
       console.error('Error eliminando sede:', error);
       const mensaje = error?.response?.data?.error || 'No se pudo eliminar la sede';
-      alert(mensaje);
+      toast.error(mensaje);
     }
   };
 
