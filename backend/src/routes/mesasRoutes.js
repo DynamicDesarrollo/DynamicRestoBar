@@ -18,6 +18,7 @@ router.use(verificarToken);
 
 // Rutas
 router.get('/', MesasController.getAll);
+router.patch('/trasladar', MesasController.trasladar);
 router.get('/:id', MesasController.getById);
 router.patch('/:id/estado', MesasController.updateEstado);
 router.get('/:id/comanda', MesasController.getComanda);

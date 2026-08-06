@@ -94,6 +94,8 @@ export const mesasService = {
     apiClient.get('/mesas', { params: { sedeId } }),
   getById: (id) =>
     apiClient.get(`/mesas/${id}`),
+  trasladarOrden: (data) =>
+    apiClient.patch('/mesas/trasladar', data),
 };
 
 export const kdsService = {

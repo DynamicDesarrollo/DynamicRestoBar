@@ -1,7 +1,7 @@
 import { toast } from 'react-toastify';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Button, Card, Badge, Spinner, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Button, Card, Badge, Spinner, Alert, Modal, Form } from 'react-bootstrap';
 import { mesasService } from '../services/api';
 import { useMesasStore, useAuthStore } from '../stores';
 import './Mesas.css';
@@ -14,6 +14,10 @@ export default function Mesas() {
   const setMesas = useMesasStore((state) => state.setMesas);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showTrasladoModal, setShowTrasladoModal] = useState(false);
+  const [mesaOrigen, setMesaOrigen] = useState(null);
+  const [mesaDestinoId, setMesaDestinoId] = useState('');
+  const [trasladando, setTrasladando] = useState(false);
 
   const cargarMesas = useCallback(async () => {
     try {
@@ -46,6 +50,46 @@ export default function Mesas() {
     navigate('/login');
   };
 
+  const abrirModalTraslado = (mesa, event) => {
+    event.stopPropagation();
+    const disponibles = mesas.filter((m) => m.estado === 'disponible' && m.id !== mesa.id);
+    if (disponibles.length === 0) {
+      toast.warn('No hay mesas disponibles para traslado');
+      return;
+    }
+
+    setMesaOrigen(mesa);
+    setMesaDestinoId(String(disponibles[0].id));
+    setShowTrasladoModal(true);
+  };
+
+  const confirmarTraslado = async () => {
+    if (!mesaOrigen?.orden_activa_id || !mesaDestinoId) {
+      toast.error('Datos incompletos para traslado');
+      return;
+    }
+
+    try {
+      setTrasladando(true);
+      await mesasService.trasladarOrden({
+        orden_id: mesaOrigen.orden_activa_id,
+        mesa_origen_id: mesaOrigen.id,
+        mesa_destino_id: parseInt(mesaDestinoId, 10),
+      });
+
+      toast.success(`Orden trasladada de mesa ${mesaOrigen.numero}`);
+      setShowTrasladoModal(false);
+      setMesaOrigen(null);
+      setMesaDestinoId('');
+      await cargarMesas();
+    } catch (err) {
+      const mensaje = err.response?.data?.error || 'No se pudo trasladar la mesa';
+      toast.error(mensaje);
+    } finally {
+      setTrasladando(false);
+    }
+  };
+
   if (loading) {
     return (
       <Container className="d-flex align-items-center justify-content-center min-vh-100">
@@ -58,6 +102,7 @@ export default function Mesas() {
   const mesasDisponibles = mesasOrdenadas.filter((m) => m.estado === 'disponible');
   const mesasOcupadas = mesasOrdenadas.filter((m) => m.estado === 'ocupada');
   const mesasPrecuenta = mesasOrdenadas.filter((m) => m.estado === 'en_precuenta');
+  const mesasDisponiblesTraslado = mesasDisponibles.filter((m) => m.id !== mesaOrigen?.id);
 
   return (
     <div className="mesas-page">
@@ -184,6 +229,17 @@ export default function Mesas() {
                         ? 'Ocupada'
                         : 'Precuenta'}
                     </Badge>
+
+                    {mesa.orden_activa_id && mesa.estado !== 'disponible' && (
+                      <Button
+                        size="sm"
+                        variant="outline-primary"
+                        className="w-100 mt-2"
+                        onClick={(event) => abrirModalTraslado(mesa, event)}
+                      >
+                        Trasladar
+                      </Button>
+                    )}
                   </Card.Body>
                 </Card>
               </div>
@@ -195,6 +251,42 @@ export default function Mesas() {
           )}
         </div>
       </Container>
+
+      <Modal show={showTrasladoModal} onHide={() => setShowTrasladoModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Trasladar mesa</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="mb-2">
+            Mesa origen: <strong>{mesaOrigen?.numero || '-'}</strong>
+          </p>
+          <p className="mb-3">
+            Orden: <strong>{mesaOrigen?.orden_activa_numero || `#${mesaOrigen?.orden_activa_id || '-'}`}</strong>
+          </p>
+
+          <Form.Group>
+            <Form.Label>Mesa destino disponible</Form.Label>
+            <Form.Select
+              value={mesaDestinoId}
+              onChange={(e) => setMesaDestinoId(e.target.value)}
+            >
+              {mesasDisponiblesTraslado.map((mesa) => (
+                <option key={mesa.id} value={mesa.id}>
+                  Mesa {mesa.numero}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowTrasladoModal(false)} disabled={trasladando}>
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={confirmarTraslado} disabled={trasladando || !mesaDestinoId}>
+            {trasladando ? 'Trasladando...' : 'Confirmar traslado'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }
