@@ -80,3 +80,20 @@
   color: #666;
   font-size: 12px;
 }
+
+.mesero-chip {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.mesero-chip-ocupada {
+  background: #fff4cc;
+  color: #7a5200;
+  border: 1px solid #ffd45a;
+}

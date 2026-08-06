@@ -159,7 +159,9 @@ export default function Mesas() {
                       {mesa.mesero_nombre && (
                         <>
                           <br />
-                          <small className="text-muted">
+                          <small
+                            className={`mesero-chip ${mesa.estado === 'ocupada' ? 'mesero-chip-ocupada' : ''}`}
+                          >
                             👤 Atiende: <strong>{mesa.mesero_nombre}</strong>
                           </small>
                         </>
