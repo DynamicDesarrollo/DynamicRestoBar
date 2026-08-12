@@ -19,6 +19,7 @@
     "migrate:rollback": "knex migrate:rollback --knexfile src/config/knexfile.js",
     "migrate:list": "knex migrate:list --knexfile src/config/knexfile.js",
     "seed": "knex seed:run --knexfile src/config/knexfile.js",
+    "seed:metodos-pago": "node seed-metodos-pago.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "lint": "eslint src --fix",

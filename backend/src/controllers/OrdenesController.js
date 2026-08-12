@@ -13,6 +13,29 @@ const db = require('../config/database');
 const PrintDispatchService = require('../services/PrintDispatchService');
 
 class OrdenesController {
+  static inferirTipoEstacionDesdeTexto(texto = '') {
+    const valor = String(texto || '').toLowerCase();
+    const cocinaTags = [
+      'cocina', 'comida', 'plato', 'pollo', 'carne', 'hamburguesa', 'sopa',
+      'pizza', 'parrilla', 'plancha', 'freidora', 'pasta', 'sandwich',
+      'ensalada', 'entrada', 'principal', 'milanesa'
+    ];
+    const barTags = [
+      'bar', 'bebida', 'coctel', 'cerveza', 'vino', 'licor', 'traguito',
+      'cafe', 'cafeteria', 'espresso', 'jugo', 'gaseosa', 'refresco',
+      'soda', 'te', 'frappe', 'milkshake', 'batido'
+    ];
+
+    const cocinaScore = cocinaTags.reduce((acc, tag) => acc + (valor.includes(tag) ? 1 : 0), 0);
+    const barScore = barTags.reduce((acc, tag) => acc + (valor.includes(tag) ? 1 : 0), 0);
+
+    if (cocinaScore > 0 && barScore === 0) return 'cocina';
+    if (barScore > 0 && cocinaScore === 0) return 'bar';
+    if (cocinaScore > barScore) return 'cocina';
+    if (barScore > cocinaScore) return 'bar';
+    return null;
+  }
+
   static async obtenerEstacionPorProducto(productoId, sedeId) {
     const producto = await db('productos as p')
       .leftJoin('estaciones as e', 'p.estacion_id', 'e.id')
@@ -36,17 +59,14 @@ class OrdenesController {
       return producto;
     }
 
-    const contextoProducto = `${producto.producto_nombre || ''} ${producto.categoria_nombre || ''}`.toLowerCase();
-    const preferirBar = ['bar', 'bebida', 'coctel', 'licor', 'cafeteria', 'cafe', 'jugo', 'gaseosa']
-      .some((tag) => contextoProducto.includes(tag));
-    const tipoEstacionPreferida = preferirBar ? 'bar' : (producto.estacion_tipo || 'cocina');
+    const textoProducto = `${producto.producto_nombre || ''} ${producto.categoria_nombre || ''} ${producto.estacion_tipo || ''}`;
+    const tipoEstacionInferido = OrdenesController.inferirTipoEstacionDesdeTexto(textoProducto);
+    const tipoEstacionPreferida = tipoEstacionInferido || (producto.estacion_tipo || 'cocina');
 
     const estacionFallback = await db('estaciones')
       .where('sede_id', sedeId)
       .where('activa', true)
-      .andWhere(function() {
-        this.where('tipo', tipoEstacionPreferida);
-      })
+      .where('tipo', tipoEstacionPreferida)
       .first();
 
     if (estacionFallback) {
