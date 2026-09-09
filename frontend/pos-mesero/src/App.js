@@ -91,7 +91,14 @@ function App() {
         />
 
         {/* Admin Routes - Administrador y Gerente */}
-        <Route path="/admin" element={<Dashboard />} />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute requiredRoles={['Administrador', 'Gerente']}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/admin/usuarios"
           element={

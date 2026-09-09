@@ -135,12 +135,16 @@ export default function Mesas() {
           </div>
 
           <div className="mesas-header__actions">
-            <button type="button" className="hdr-btn" onClick={() => navigate('/admin')}>
-              <IconGear /> <span>Admin</span>
-            </button>
-            <button type="button" className="hdr-btn hdr-btn--accent" onClick={() => navigate('/caja')}>
-              <IconCash /> <span>Caja</span>
-            </button>
+            {['Administrador', 'Gerente'].includes(usuario?.rol?.nombre) && (
+              <button type="button" className="hdr-btn" onClick={() => navigate('/admin')}>
+                <IconGear /> <span>Admin</span>
+              </button>
+            )}
+            {usuario?.rol?.nombre === 'Caja' && (
+              <button type="button" className="hdr-btn hdr-btn--accent" onClick={() => navigate('/caja')}>
+                <IconCash /> <span>Caja</span>
+              </button>
+            )}
             <button type="button" className="hdr-btn" onClick={cargarMesas}>
               <IconRefresh /> <span>Refrescar</span>
             </button>
