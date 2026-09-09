@@ -27,7 +27,7 @@
 
 @media (max-width: 767.98px) {
   .aurum-catalog {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -47,6 +47,12 @@
 @media (max-width: 767.98px) {
   .aurum-sidebar {
     flex-direction: row;
+    /* Sin esto, los botones en fila (que no envuelven texto por el
+       white-space: nowrap) empujan el ancho del sidebar en vez de
+       quedar contenidos — y el overflow-x: auto de arriba nunca llega
+       a activarse porque el contenedor mismo ya creció de más. */
+    width: 100%;
+    min-width: 0;
   }
 }
 

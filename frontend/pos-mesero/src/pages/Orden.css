@@ -8,6 +8,9 @@
   background: var(--rb-charcoal-950);
   color: var(--rb-cream-100);
   font-family: var(--rb-font-body);
+  /* Nunca debe scrollear de lado — si algo interno se desborda, que se
+     recorte ahí, no que arrastre toda la pantalla en móvil. */
+  overflow-x: hidden;
 }
 
 .orden-page--loading {
@@ -66,7 +69,11 @@
 }
 
 @media (max-width: 991.98px) {
-  .orden-content { grid-template-columns: 1fr; }
+  /* minmax(0, 1fr) y no un 1fr desnudo: un track "1fr" solo, sin el 0,
+     no deja que su contenido se achique por debajo de su ancho natural
+     — si algo adentro no puede envolver texto (como la barra de
+     categorías), termina empujando el ancho de toda la columna. */
+  .orden-content { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Estilo Aurum: AurumCatalog ya maneja su propio grid interno
