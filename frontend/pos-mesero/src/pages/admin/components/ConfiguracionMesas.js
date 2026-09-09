@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import axios from '../../../services/api';
 import AdminLayout from '../AdminLayout';
+import { IconTable, IconPlus, IconEdit, IconTrash, IconClose, IconMapPin } from '../../../components/Icons';
 import '../admin.css';
 
 const ConfiguracionMesas = () => {
@@ -17,6 +18,9 @@ const ConfiguracionMesas = () => {
     capacidad: 4,
     sede_id: '',
   });
+  const [showZonaModal, setShowZonaModal] = useState(false);
+  const [editingZonaId, setEditingZonaId] = useState(null);
+  const [zonaForm, setZonaForm] = useState({ nombre: '', descripcion: '' });
 
   useEffect(() => {
     cargarDatos();
@@ -46,15 +50,6 @@ const ConfiguracionMesas = () => {
       const response = await axios.get('/admin/mesas');
       if (response.data.success) {
         setMesas(response.data.data);
-        
-        // Limpiar duplicadas DESPUÉS de cargar
-        try {
-          await axios.post(`/admin/mesas/limpiar-duplicadas?t=${Date.now()}`, {}, {
-            headers: { 'Cache-Control': 'no-cache' }
-          });
-        } catch (err) {
-          console.error('Error al limpiar duplicadas:', err);
-        }
       }
     } catch (err) {
       console.error('Error al cargar mesas:', err);
@@ -169,6 +164,66 @@ const ConfiguracionMesas = () => {
     }
   };
 
+  const cargarZonas = async () => {
+    try {
+      const res = await axios.get('/admin/zonas');
+      if (res.data.success) {
+        setZonas(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error al cargar zonas:', err);
+    }
+  };
+
+  const abrirModalNuevaZona = () => {
+    setZonaForm({ nombre: '', descripcion: '' });
+    setEditingZonaId(null);
+    setShowZonaModal(true);
+  };
+
+  const handleZonaChange = (e) => {
+    const { name, value } = e.target;
+    setZonaForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmitZona = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingZonaId) {
+        await axios.put(`/admin/zonas/${editingZonaId}`, zonaForm);
+        toast.success('Zona actualizada');
+      } else {
+        await axios.post('/admin/zonas', zonaForm);
+        toast.success('Zona creada');
+      }
+      setShowZonaModal(false);
+      setZonaForm({ nombre: '', descripcion: '' });
+      setEditingZonaId(null);
+      cargarZonas();
+    } catch (err) {
+      console.error('Error al guardar zona:', err);
+      toast.error(err.response?.data?.error || 'Error al guardar zona');
+    }
+  };
+
+  const handleEditZona = (zona) => {
+    setEditingZonaId(zona.id);
+    setZonaForm({ nombre: zona.nombre, descripcion: zona.descripcion || '' });
+    setShowZonaModal(true);
+  };
+
+  const handleDeleteZona = async (id) => {
+    if (window.confirm('¿Está seguro de eliminar esta zona?')) {
+      try {
+        await axios.delete(`/admin/zonas/${id}`);
+        cargarZonas();
+      } catch (err) {
+        console.error('Error al eliminar zona:', err);
+        toast.error(err.response?.data?.error || 'Error al eliminar zona');
+      }
+    }
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -181,10 +236,11 @@ const ConfiguracionMesas = () => {
     <AdminLayout>
       <div className="admin-section">
         <div className="section-header">
-          <h2>🪑 Configuración de Mesas</h2>
+          <h2><IconTable /> Configuración de Mesas</h2>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <label style={{ fontWeight: 500, marginRight: 8 }}>Sede:</label>
+            <label style={{ fontWeight: 600, marginRight: 8, color: 'var(--rb-cream-300)', fontSize: '0.86rem' }}>Sede:</label>
             <select
+              className="admin-select"
               value={formData.sede_id || ''}
               onChange={e => {
                 const sedeId = e.target.value;
@@ -198,10 +254,47 @@ const ConfiguracionMesas = () => {
                 <option key={sede.id} value={sede.id}>{sede.nombre}</option>
               ))}
             </select>
+            <button className="btn btn-secondary" onClick={abrirModalNuevaZona}>
+              <IconMapPin /> Zona
+            </button>
             <button className="btn btn-primary" onClick={abrirModalNuevaMesa}>
-              + Agregar Mesa
+              <IconPlus /> Agregar Mesa
             </button>
           </div>
+        </div>
+
+        {/* Zonas */}
+        <div style={{ marginBottom: '30px' }}>
+          <h3 className="admin-subtitle"><IconMapPin /> Zonas ({zonas.length})</h3>
+          {zonas.length === 0 ? (
+            <div style={{ color: 'var(--rb-cream-700)', fontSize: 13 }}>
+              Aún no tienes zonas creadas. Crea una para poder agregar mesas.
+            </div>
+          ) : (
+            <div className="categoria-pills">
+              {zonas.map(zona => (
+                <div key={zona.id} className="categoria-pill" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {zona.nombre}
+                  <button
+                    type="button"
+                    onClick={() => handleEditZona(zona)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex' }}
+                    title="Editar zona"
+                  >
+                    <IconEdit />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteZona(zona.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex' }}
+                    title="Eliminar zona"
+                  >
+                    <IconClose />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mesas-grid">
@@ -217,13 +310,13 @@ const ConfiguracionMesas = () => {
                   className="btn btn-sm btn-primary"
                   onClick={() => handleEdit(mesa)}
                 >
-                  ✏️ Editar
+                  <IconEdit /> Editar
                 </button>
                 <button
                   className="btn btn-sm btn-danger"
                   onClick={() => handleDelete(mesa.id)}
                 >
-                  🗑️ Eliminar
+                  <IconTrash /> Eliminar
                 </button>
               </div>
             </div>
@@ -236,7 +329,7 @@ const ConfiguracionMesas = () => {
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <div className="modal-header">
                 <h3>{editingId ? 'Editar Mesa' : 'Nueva Mesa'}</h3>
-                <button className="btn-close" onClick={handleCloseModal}>✕</button>
+                <button className="btn-close" onClick={handleCloseModal}><IconClose /></button>
               </div>
 
               <form onSubmit={handleSubmit}>
@@ -288,6 +381,50 @@ const ConfiguracionMesas = () => {
                   </button>
                   <button type="submit" className="btn btn-primary">
                     {editingId ? 'Actualizar' : 'Crear'} Mesa
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Zona */}
+        {showZonaModal && (
+          <div className="modal-overlay" onClick={() => setShowZonaModal(false)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>{editingZonaId ? 'Editar Zona' : 'Nueva Zona'}</h3>
+                <button className="btn-close" onClick={() => setShowZonaModal(false)}><IconClose /></button>
+              </div>
+
+              <form onSubmit={handleSubmitZona}>
+                <div className="form-group">
+                  <label>Nombre * <small style={{color: '#999', fontWeight: 'normal'}}>(Ej: Salón principal, Terraza, Barra)</small></label>
+                  <input
+                    type="text"
+                    name="nombre"
+                    value={zonaForm.nombre}
+                    onChange={handleZonaChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Descripción</label>
+                  <textarea
+                    name="descripcion"
+                    value={zonaForm.descripcion}
+                    onChange={handleZonaChange}
+                    rows="3"
+                  />
+                </div>
+
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowZonaModal(false)}>
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    <IconPlus /> {editingZonaId ? 'Actualizar' : 'Crear'} Zona
                   </button>
                 </div>
               </form>

@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
-import { Card, Button, ListGroup, Modal, Form } from 'react-bootstrap';
+import { Modal } from 'react-bootstrap';
 import { useOrdenStore } from '../stores';
+import { formatMoney } from '../utils/formatters';
+import {
+  IconInbox, IconNote, IconEdit, IconTrash, IconCheck, IconArrowLeft, IconMinus, IconPlus,
+} from './Icons';
 import './ResumenOrden.css';
 
 export default function ResumenOrden({
@@ -36,182 +40,148 @@ export default function ResumenOrden({
 
   return (
     <>
-      <Card className="resumen-orden sticky-top">
-        <Card.Header className="bg-primary text-white" style={{ backgroundColor: '#2563eb !important' }}>
-          <h5 className="mb-0">📋 Resumen de Orden</h5>
-        </Card.Header>
+      <div className="resumen-orden">
+        <div className="resumen-orden__header">
+          <IconInbox />
+          <h2>Resumen de Orden</h2>
+        </div>
 
-        <Card.Body className="p-0">
-          {/* Items */}
+        <div className="resumen-orden__body">
           {items.length > 0 ? (
             <>
-              <ListGroup className="list-group-flush">
-                {items.map((item) => (
-                  <ListGroup.Item key={item.id} className="item-resumen">
-                    <div className="d-flex justify-content-between align-items-start mb-2">
-                      <div className="flex-grow-1">
-                        <h6 className="mb-1">{item.producto.nombre}</h6>
-                        <small className="text-muted">
-                          {item.cantidad} × ${item.producto.precio_venta.toLocaleString()}
-                        </small>
-                      </div>
-                      <div className="text-end">
-                        <div className="fw-bold text-danger">
-                          $
-                          {(
-                            item.producto.precio_venta * item.cantidad
-                          ).toLocaleString()}
-                        </div>
-                      </div>
+              {items.map((item) => (
+                <div key={item.id} className="item-resumen">
+                  <div className="item-resumen__top">
+                    <div>
+                      <h6 className="item-resumen__nombre">{item.producto.nombre}</h6>
+                      <span className="item-resumen__cantidad">
+                        {item.cantidad} × {formatMoney(item.producto.precio_venta)}
+                      </span>
                     </div>
-
-                    {/* Modificadores */}
-                    {item.modificadores.length > 0 && (
-                      <div className="modificadores-resumen mb-2">
-                        {item.modificadores.map((mod) => (
-                          <small key={mod.id} className="d-block text-muted">
-                            • {mod.nombre}
-                            {mod.precio_adicional > 0 &&
-                              ` (+$${mod.precio_adicional.toLocaleString()})`}
-                          </small>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Observaciones */}
-                    {item.observacionesEspeciales && (
-                      <div className="observaciones mb-2">
-                        <small className="text-warning bg-light p-1 rounded d-block">
-                          📝 {item.observacionesEspeciales}
-                        </small>
-                      </div>
-                    )}
-
-                    {/* Acciones */}
-                    <div className="d-flex gap-1">
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => handleEditarItem(item)}
-                        className="flex-grow-1"
-                      >
-                        ✏️ Editar
-                      </Button>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => eliminarItem(item.id)}
-                      >
-                        🗑️
-                      </Button>
+                    <div className="item-resumen__precio">
+                      {formatMoney(item.producto.precio_venta * item.cantidad)}
                     </div>
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
+                  </div>
 
-              {/* Totales */}
-              <div className="p-3 bg-light">
-                <div className="d-flex justify-content-between mb-2">
-                  <span>Subtotal ({totalItems} items):</span>
-                  <span>${total.toLocaleString()}</span>
+                  {item.modificadores.length > 0 && (
+                    <div className="modificadores-resumen">
+                      {item.modificadores.map((mod) => (
+                        <small key={mod.id}>
+                          • {mod.nombre}
+                          {mod.precio_adicional > 0 &&
+                            ` (+${formatMoney(mod.precio_adicional)})`}
+                        </small>
+                      ))}
+                    </div>
+                  )}
+
+                  {item.observacionesEspeciales && (
+                    <div className="observaciones">
+                      <IconNote /> {item.observacionesEspeciales}
+                    </div>
+                  )}
+
+                  <div className="item-resumen__acciones">
+                    <button
+                      type="button"
+                      className="item-resumen__accion"
+                      onClick={() => handleEditarItem(item)}
+                    >
+                      <IconEdit /> Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="item-resumen__accion item-resumen__accion--danger"
+                      onClick={() => eliminarItem(item.id)}
+                    >
+                      <IconTrash />
+                    </button>
+                  </div>
                 </div>
-                <div className="border-top pt-2 d-flex justify-content-between">
+              ))}
+
+              <div className="resumen-orden__totales">
+                <div className="resumen-orden__linea">
+                  <span>Subtotal ({totalItems} items):</span>
+                  <span>{formatMoney(total)}</span>
+                </div>
+                <div className="resumen-orden__total">
                   <strong>Total:</strong>
-                  <h5 className="mb-0 text-primary">
-                    ${total.toLocaleString()}
-                  </h5>
+                  <span>{formatMoney(total)}</span>
                 </div>
               </div>
 
-              {/* Botones */}
-              <div className="p-3 d-grid gap-2">
-                <Button
-                  variant="primary"
-                  size="lg"
+              <div className="resumen-orden__acciones">
+                <button
+                  type="button"
+                  className="rb-btn rb-btn--primary"
                   onClick={onConfirmar}
                   disabled={bloquearEnvio}
-                  className="fw-bold"
-                  style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }}
                 >
-                  ✅ Enviar Orden
-                </Button>
+                  <IconCheck /> Enviar Orden
+                </button>
                 {bloquearEnvio && mensajeBloqueo && (
-                  <small className="text-muted">{mensajeBloqueo}</small>
+                  <p className="resumen-orden__bloqueo-hint">{mensajeBloqueo}</p>
                 )}
-                <Button variant="outline-secondary" onClick={onCancelar}>
-                  ← Cancelar
-                </Button>
+                <button type="button" className="rb-btn rb-btn--ghost" onClick={onCancelar}>
+                  <IconArrowLeft /> Cancelar
+                </button>
               </div>
             </>
           ) : (
-            <div className="p-4 text-center text-muted">
-              <p className="mb-0">📭</p>
-              <p className="mb-0">Sin productos agregados</p>
+            <div className="resumen-orden__empty">
+              <IconInbox />
+              <p>Sin productos agregados</p>
             </div>
           )}
-        </Card.Body>
-      </Card>
+        </div>
+      </div>
 
       {/* Modal: Editar Item */}
-      <Modal show={showEditarItem} onHide={() => setShowEditarItem(null)}>
+      <Modal show={!!showEditarItem} onHide={() => setShowEditarItem(null)} centered className="rb-modal">
         <Modal.Header closeButton>
           <Modal.Title>Editar Producto</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form.Group className="mb-3">
-            <Form.Label>
-              <strong>Cantidad</strong>
-            </Form.Label>
-            <div className="d-flex gap-2 align-items-center">
-              <Button
-                variant="outline-primary"
-                size="sm"
+          <div className="rb-form-group">
+            <label className="rb-form-label">Cantidad</label>
+            <div className="rb-stepper">
+              <button
+                type="button"
+                className="rb-stepper__btn"
                 onClick={() => setCantidadEdit(Math.max(1, cantidadEdit - 1))}
               >
-                −
-              </Button>
-              <Form.Control
-                type="number"
-                value={cantidadEdit}
-                onChange={(e) =>
-                  setCantidadEdit(Math.max(1, parseInt(e.target.value) || 1))
-                }
-                min="1"
-                style={{ maxWidth: '100px', textAlign: 'center' }}
-              />
-              <Button
-                variant="outline-primary"
-                size="sm"
+                <IconMinus />
+              </button>
+              <span className="rb-stepper__value">{cantidadEdit}</span>
+              <button
+                type="button"
+                className="rb-stepper__btn"
                 onClick={() => setCantidadEdit(cantidadEdit + 1)}
               >
-                +
-              </Button>
+                <IconPlus />
+              </button>
             </div>
-          </Form.Group>
+          </div>
 
-          <Form.Group>
-            <Form.Label>
-              <strong>Observaciones Especiales</strong>
-            </Form.Label>
-            <Form.Control
-              as="textarea"
+          <div className="rb-form-group" style={{ marginBottom: 0 }}>
+            <label className="rb-form-label">Observaciones Especiales</label>
+            <textarea
+              className="rb-textarea"
               rows="3"
               placeholder="Ej: Sin cebolla, Muy picante..."
               value={observacionesEdit}
               onChange={(e) => setObservacionesEdit(e.target.value)}
             />
-          </Form.Group>
+          </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button
-            variant="secondary"
-            onClick={() => setShowEditarItem(null)}
-          >
+          <button type="button" className="rb-btn rb-btn--ghost" onClick={() => setShowEditarItem(null)}>
             Cancelar
-          </Button>
-          <Button variant="primary" onClick={handleGuardarEdit} style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }}>
+          </button>
+          <button type="button" className="rb-btn rb-btn--primary" onClick={handleGuardarEdit}>
             Guardar
-          </Button>
+          </button>
         </Modal.Footer>
       </Modal>
     </>

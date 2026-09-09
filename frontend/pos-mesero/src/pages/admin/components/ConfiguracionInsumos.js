@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import axios from '../../../services/api';
 import AdminLayout from '../AdminLayout';
 import { formatMoney } from '../../../utils/formatters';
+import { IconBox, IconPlus, IconEdit, IconTrash, IconCheck, IconAlertTriangle, IconClose } from '../../../components/Icons';
 import '../admin.css';
 
 const ConfiguracionInsumos = () => {
@@ -245,10 +246,11 @@ const ConfiguracionInsumos = () => {
     <AdminLayout>
       <div className="admin-section">
         <div className="section-header">
-          <h2>📦 Gestión de Insumos</h2>
+          <h2><IconBox /> Gestión de Insumos</h2>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <label style={{ fontWeight: 500, marginRight: 8 }}>Sede:</label>
+            <label style={{ fontWeight: 600, marginRight: 8, color: 'var(--rb-cream-300)', fontSize: '0.86rem' }}>Sede:</label>
             <select
+              className="admin-select"
               value={filtroSede || ''}
               onChange={e => {
                 const sedeId = e.target.value;
@@ -263,7 +265,7 @@ const ConfiguracionInsumos = () => {
               ))}
             </select>
             <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-              + Insumo
+              <IconPlus /> Insumo
             </button>
           </div>
         </div>
@@ -280,18 +282,18 @@ const ConfiguracionInsumos = () => {
             onClick={() => setFiltroStock('normal')}
             className={`btn btn-sm ${filtroStock === 'normal' ? 'btn-primary' : 'btn-outline-secondary'}`}
           >
-            ✅ En Stock ({insumos.length - bajosStock})
+            <IconCheck /> En Stock ({insumos.length - bajosStock})
           </button>
           <button
             onClick={() => setFiltroStock('bajo')}
             className={`btn btn-sm ${filtroStock === 'bajo' ? 'btn-danger' : 'btn-outline-danger'}`}
           >
-            🔴 Bajo Stock ({bajosStock})
+            <IconAlertTriangle /> Bajo Stock ({bajosStock})
           </button>
         </div>
 
         {/* Grid de Insumos */}
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive">
           <table className="table table-hover">
             <thead>
               <tr>
@@ -311,29 +313,26 @@ const ConfiguracionInsumos = () => {
                 return (
                   <tr
                     key={insumo.id}
-                    style={{
-                      background: esBajoStock ? '#fff3cd' : 'transparent',
-                      borderLeft: esBajoStock ? '4px solid #ff6b6b' : 'none',
-                    }}
+                    className={esBajoStock ? 'table-row--low-stock' : ''}
                   >
-                    <td style={{ fontWeight: 'bold' }}>
-                      {esBajoStock && '🔴 '}
+                    <td style={{ fontWeight: 700 }}>
+                      <span className={`stock-dot ${esBajoStock ? 'stock-dot--low' : 'stock-dot--ok'}`} />
                       {insumo.nombre}
                     </td>
-                    <td style={{ fontSize: '12px', color: '#666' }}>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--rb-cream-700)' }}>
                       {insumo.codigo_sku || '-'}
                     </td>
                     <td>{insumo.unidad_medida || 'N/A'}</td>
-                    <td style={{ color: esBajoStock ? '#c92a2a' : '#2f9e44' }}>
+                    <td style={{ color: esBajoStock ? '#f0958c' : 'var(--rb-green-400)' }}>
                       <strong>{insumo.stock_actual}</strong>
                     </td>
-                    <td style={{ fontSize: '12px' }}>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--rb-cream-500)' }}>
                       {insumo.stock_minimo} / {insumo.stock_maximo || '∞'}
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       {formatMoney(insumo.costo_unitario, true)}
                     </td>
-                    <td style={{ fontSize: '12px', color: '#666' }}>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--rb-cream-500)' }}>
                       {insumo.proveedor || 'Sin proveedor'}
                     </td>
                     <td>
@@ -341,13 +340,14 @@ const ConfiguracionInsumos = () => {
                         className="btn btn-sm btn-primary"
                         onClick={() => handleEdit(insumo)}
                       >
-                        ✏️ Editar
+                        <IconEdit /> Editar
                       </button>
                       <button
                         className="btn btn-sm btn-danger ms-2"
                         onClick={() => handleDelete(insumo.id)}
+                        style={{ marginLeft: 6 }}
                       >
-                        🗑️ Eliminar
+                        <IconTrash /> Eliminar
                       </button>
                     </td>
                   </tr>
@@ -358,8 +358,9 @@ const ConfiguracionInsumos = () => {
         </div>
 
         {insumosFiltrados.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-            No hay insumos para mostrar
+          <div className="admin-empty-state">
+            <IconBox />
+            <p>No hay insumos para mostrar</p>
           </div>
         )}
       </div>
@@ -367,10 +368,10 @@ const ConfiguracionInsumos = () => {
       {/* Modal CRUD */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content modal-content--wide" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{editingId ? 'Editar Insumo' : 'Nuevo Insumo'}</h3>
-              <button className="btn-close" onClick={() => setShowModal(false)}>✕</button>
+              <button className="btn-close" onClick={() => setShowModal(false)}><IconClose /></button>
             </div>
 
             <form onSubmit={handleSubmit}>
@@ -493,7 +494,7 @@ const ConfiguracionInsumos = () => {
                         onClick={() => setShowModalProveedor(true)}
                         style={{ whiteSpace: 'nowrap' }}
                       >
-                        + Nuevo
+                        <IconPlus /> Nuevo
                       </button>
                     </div>
                   </div>
@@ -518,7 +519,7 @@ const ConfiguracionInsumos = () => {
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Nuevo Proveedor</h3>
-              <button className="btn-close" onClick={() => setShowModalProveedor(false)}>✕</button>
+              <button className="btn-close" onClick={() => setShowModalProveedor(false)}><IconClose /></button>
             </div>
 
             <form onSubmit={handleGuardarProveedor}>
@@ -583,7 +584,7 @@ const ConfiguracionInsumos = () => {
                   Cancelar
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Crear Proveedor
+                  <IconPlus /> Crear Proveedor
                 </button>
               </div>
             </form>

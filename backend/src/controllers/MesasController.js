@@ -8,6 +8,12 @@
  */
 
 const db = require('../config/database');
+const {
+  validarSedeDeReq,
+  validarRecursoDeReq,
+  sedesDeReq,
+  sedePerteneceACliente,
+} = require('../utils/tenantScope');
 
 class MesasController {
   /**
@@ -17,14 +23,9 @@ class MesasController {
    */
   static async getAll(req, res) {
     try {
-      const { sedeId } = req.query;
-      const clienteId = req.usuario?.cliente_id || req.query.clienteId;
-
-      if (!sedeId) {
-        return res.status(400).json({
-          error: 'sedeId es requerido',
-        });
-      }
+      const permiso = await validarSedeDeReq(req, req.query.sedeId);
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
+      const sedeId = permiso.sedeId;
 
       const mesas = await db('mesas as m')
         .leftJoin(
@@ -80,11 +81,8 @@ class MesasController {
         .where('deleted_at', null)
         .first();
 
-      if (!mesa) {
-        return res.status(404).json({
-          error: 'Mesa no encontrada',
-        });
-      }
+      const permiso = await validarRecursoDeReq(req, mesa, 'mesa');
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
 
       return res.json({
         success: true,
@@ -122,11 +120,8 @@ class MesasController {
         .where('deleted_at', null)
         .first();
 
-      if (!mesa) {
-        return res.status(404).json({
-          error: 'Mesa no encontrada',
-        });
-      }
+      const permiso = await validarRecursoDeReq(req, mesa, 'mesa');
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
 
       // Actualizar
       await db('mesas')
@@ -157,6 +152,10 @@ class MesasController {
   static async getComanda(req, res) {
     try {
       const { id } = req.params;
+
+      const mesa = await db('mesas').where('id', id).whereNull('deleted_at').first();
+      const permiso = await validarRecursoDeReq(req, mesa, 'mesa');
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
 
       const comanda = await db('comandas')
         .select('*')
@@ -213,12 +212,30 @@ class MesasController {
         });
       }
 
+      // Ambas mesas y la orden deben ser del cliente autenticado: sin esto se
+      // podía trasladar una orden entre mesas de otro restaurante.
+      const sedeIdsCliente = await sedesDeReq(req);
+      const mesasImplicadas = await db('mesas')
+        .whereIn('id', [mesa_origen_id, mesa_destino_id])
+        .whereNull('deleted_at');
+      const ajena = mesasImplicadas.length !== 2
+        || mesasImplicadas.some((m) => !sedePerteneceACliente(m.sede_id, sedeIdsCliente));
+      if (ajena) {
+        await trx.rollback();
+        return res.status(403).json({ error: 'Alguna de las mesas no pertenece a tu empresa' });
+      }
+
       const estadosActivos = ['abierta', 'enviada_produccion', 'en_preparacion', 'lista_entrega', 'en_precuenta'];
 
       const orden = await trx('ordenes')
         .where('id', orden_id)
         .forUpdate()
         .first();
+
+      if (orden && !sedePerteneceACliente(orden.sede_id, sedeIdsCliente)) {
+        await trx.rollback();
+        return res.status(403).json({ error: 'Esa orden no pertenece a tu empresa' });
+      }
 
       if (!orden) {
         await trx.rollback();

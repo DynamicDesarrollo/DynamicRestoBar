@@ -1,10 +1,20 @@
 import { toast } from 'react-toastify';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Button, Card, Badge, Spinner, Alert, Modal, Form } from 'react-bootstrap';
+import { Modal, Form } from 'react-bootstrap';
 import { mesasService } from '../services/api';
 import { useMesasStore, useAuthStore } from '../stores';
+import {
+  IconGear, IconCash, IconRefresh, IconLogout,
+  IconUsers, IconUser, IconMapPin, IconPlate, IconArrowSwap,
+} from '../components/Icons';
 import './Mesas.css';
+
+const ESTADO_CONFIG = {
+  disponible: { label: 'Disponible', className: 'disponible' },
+  ocupada: { label: 'Ocupada', className: 'ocupada' },
+  en_precuenta: { label: 'Precuenta', className: 'en_precuenta' },
+};
 
 export default function Mesas() {
   const navigate = useNavigate();
@@ -41,7 +51,6 @@ export default function Mesas() {
   }, [cargarMesas]);
 
   const handleSelectMesa = (mesa) => {
-    console.log('Seleccionando mesa:', mesa);
     localStorage.setItem('mesaActual', JSON.stringify(mesa));
     navigate(`/orden/${mesa.id}`);
   };
@@ -96,9 +105,9 @@ export default function Mesas() {
 
   if (loading) {
     return (
-      <Container className="d-flex align-items-center justify-content-center min-vh-100">
-        <Spinner animation="border" variant="primary" />
-      </Container>
+      <div className="mesas-page mesas-page--loading">
+        <div className="mesas-spinner" aria-label="Cargando mesas" />
+      </div>
     );
   }
 
@@ -111,168 +120,136 @@ export default function Mesas() {
   return (
     <div className="mesas-page">
       {/* Header */}
-      <div className="mesas-header text-white py-3">
-        <Container>
-          <Row className="align-items-center">
-            <Col>
-              <h1 className="mb-0">
-                🍽️ {usuario?.nombre || 'Mesero'}
-              </h1>
-              <small className="text-muted">
-                Sede: {usuario?.sede?.nombre || 'Sede Principal'}
-              </small>
-            </Col>
-            <Col className="text-end">
-              <Button variant="info" size="sm" onClick={() => navigate('/admin')}>
-                ⚙️ Admin
-              </Button>
-              <Button variant="warning" size="sm" className="ms-2" onClick={() => navigate('/caja')}>
-                💰 Caja
-              </Button>
-              <Button variant="outline-light" size="sm" className="ms-2" onClick={cargarMesas}>
-                🔄 Refrescar
-              </Button>
-              <Button variant="outline-light" size="sm" className="ms-2" onClick={handleLogout}>
-                Salir
-              </Button>
-            </Col>
-          </Row>
-        </Container>
+      <div className="mesas-header">
+        <div className="mesas-header__inner">
+          <div className="mesas-header__identity">
+            <div className="mesas-header__avatar">
+              <IconPlate />
+            </div>
+            <div>
+              <h1 className="mesas-header__name">{usuario?.nombre || 'Mesero'}</h1>
+              <p className="mesas-header__sede">
+                <IconMapPin /> {usuario?.sede?.nombre || 'Sede Principal'}
+              </p>
+            </div>
+          </div>
+
+          <div className="mesas-header__actions">
+            <button type="button" className="hdr-btn" onClick={() => navigate('/admin')}>
+              <IconGear /> <span>Admin</span>
+            </button>
+            <button type="button" className="hdr-btn hdr-btn--accent" onClick={() => navigate('/caja')}>
+              <IconCash /> <span>Caja</span>
+            </button>
+            <button type="button" className="hdr-btn" onClick={cargarMesas}>
+              <IconRefresh /> <span>Refrescar</span>
+            </button>
+            <button type="button" className="hdr-btn hdr-btn--ghost" onClick={handleLogout}>
+              <IconLogout /> <span>Salir</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Contenido */}
-      <Container className="py-4">
-        {error && <Alert variant="danger">{error}</Alert>}
+      <div className="mesas-content">
+        {error && <div className="mesas-alert">{error}</div>}
 
         {/* Estadísticas */}
-        <Row className="mb-4">
-          <Col md={3} className="mb-3">
-            <Card className="text-center">
-              <Card.Body>
-                <h3 className="text-success">{mesasDisponibles.length}</h3>
-                <p className="text-muted mb-0">Disponibles</p>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={3} className="mb-3">
-            <Card className="text-center">
-              <Card.Body>
-                <h3 className="text-warning">{mesasOcupadas.length}</h3>
-                <p className="text-muted mb-0">Ocupadas</p>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={3} className="mb-3">
-            <Card className="text-center">
-              <Card.Body>
-                <h3 className="text-info">{mesasPrecuenta.length}</h3>
-                <p className="text-muted mb-0">En Precuenta</p>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={3} className="mb-3">
-            <Card className="text-center">
-              <Card.Body>
-                <h3 className="text-secondary">{mesas.length}</h3>
-                <p className="text-muted mb-0">Total</p>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
+        <div className="mesas-stats">
+          <div className="mesas-stat mesas-stat--green">
+            <span className="mesas-stat__value">{mesasDisponibles.length}</span>
+            <span className="mesas-stat__label">Disponibles</span>
+          </div>
+          <div className="mesas-stat mesas-stat--copper">
+            <span className="mesas-stat__value">{mesasOcupadas.length}</span>
+            <span className="mesas-stat__label">Ocupadas</span>
+          </div>
+          <div className="mesas-stat mesas-stat--cyan">
+            <span className="mesas-stat__value">{mesasPrecuenta.length}</span>
+            <span className="mesas-stat__label">En Precuenta</span>
+          </div>
+          <div className="mesas-stat mesas-stat--neutral">
+            <span className="mesas-stat__value">{mesas.length}</span>
+            <span className="mesas-stat__label">Total</span>
+          </div>
+        </div>
 
         {/* Mesas por Zona */}
-        <h4 className="mb-3">📍 Mesas por Zona</h4>
+        <h2 className="mesas-section-title">
+          <IconMapPin /> Mesas por zona
+        </h2>
 
         <div className="mesas-grid">
           {mesas.length > 0 ? (
-            mesasOrdenadas.map((mesa) => (
-              <div key={mesa.id} className="mesa-card-wrapper">
-                <Card
-                  className={`mesa-card cursor-pointer ${mesa.estado}`}
+            mesasOrdenadas.map((mesa) => {
+              const cfg = ESTADO_CONFIG[mesa.estado] || ESTADO_CONFIG.disponible;
+              return (
+                <div
+                  key={mesa.id}
+                  className={`mesas-tile ${cfg.className}`}
                   onClick={() => handleSelectMesa(mesa)}
-                  style={{ cursor: 'pointer' }}
+                  role="button"
+                  tabIndex={0}
                 >
-                  <Card.Body className="text-center p-3">
-                    <div className="mesa-numero mb-2">
-                      {mesa.numero}
-                    </div>
+                  <div className="mesas-tile__top">
+                    <span className="mesas-tile__numero">{mesa.numero}</span>
+                    <span className={`mesas-tile__badge ${cfg.className}`}>{cfg.label}</span>
+                  </div>
 
-                    <div className="mesa-info mb-2">
-                      <small className="text-muted">
-                        <strong>{mesa.zona?.nombre || 'Zona'}</strong>
-                      </small>
-                      <br />
-                      <small className="text-muted">
-                        👥 {mesa.capacidad} personas
-                      </small>
-                      {mesa.mesero_nombre && (
-                        <>
-                          <br />
-                          <small
-                            className={`mesero-chip ${mesa.estado === 'ocupada' ? 'mesero-chip-ocupada' : ''}`}
-                          >
-                            👤 Atiende: <strong>{mesa.mesero_nombre}</strong>
-                          </small>
-                        </>
-                      )}
-                    </div>
+                  <p className="mesas-tile__zona">{mesa.zona?.nombre || 'Zona'}</p>
 
-                    <Badge
-                      bg={
-                        mesa.estado === 'disponible'
-                          ? 'success'
-                          : mesa.estado === 'ocupada'
-                          ? 'warning'
-                          : 'info'
-                      }
-                      className="w-100"
+                  <p className="mesas-tile__capacidad">
+                    <IconUsers /> {mesa.capacidad} personas
+                  </p>
+
+                  {mesa.mesero_nombre && (
+                    <p className={`mesero-chip ${mesa.estado === 'ocupada' ? 'mesero-chip--ocupada' : ''}`}>
+                      <IconUser /> {mesa.mesero_nombre}
+                    </p>
+                  )}
+
+                  {mesa.orden_activa_id && mesa.estado !== 'disponible' && (
+                    <button
+                      type="button"
+                      className="mesas-tile__traslado-btn"
+                      onClick={(event) => abrirModalTraslado(mesa, event)}
                     >
-                      {mesa.estado === 'disponible'
-                        ? 'Disponible'
-                        : mesa.estado === 'ocupada'
-                        ? 'Ocupada'
-                        : 'Precuenta'}
-                    </Badge>
-
-                    {mesa.orden_activa_id && mesa.estado !== 'disponible' && (
-                      <Button
-                        size="sm"
-                        variant="outline-primary"
-                        className="w-100 mt-2"
-                        onClick={(event) => abrirModalTraslado(mesa, event)}
-                      >
-                        Trasladar
-                      </Button>
-                    )}
-                  </Card.Body>
-                </Card>
-              </div>
-            ))
+                      <IconArrowSwap /> Trasladar
+                    </button>
+                  )}
+                </div>
+              );
+            })
           ) : (
-            <Alert variant="warning">
-              No hay mesas disponibles
-            </Alert>
+            <div className="mesas-alert mesas-alert--warning">No hay mesas disponibles</div>
           )}
         </div>
-      </Container>
+      </div>
 
-      <Modal show={showTrasladoModal} onHide={() => setShowTrasladoModal(false)} centered>
+      <Modal
+        show={showTrasladoModal}
+        onHide={() => setShowTrasladoModal(false)}
+        centered
+        className="rb-modal"
+      >
         <Modal.Header closeButton>
           <Modal.Title>Trasladar mesa</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p className="mb-2">
+          <p className="rb-modal__line">
             Mesa origen: <strong>{mesaOrigen?.numero || '-'}</strong>
           </p>
-          <p className="mb-3">
+          <p className="rb-modal__line rb-modal__line--spaced">
             Orden: <strong>{mesaOrigen?.orden_activa_numero || `#${mesaOrigen?.orden_activa_id || '-'}`}</strong>
           </p>
 
           <Form.Group>
-            <Form.Label>Mesa destino disponible</Form.Label>
+            <Form.Label className="rb-modal__label">Mesa destino disponible</Form.Label>
             <Form.Select
               value={mesaDestinoId}
               onChange={(e) => setMesaDestinoId(e.target.value)}
+              className="rb-modal__select"
             >
               {mesasDisponiblesTraslado.map((mesa) => (
                 <option key={mesa.id} value={mesa.id}>
@@ -289,15 +266,17 @@ export default function Mesas() {
               checked={reasignarMesero}
               onChange={(e) => setReasignarMesero(e.target.checked)}
               label="Reasignar orden al mesero actual"
+              className="rb-modal__switch"
             />
-            <small className="text-muted d-block mt-1">
+            <small className="rb-modal__hint">
               Si se desactiva, la orden conserva el mesero original.
             </small>
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button
-            variant="secondary"
+          <button
+            type="button"
+            className="rb-btn rb-btn--ghost"
             onClick={() => {
               setShowTrasladoModal(false);
               setReasignarMesero(true);
@@ -305,10 +284,15 @@ export default function Mesas() {
             disabled={trasladando}
           >
             Cancelar
-          </Button>
-          <Button variant="primary" onClick={confirmarTraslado} disabled={trasladando || !mesaDestinoId}>
+          </button>
+          <button
+            type="button"
+            className="rb-btn rb-btn--primary"
+            onClick={confirmarTraslado}
+            disabled={trasladando || !mesaDestinoId}
+          >
             {trasladando ? 'Trasladando...' : 'Confirmar traslado'}
-          </Button>
+          </button>
         </Modal.Footer>
       </Modal>
     </div>

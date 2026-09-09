@@ -18,16 +18,22 @@ const verificarToken = require('../middleware/verificarToken');
 
 const router = express.Router();
 
-// Rutas públicas (obtener datos)
+// Todas las rutas exigen sesión. Antes las lecturas eran públicas y, sin
+// sedeId, devolvían el catálogo de TODOS los clientes. Cuando exista el menú
+// QR para comensales, debe añadirse un endpoint público aparte que reciba la
+// sede y devuelva solo esa, en vez de reabrir estas.
+router.use(verificarToken);
+
+// Consulta de catálogo
 router.get('/categorias', ProductosController.getCategorias);
 router.get('/combos/listar', ProductosController.getCombos);
 router.get('/modificadores/:modificadorId', ProductosController.getModificadorOpciones);
 router.get('/', ProductosController.getProductos);
 router.get('/:id', ProductosController.getProductoDetalle);
 
-// Rutas protegidas (crear/editar/eliminar)
-router.post('/', verificarToken, ProductosController.crearProducto);
-router.put('/:id', verificarToken, ProductosController.actualizarProducto);
-router.delete('/:id', verificarToken, ProductosController.eliminarProducto);
+// Crear/editar/eliminar
+router.post('/', ProductosController.crearProducto);
+router.put('/:id', ProductosController.actualizarProducto);
+router.delete('/:id', ProductosController.eliminarProducto);
 
 module.exports = router;

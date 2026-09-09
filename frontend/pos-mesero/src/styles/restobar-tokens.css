@@ -1,0 +1,38 @@
+/* ==========================================================================
+   DYNAMIC RESTOBAR — TOKENS DE DISEÑO COMPARTIDOS
+   Paleta y tipografía usadas en todo el rediseño (Login, Mesas, Admin...).
+   Cada pantalla puede consumir estas variables sin redefinirlas.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --rb-charcoal-950: #0f0b08;
+  --rb-charcoal-900: #1a130e;
+  --rb-charcoal-800: #241b14;
+  --rb-charcoal-700: #33271b;
+  --rb-charcoal-600: #46341f;
+
+  --rb-gold-300: #eccd8f;
+  --rb-gold-400: #e3b565;
+  --rb-gold-500: #c99a46;
+  --rb-gold-600: #a87d34;
+
+  --rb-copper-500: #b1552b;
+  --rb-copper-400: #cf7245;
+
+  --rb-green-500: #4d9d6f;
+  --rb-green-400: #6fbd8f;
+  --rb-cyan-500: #4a97a3;
+  --rb-cyan-400: #6fb9c4;
+
+  --rb-cream-100: #f7f1e6;
+  --rb-cream-300: #ddcfb6;
+  --rb-cream-500: #b7a78e;
+  --rb-cream-700: #8a7c68;
+
+  --rb-error-500: #e2564b;
+
+  --rb-font-display: 'Fraunces', 'Georgia', serif;
+  --rb-font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}

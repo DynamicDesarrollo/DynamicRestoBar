@@ -1,12 +1,29 @@
 const db = require('../../config/database');
+const { sedesDelCliente } = require('../../utils/tenantScope');
 
 class ProductosController {
-  // Obtener todas las categorías
+  // Obtener todas las categorías del cliente autenticado
   static async getCategorias(req, res) {
     try {
-      const categorias = await db('categorias')
+      const clienteId = req.usuario?.cliente_id;
+      const sedeIds = await sedesDelCliente(clienteId);
+      const { sedeId } = req.query;
+
+      let query = db('categorias')
         .select('*')
-        .orderBy('nombre', 'asc');
+        .whereNull('deleted_at')
+        .andWhere((q) => {
+          q.whereNull('sede_id').orWhereIn('sede_id', sedeIds);
+        });
+
+      // Si piden una sede puntual, solo se respeta si es del propio cliente
+      if (sedeId && sedeIds.includes(Number(sedeId))) {
+        query = query.andWhere((q) => {
+          q.whereNull('sede_id').orWhere('sede_id', sedeId);
+        });
+      }
+
+      const categorias = await query.orderBy('nombre', 'asc');
 
       return res.json({
         success: true,
@@ -24,7 +41,8 @@ class ProductosController {
   // Crear categoría
   static async crearCategoria(req, res) {
     try {
-      const { nombre, descripcion, icono, sede_id } = req.body;
+      const { nombre, descripcion, icono } = req.body;
+      const clienteId = req.usuario?.cliente_id;
 
       if (!nombre) {
         return res.status(400).json({
@@ -32,11 +50,20 @@ class ProductosController {
         });
       }
 
+      const sedeIds = await sedesDelCliente(clienteId);
+      let sede_id = req.body.sede_id || null;
+      if (sede_id && !sedeIds.includes(Number(sede_id))) {
+        return res.status(403).json({ error: 'La sede indicada no pertenece a tu empresa' });
+      }
+      if (!sede_id) {
+        sede_id = req.usuario?.sede_id || null;
+      }
+
       const result = await db('categorias').insert({
         nombre,
         descripcion: descripcion || null,
         icono_url: icono || null,
-        sede_id: sede_id || null,
+        sede_id,
       }).returning('*');
 
       const categoria = Array.isArray(result) ? result[0] : result;
@@ -62,11 +89,24 @@ class ProductosController {
     try {
       const { id } = req.params;
       const { nombre, descripcion, icono, sede_id } = req.body;
+      const clienteId = req.usuario?.cliente_id;
 
       if (!nombre) {
         return res.status(400).json({
           error: 'El nombre de la categoría es requerido',
         });
+      }
+
+      const sedeIds = await sedesDelCliente(clienteId);
+      const existente = await db('categorias').where('id', id).first();
+      if (!existente) {
+        return res.status(404).json({ error: 'Categoría no encontrada' });
+      }
+      if (existente.sede_id != null && !sedeIds.includes(existente.sede_id)) {
+        return res.status(403).json({ error: 'No puedes editar una categoría de otra empresa' });
+      }
+      if (sede_id && !sedeIds.includes(Number(sede_id))) {
+        return res.status(403).json({ error: 'La sede indicada no pertenece a tu empresa' });
       }
 
       const updateData = {};
@@ -98,6 +138,16 @@ class ProductosController {
   static async eliminarCategoria(req, res) {
     try {
       const { id } = req.params;
+      const clienteId = req.usuario?.cliente_id;
+
+      const sedeIds = await sedesDelCliente(clienteId);
+      const existente = await db('categorias').where('id', id).first();
+      if (!existente) {
+        return res.status(404).json({ error: 'Categoría no encontrada' });
+      }
+      if (existente.sede_id != null && !sedeIds.includes(existente.sede_id)) {
+        return res.status(403).json({ error: 'No puedes eliminar una categoría de otra empresa' });
+      }
 
       // Verificar si tiene productos asociados
       const productosAsociados = await db('productos')
@@ -128,9 +178,11 @@ class ProductosController {
     }
   }
 
-  // Obtener productos
+  // Obtener productos del cliente autenticado
   static async getProductos(req, res) {
     try {
+      const clienteId = req.usuario?.cliente_id;
+      const sedeIds = await sedesDelCliente(clienteId);
       const { sedeId } = req.query;
 
       let query = db('productos')
@@ -141,12 +193,15 @@ class ProductosController {
           'productos.descripcion',
           'productos.precio_venta as precio',
           'productos.estacion_id',
+          'productos.categoria_id',
+          'productos.foto_url',
           'categorias.nombre as categoria',
         )
-        .whereNull('productos.deleted_at');
+        .whereNull('productos.deleted_at')
+        .whereIn('productos.sede_id', sedeIds);
 
-      // Filtrar por sede si está presente
-      if (sedeId) {
+      // Filtrar por una sede puntual, solo si es del propio cliente
+      if (sedeId && sedeIds.includes(Number(sedeId))) {
         query = query.andWhere('productos.sede_id', sedeId);
       }
 
@@ -168,12 +223,28 @@ class ProductosController {
   // Crear producto
   static async crearProducto(req, res) {
     try {
-      const { nombre, descripcion, categoria_id, precio_venta, estacion_id, sede_id } = req.body;
+      const { nombre, descripcion, categoria_id, precio_venta, estacion_id } = req.body;
+      const clienteId = req.usuario?.cliente_id;
 
       if (!nombre || !precio_venta || !estacion_id) {
         return res.status(400).json({
           error: 'Nombre, precio y estación son requeridos',
         });
+      }
+
+      const sedeIds = await sedesDelCliente(clienteId);
+      let sede_id = req.body.sede_id || null;
+      if (sede_id && !sedeIds.includes(Number(sede_id))) {
+        return res.status(403).json({ error: 'La sede indicada no pertenece a tu empresa' });
+      }
+      if (!sede_id) {
+        sede_id = req.usuario?.sede_id || null;
+      }
+
+      let foto_url = null;
+      if (req.file) {
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        foto_url = `${baseUrl}/uploads/productos/${req.file.filename}`;
       }
 
       const result = await db('productos').insert({
@@ -182,7 +253,8 @@ class ProductosController {
         categoria_id: categoria_id || null,
         precio_venta: parseFloat(precio_venta),
         estacion_id: parseInt(estacion_id),
-        sede_id: sede_id || null,
+        sede_id,
+        foto_url,
       }).returning('*');
 
       const producto = Array.isArray(result) ? result[0] : result;
@@ -208,6 +280,7 @@ class ProductosController {
     try {
       const { id } = req.params;
       const { nombre, descripcion, categoria_id, precio_venta, estacion_id, sede_id } = req.body;
+      const clienteId = req.usuario?.cliente_id;
 
       const producto = await db('productos')
         .where('id', id)
@@ -217,6 +290,14 @@ class ProductosController {
         return res.status(404).json({ error: 'Producto no encontrado' });
       }
 
+      const sedeIds = await sedesDelCliente(clienteId);
+      if (producto.sede_id != null && !sedeIds.includes(producto.sede_id)) {
+        return res.status(403).json({ error: 'No puedes editar un producto de otra empresa' });
+      }
+      if (sede_id && !sedeIds.includes(Number(sede_id))) {
+        return res.status(403).json({ error: 'La sede indicada no pertenece a tu empresa' });
+      }
+
       const updateData = {};
       if (nombre !== undefined && nombre) updateData.nombre = nombre;
       if (descripcion !== undefined) updateData.descripcion = descripcion;
@@ -224,7 +305,11 @@ class ProductosController {
       if (precio_venta !== undefined) updateData.precio_venta = parseFloat(precio_venta);
       if (estacion_id !== undefined) updateData.estacion_id = parseInt(estacion_id);
       if (sede_id !== undefined) updateData.sede_id = sede_id || null;
-      
+      if (req.file) {
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        updateData.foto_url = `${baseUrl}/uploads/productos/${req.file.filename}`;
+      }
+
       // Solo actualizar si hay cambios
       if (Object.keys(updateData).length === 0) {
         return res.json({
@@ -232,7 +317,7 @@ class ProductosController {
           message: 'No hay cambios para actualizar',
         });
       }
-      
+
       updateData.updated_at = new Date();
 
       await db('productos').where('id', id).update(updateData);
@@ -256,6 +341,7 @@ class ProductosController {
   static async eliminarProducto(req, res) {
     try {
       const { id } = req.params;
+      const clienteId = req.usuario?.cliente_id;
 
       const producto = await db('productos')
         .where('id', id)
@@ -263,6 +349,11 @@ class ProductosController {
 
       if (!producto) {
         return res.status(404).json({ error: 'Producto no encontrado' });
+      }
+
+      const sedeIds = await sedesDelCliente(clienteId);
+      if (producto.sede_id != null && !sedeIds.includes(producto.sede_id)) {
+        return res.status(403).json({ error: 'No puedes eliminar un producto de otra empresa' });
       }
 
       // Soft delete
@@ -285,12 +376,16 @@ class ProductosController {
     }
   }
 
-  // Obtener todas las estaciones
+  // Obtener las estaciones del cliente autenticado
   static async getEstaciones(req, res) {
     try {
+      const clienteId = req.usuario?.cliente_id;
+      const sedeIds = await sedesDelCliente(clienteId);
+
       const estaciones = await db('estaciones')
         .select('*')
         .where('activa', true)
+        .whereIn('sede_id', sedeIds)
         .orderBy('nombre', 'asc');
 
       return res.json({

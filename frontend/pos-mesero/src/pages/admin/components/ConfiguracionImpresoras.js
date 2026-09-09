@@ -3,6 +3,9 @@ import axios from '../../../services/api';
 import { useAuthStore } from '../../../stores';
 import AdminLayout from '../AdminLayout';
 import { toast } from 'react-toastify';
+import {
+  IconPrinter, IconPlus, IconInfo, IconEdit, IconTrash, IconClose,
+} from '../../../components/Icons';
 import '../admin.css';
 
 const EMPTY_FORM = {
@@ -124,45 +127,46 @@ const ConfiguracionImpresoras = () => {
   }
 
   const estadoBadge = (estado) => (
-    <span style={{
-      background: estado === 'activa' ? '#4caf50' : '#9e9e9e',
-      color: 'white',
-      padding: '3px 10px',
-      borderRadius: '12px',
-      fontSize: '12px',
-    }}>
-      {estado === 'activa' ? '● Activa' : '○ Inactiva'}
+    <span className={`rb-badge ${estado === 'activa' ? 'rb-badge--success' : 'rb-badge--neutral'}`}>
+      {estado === 'activa' ? 'Activa' : 'Inactiva'}
     </span>
   );
 
   return (
     <AdminLayout>
       <div className="admin-section">
-        <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2>🖨️ Impresoras de Red</h2>
+        <div className="section-header">
+          <h2><IconPrinter /> Impresoras de Red</h2>
           <button className="btn btn-primary" onClick={handleNueva}>
-            + Nueva Impresora
+            <IconPlus /> Nueva Impresora
           </button>
         </div>
 
         {/* Tip de configuración */}
         <div style={{
-          background: '#e3f2fd',
-          border: '1px solid #90caf9',
-          borderRadius: '8px',
+          background: 'rgba(74, 151, 163, 0.1)',
+          border: '1px solid rgba(74, 151, 163, 0.35)',
+          borderRadius: '10px',
           padding: '12px 16px',
           marginBottom: '20px',
-          fontSize: '13px',
-          color: '#1565c0',
+          fontSize: '0.84rem',
+          color: 'var(--rb-cyan-400)',
+          display: 'flex',
+          gap: 10,
+          alignItems: 'flex-start',
         }}>
-          <strong>💡 DigitalPOS DIG-E200I:</strong> Para asignarle IP fija, imprime la config manteniendo presionado el botón de papel al encender.
-          Luego en la app <em>DigitalPOS</em> o el panel web de la impresora, configura WiFi y asigna IP estática.
-          Puerto predeterminado: <strong>9100</strong>.
+          <IconInfo style={{ width: 17, height: 17, flexShrink: 0, marginTop: 2 }} />
+          <span>
+            <strong>DigitalPOS DIG-E200I:</strong> Para asignarle IP fija, imprime la config manteniendo presionado el botón de papel al encender.
+            Luego en la app <em>DigitalPOS</em> o el panel web de la impresora, configura WiFi y asigna IP estática.
+            Puerto predeterminado: <strong>9100</strong>.
+          </span>
         </div>
 
         {impresoras.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-            No hay impresoras configuradas. Agrega una para enviar comandas automáticamente.
+          <div className="admin-empty-state">
+            <IconPrinter />
+            <p>No hay impresoras configuradas. Agrega una para enviar comandas automáticamente.</p>
           </div>
         ) : (
           <div className="table-responsive">
@@ -183,32 +187,33 @@ const ConfiguracionImpresoras = () => {
                   <tr key={imp.id}>
                     <td><strong>{imp.nombre}</strong></td>
                     <td>{imp.sede_nombre}</td>
-                    <td>{imp.modelo || <span style={{ color: '#bbb' }}>—</span>}</td>
-                    <td><code>{imp.ip_address || <span style={{ color: '#bbb' }}>Sin IP</span>}</code></td>
+                    <td>{imp.modelo || <span style={{ color: 'var(--rb-cream-700)' }}>—</span>}</td>
+                    <td><code style={{ color: 'var(--rb-cream-300)' }}>{imp.ip_address || <span style={{ color: 'var(--rb-cream-700)' }}>Sin IP</span>}</code></td>
                     <td>{imp.puerto}</td>
                     <td>{estadoBadge(imp.estado)}</td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <button
-                        className="btn btn-sm"
-                        style={{ background: '#2196f3', color: 'white', marginRight: 6 }}
+                        className="btn btn-sm btn-info"
+                        style={{ marginRight: 6 }}
                         onClick={() => handleTest(imp)}
                         disabled={testando === imp.id || !imp.ip_address}
                         title={!imp.ip_address ? 'Configura la IP primero' : 'Imprimir página de prueba'}
                       >
-                        {testando === imp.id ? '⏳' : '🖨️'} Prueba
+                        <IconPrinter /> {testando === imp.id ? 'Probando...' : 'Prueba'}
                       </button>
                       <button
                         className="btn btn-sm btn-primary"
                         style={{ marginRight: 6 }}
                         onClick={() => handleEditar(imp)}
                       >
-                        ✏️ Editar
+                        <IconEdit /> Editar
                       </button>
                       <button
                         className="btn btn-sm btn-danger"
                         onClick={() => handleEliminar(imp.id)}
+                        aria-label="Eliminar impresora"
                       >
-                        🗑️
+                        <IconTrash />
                       </button>
                     </td>
                   </tr>
@@ -224,7 +229,7 @@ const ConfiguracionImpresoras = () => {
             <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
               <div className="modal-header">
                 <h3>{editingId ? 'Editar Impresora' : 'Nueva Impresora'}</h3>
-                <button className="btn-close" onClick={() => setShowModal(false)}>✕</button>
+                <button className="btn-close" onClick={() => setShowModal(false)}><IconClose /></button>
               </div>
 
               <form onSubmit={handleGuardar}>

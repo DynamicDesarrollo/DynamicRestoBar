@@ -51,8 +51,8 @@ apiClient.interceptors.response.use(
 export const authService = {
   login: (email, contraseña) =>
     apiClient.post('/auth/login', { email, contraseña }),
-  loginPin: (pin) =>
-    apiClient.post('/auth/login-pin', { pin }),
+  loginPin: (pin, email) =>
+    apiClient.post('/auth/login-pin', { pin, email }),
   logout: () =>
     apiClient.post('/auth/logout'),
   getMe: () =>
@@ -128,9 +128,6 @@ export const cajaService = {
   procesarDevolucion: (data) =>
     apiClient.post('/caja/devolucion', data),
 
-  // Legacy
-  cerrarOrden: (ordenId, data) =>
-    apiClient.post(`/caja/cerrar-orden/${ordenId}`, data),
   getFacturas: (sedeId, params) =>
     apiClient.get(`/caja/facturas/${sedeId}`, { params }),
   getResumen: (sedeId) =>

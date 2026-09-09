@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { clientesService } from '../../services/api';
 import styles from '../superadmin/ClientesAdmin.module.css';
+import { IconPlus, IconClose, IconCheck } from '../../components/Icons';
 
 const ClientesAdmin = () => {
     const [accionMsg, setAccionMsg] = useState(null);
@@ -16,7 +17,8 @@ const ClientesAdmin = () => {
       departamento: '',
       ciudad: '',
       foto: null,
-      valor_plan: ''
+      valor_plan: '',
+      estilo_catalogo: 'clasico'
     });
 
     const [departamentos, setDepartamentos] = useState([]);
@@ -59,7 +61,8 @@ const ClientesAdmin = () => {
         departamento: '',
         ciudad: '',
         foto: null,
-        valor_plan: ''
+        valor_plan: '',
+        estilo_catalogo: 'clasico'
       });
       setEditId(null);
       setShowForm(true);
@@ -76,7 +79,8 @@ const ClientesAdmin = () => {
         departamento: cliente.departamento || '',
         ciudad: cliente.ciudad || '',
         foto: null,
-        valor_plan: cliente.valor_plan || ''
+        valor_plan: cliente.valor_plan || '',
+        estilo_catalogo: cliente.estilo_catalogo || 'clasico'
       });
       setEditId(cliente.id);
       setShowForm(true);
@@ -192,7 +196,7 @@ const ClientesAdmin = () => {
     <div className={styles.clientesCard}>
       <div className={styles.clientesHeader}>
         <span className={styles.clientesTitle}>Clientes (Empresas)</span>
-        <button className={styles.crearBtn} onClick={abrirCrear}>+ Crear Cliente</button>
+        <button className={styles.crearBtn} onClick={abrirCrear}><IconPlus /> Crear Cliente</button>
       </div>
       {showForm && (
         <div className={styles.modalOverlay}>
@@ -243,6 +247,13 @@ const ClientesAdmin = () => {
                   <input name="valor_plan" type="number" value={formData.valor_plan || ''} onChange={handleInputChange} className={styles.input} min="0" step="0.01" />
                 </div>
                 <div className={styles.formGroup}>
+                  <label>Estilo de catálogo</label>
+                  <select name="estilo_catalogo" value={formData.estilo_catalogo} onChange={handleInputChange} className={styles.input}>
+                    <option value="clasico">Clásico</option>
+                    <option value="aurum">Aurum</option>
+                  </select>
+                </div>
+                <div className={styles.formGroup}>
                   <label>Estado</label>
                   <select name="estado" value={formData.estado} onChange={handleInputChange} className={styles.input}>
                     <option value="activo">activo</option>
@@ -259,16 +270,16 @@ const ClientesAdmin = () => {
                 </div>
               </div>
               <div className={styles.modalActions}>
-                <button className={styles.crearBtn} type="submit">{editId ? 'Actualizar' : 'Crear'}</button>
-                <button className={styles.accionesBtn} type="button" onClick={() => setShowForm(false)}>Cancelar</button>
+                <button className={styles.crearBtn} type="submit"><IconCheck />{editId ? 'Actualizar' : 'Crear'}</button>
+                <button className={styles.accionesBtn} type="button" onClick={() => setShowForm(false)}><IconClose /> Cancelar</button>
               </div>
             </form>
           </div>
         </div>
       )}
-      {loading && <p>Cargando...</p>}
+      {loading && <p style={{ color: 'var(--rb-cream-500)' }}>Cargando...</p>}
       {error && <p className={styles.errorMsg}>{error}</p>}
-      {accionMsg && <p style={{ color: 'green' }}>{accionMsg}</p>}
+      {accionMsg && <p style={{ color: 'var(--rb-green-400)', fontWeight: 600 }}>{accionMsg}</p>}
       <table className={styles.clientesTable}>
         <thead>
           <tr>
@@ -276,6 +287,7 @@ const ClientesAdmin = () => {
             <th>Foto</th>
             <th>Nombre</th>
             <th>Plan</th>
+            <th>Catálogo</th>
             <th>Valor del Plan</th>
             <th>Estado</th>
             <th>Fecha Corte</th>
@@ -287,7 +299,7 @@ const ClientesAdmin = () => {
             // Fallback simple para errores de imagen
             const handleImgError = (e) => {
               e.target.onerror = null;
-              e.target.src = 'https://ui-avatars.com/api/?name=Empresa&background=eee&color=888&size=48';
+              e.target.src = 'https://ui-avatars.com/api/?name=Empresa&background=241b14&color=e3b565&size=48';
             };
             return (
               <tr key={c.id}>
@@ -304,7 +316,7 @@ const ClientesAdmin = () => {
                     </div>
                   ) : (
                     <img
-                      src={'https://ui-avatars.com/api/?name=Empresa&background=eee&color=888&size=48'}
+                      src={'https://ui-avatars.com/api/?name=Empresa&background=241b14&color=e3b565&size=48'}
                       alt="Sin foto"
                       style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8 }}
                     />
@@ -312,13 +324,18 @@ const ClientesAdmin = () => {
                 </td>
                 <td>{c.nombre}</td>
                 <td>
-                  <span className={c.plan === 'Diamante' ? styles['badge-premium'] : styles['badge-basico'] + ' ' + styles.badge}>
+                  <span className={`${styles.badge} ${c.plan === 'Diamante' ? styles['badge-premium'] : styles['badge-basico']}`}>
                     {c.plan}
+                  </span>
+                </td>
+                <td>
+                  <span className={`${styles.badge} ${c.estilo_catalogo === 'aurum' ? styles['badge-premium'] : styles['badge-basico']}`}>
+                    {c.estilo_catalogo === 'aurum' ? 'Aurum' : 'Clásico'}
                   </span>
                 </td>
                 <td>{c.valor_plan ? `$${Number(c.valor_plan).toLocaleString()}` : '-'}</td>
                 <td>
-                  <span className={c.estado === 'activo' ? styles['badge-activo'] : styles['badge-inactivo'] + ' ' + styles.badge}>
+                  <span className={`${styles.badge} ${c.estado === 'activo' ? styles['badge-activo'] : styles['badge-inactivo']}`}>
                     {c.estado}
                   </span>
                 </td>
@@ -326,41 +343,41 @@ const ClientesAdmin = () => {
                 <td>
                   <div className={styles.accionesGroup}>
                     <button className={styles.accionesBtn} title="Editar" onClick={() => abrirEditar(c)}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1976d2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e3b565" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
                     </button>
                     <button className={styles.eliminarBtn} title="Eliminar" onClick={() => eliminarCliente(c.id)}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e53935" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="4" y="4" width="16" height="16" rx="4" fill="#fff" stroke="#e53935" strokeWidth="2"/>
-                        <line x1="8" y1="8" x2="16" y2="16" stroke="#e53935" strokeWidth="2"/>
-                        <line x1="16" y1="8" x2="8" y2="16" stroke="#e53935" strokeWidth="2"/>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e2564b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="#e2564b" strokeWidth="2"/>
+                        <line x1="8" y1="8" x2="16" y2="16" stroke="#e2564b" strokeWidth="2"/>
+                        <line x1="16" y1="8" x2="8" y2="16" stroke="#e2564b" strokeWidth="2"/>
                       </svg>
                     </button>
                     <button className={styles.accionesBtn} title="Suspender" onClick={() => cambiarEstado(c.id, c.estado)}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffa726" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#cf7245" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
                     </button>
                     <button className={styles.metricasBtn} title="Métricas" onClick={() => verMetricas(c.id)}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                        <rect x="3" y="14" width="4" height="6" rx="1" fill="#43a047"/>
-                        <rect x="9" y="10" width="4" height="10" rx="1" fill="#1976d2"/>
-                        <rect x="15" y="6" width="4" height="14" rx="1" fill="#ffa726"/>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="14" width="4" height="6" rx="1" fill="#4d9d6f"/>
+                        <rect x="9" y="10" width="4" height="10" rx="1" fill="#c99a46"/>
+                        <rect x="15" y="6" width="4" height="14" rx="1" fill="#4a97a3"/>
                       </svg>
                     </button>
                     <button className={styles.accionesBtn} title="Token Activación Admin" onClick={() => obtenerTokenActivacion(c.admin_usuario_id)}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6a1b9a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a97a3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></svg>
                     </button>
-                    {tokenLoading[c.admin_usuario_id] && <span style={{color:'#6a1b9a'}}>Cargando...</span>}
-                    {tokenError[c.admin_usuario_id] && <span style={{color:'red'}}>{tokenError[c.admin_usuario_id]}</span>}
+                    {tokenLoading[c.admin_usuario_id] && <span style={{color:'var(--rb-cyan-400)'}}>Cargando...</span>}
+                    {tokenError[c.admin_usuario_id] && <span style={{color:'#f0958c'}}>{tokenError[c.admin_usuario_id]}</span>}
                     {tokenActivacion[c.admin_usuario_id] && (
-                      <span style={{background:'#f3e5f5',color:'#6a1b9a',padding:'2px 8px',borderRadius:'4px',marginLeft:'4px',fontSize:'13px'}}>
+                      <span style={{background:'rgba(74, 151, 163, 0.14)',color:'var(--rb-cyan-400)',padding:'3px 10px',borderRadius:'999px',marginLeft:'4px',fontSize:'13px',border:'1px solid rgba(74, 151, 163, 0.35)'}}>
                         Token: {tokenActivacion[c.admin_usuario_id]}
-                        <button style={{marginLeft:'4px',fontSize:'12px'}} onClick={() => navigator.clipboard.writeText(tokenActivacion[c.admin_usuario_id])}>Copiar</button>
+                        <button style={{marginLeft:'6px',fontSize:'12px',background:'none',border:'none',color:'var(--rb-cyan-400)',textDecoration:'underline',cursor:'pointer'}} onClick={() => navigator.clipboard.writeText(tokenActivacion[c.admin_usuario_id])}>Copiar</button>
                       </span>
                     )}
                   </div>
                   {metricas[c.id] && (
-                    <div style={{ fontSize: '0.9em', marginTop: 4 }}>
+                    <div style={{ fontSize: '0.85em', marginTop: 6, color: 'var(--rb-cream-500)' }}>
                       {metricas[c.id].error ? (
-                        <span style={{ color: 'red' }}>{metricas[c.id].error}</span>
+                        <span style={{ color: '#f0958c' }}>{metricas[c.id].error}</span>
                       ) : (
                         <span>Sedes: {metricas[c.id].sedes}</span>
                       )}

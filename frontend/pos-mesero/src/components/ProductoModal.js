@@ -1,8 +1,8 @@
 import { toast } from 'react-toastify';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Modal, Form, Button, Spinner, Alert } from 'react-bootstrap';
-// import toast from 'react-hot-toast';
+import { Modal } from 'react-bootstrap';
 import { productosService } from '../services/api';
+import { IconMinus, IconPlus, IconCheck } from './Icons';
 
 export default function ProductoModal({ show, producto, onHide, onAgregar }) {
   const [cantidad, setCantidad] = useState(1);
@@ -29,6 +29,7 @@ export default function ProductoModal({ show, producto, onHide, onAgregar }) {
       cargarModificadores();
       setCantidad(1);
       setModificadores({});
+      setError('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, producto]);
@@ -38,47 +39,28 @@ export default function ProductoModal({ show, producto, onHide, onAgregar }) {
       const modificadorId = modificador.id;
       const actual = prev[modificadorId] || [];
 
-      // Si ya está seleccionado, quitarlo
       if (actual.find((o) => o.id === opcion.id)) {
-        return {
-          ...prev,
-          [modificadorId]: actual.filter((o) => o.id !== opcion.id),
-        };
+        return { ...prev, [modificadorId]: actual.filter((o) => o.id !== opcion.id) };
       }
 
-      // Si hay límite de selección
-      if (
-        modificador.maxima_seleccion &&
-        actual.length >= modificador.maxima_seleccion
-      ) {
-        toast.error(
-          `Máximo ${modificador.maxima_seleccion} ${modificador.nombre}`
-        );
+      if (modificador.maxima_seleccion && actual.length >= modificador.maxima_seleccion) {
+        toast.error(`Máximo ${modificador.maxima_seleccion} ${modificador.nombre}`);
         return prev;
       }
 
-      return {
-        ...prev,
-        [modificadorId]: [...actual, opcion],
-      };
+      return { ...prev, [modificadorId]: [...actual, opcion] };
     });
   };
 
   const handleAgregar = () => {
-    // Validar modificadores requeridos
     for (const mod of modificadoresDisponibles) {
-      if (
-        mod.requerido &&
-        (!modificadores[mod.id] || modificadores[mod.id].length === 0)
-      ) {
+      if (mod.requerido && (!modificadores[mod.id] || modificadores[mod.id].length === 0)) {
         toast.error(`${mod.nombre} es requerido`);
         return;
       }
     }
 
-    // Aplanar los modificadores seleccionados
     const modificadoresFlat = Object.values(modificadores).flat();
-
     onAgregar(producto, cantidad, modificadoresFlat);
     onHide();
   };
@@ -92,90 +74,87 @@ export default function ProductoModal({ show, producto, onHide, onAgregar }) {
   const precioTotal = (precioBase + precioAdicional) * cantidad;
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
+    <Modal show={show} onHide={onHide} size="lg" centered className="rb-modal">
       <Modal.Header closeButton>
         <Modal.Title>{producto?.nombre}</Modal.Title>
       </Modal.Header>
 
       <Modal.Body>
-        {error && <Alert variant="danger">{error}</Alert>}
+        {error && <div className="rb-alert" style={{ marginBottom: 16 }}>{error}</div>}
 
-        {/* Descripción y precio base */}
-        <p className="text-muted">{producto?.descripcion}</p>
-        <div className="mb-3">
-          <strong>Precio Base:</strong> ${precioBase.toLocaleString()}
+        {producto?.descripcion && (
+          <p style={{ color: 'var(--rb-cream-500)', fontSize: '0.9rem', marginBottom: 14 }}>
+            {producto.descripcion}
+          </p>
+        )}
+
+        <div style={{ marginBottom: 20, fontSize: '0.92rem' }}>
+          <strong style={{ color: 'var(--rb-cream-300)' }}>Precio base: </strong>
+          <span style={{ color: 'var(--rb-gold-400)', fontWeight: 700 }}>
+            ${precioBase.toLocaleString()}
+          </span>
         </div>
 
         {/* Cantidad */}
-        <Form.Group className="mb-4">
-          <Form.Label>
-            <strong>Cantidad</strong>
-          </Form.Label>
-          <div className="d-flex gap-2 align-items-center">
-            <Button
-              variant="outline-primary"
-              size="sm"
-              onClick={() => setCantidad(Math.max(1, cantidad - 1))}
-            >
-              −
-            </Button>
-            <Form.Control
-              type="number"
-              value={cantidad}
-              onChange={(e) => setCantidad(Math.max(1, parseInt(e.target.value) || 1))}
-              min="1"
-              style={{ maxWidth: '100px', textAlign: 'center' }}
-            />
-            <Button
-              variant="outline-danger"
-              size="sm"
-              onClick={() => setCantidad(cantidad + 1)}
-            >
-              +
-            </Button>
+        <div className="rb-form-group">
+          <label className="rb-form-label">Cantidad</label>
+          <div className="rb-stepper">
+            <button type="button" className="rb-stepper__btn" onClick={() => setCantidad(Math.max(1, cantidad - 1))}>
+              <IconMinus />
+            </button>
+            <span className="rb-stepper__value">{cantidad}</span>
+            <button type="button" className="rb-stepper__btn" onClick={() => setCantidad(cantidad + 1)}>
+              <IconPlus />
+            </button>
           </div>
-        </Form.Group>
+        </div>
 
         {/* Modificadores */}
         {loading ? (
-          <Spinner animation="border" variant="danger" />
+          <div className="rb-spinner" style={{ width: 28, height: 28 }} />
         ) : modificadoresDisponibles.length > 0 ? (
-          <div className="modificadores-section">
-            <h6 className="mb-3">Opciones Adicionales</h6>
+          <div>
+            <h4 style={{
+              fontFamily: 'var(--rb-font-display)', fontWeight: 600, fontSize: '1rem',
+              color: 'var(--rb-cream-100)', margin: '0 0 12px',
+            }}>
+              Opciones adicionales
+            </h4>
             {modificadoresDisponibles.map((modificador) => (
-              <div key={modificador.id} className="mb-4">
-                <h6>
+              <div key={modificador.id} style={{ marginBottom: 18 }}>
+                <p style={{ margin: '0 0 8px', fontSize: '0.88rem', fontWeight: 600, color: 'var(--rb-cream-300)' }}>
                   {modificador.nombre}
                   {modificador.requerido && (
-                    <span className="text-danger ms-2">*Requerido</span>
+                    <span style={{ color: 'var(--rb-error-500)', marginLeft: 8, fontWeight: 600, fontSize: '0.78rem' }}>
+                      * Requerido
+                    </span>
                   )}
-                </h6>
-                <div className="d-flex flex-wrap gap-2">
-                  {(modificador.opciones || []).map((opcion) => (
-                    <Form.Check
-                      key={opcion.id}
-                      type={
-                        modificador.maxima_seleccion === 1
-                          ? 'radio'
-                          : 'checkbox'
-                      }
-                      name={`modificador-${modificador.id}`}
-                      label={`${opcion.nombre}${
-                        opcion.precio_adicional
-                          ? ` (+$${opcion.precio_adicional.toLocaleString()})`
-                          : ''
-                      }`}
-                      checked={
-                        modificadores[modificador.id]?.some(
-                          (o) => o.id === opcion.id
-                        ) || false
-                      }
-                      onChange={() =>
-                        handleSelectModificador(modificador, opcion)
-                      }
-                      className="mb-2"
-                    />
-                  ))}
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {(modificador.opciones || []).map((opcion) => {
+                    const seleccionado = modificadores[modificador.id]?.some((o) => o.id === opcion.id) || false;
+                    return (
+                      <button
+                        key={opcion.id}
+                        type="button"
+                        onClick={() => handleSelectModificador(modificador, opcion)}
+                        style={{
+                          border: `1px solid ${seleccionado ? 'var(--rb-gold-500)' : 'var(--rb-charcoal-700)'}`,
+                          background: seleccionado ? 'rgba(201, 154, 70, 0.14)' : 'var(--rb-charcoal-900)',
+                          color: seleccionado ? 'var(--rb-gold-300)' : 'var(--rb-cream-300)',
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          padding: '8px 14px',
+                          borderRadius: 999,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {opcion.nombre}
+                        {opcion.precio_adicional > 0 && ` (+$${opcion.precio_adicional.toLocaleString()})`}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -183,35 +162,39 @@ export default function ProductoModal({ show, producto, onHide, onAgregar }) {
         ) : null}
 
         {/* Resumen de precio */}
-        <div className="p-3 bg-light rounded mt-4">
-          <div className="d-flex justify-content-between mb-2">
-            <span>Precio Base × {cantidad}:</span>
+        <div style={{
+          background: 'var(--rb-charcoal-900)',
+          border: '1px solid var(--rb-charcoal-700)',
+          borderRadius: 12,
+          padding: 16,
+          marginTop: 8,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.86rem', color: 'var(--rb-cream-500)' }}>
+            <span>Precio base × {cantidad}</span>
             <span>${(precioBase * cantidad).toLocaleString()}</span>
           </div>
           {precioAdicional > 0 && (
-            <div className="d-flex justify-content-between mb-2 text-muted">
-              <span>Adicionales:</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.86rem', color: 'var(--rb-cream-500)' }}>
+              <span>Adicionales</span>
               <span>+${(precioAdicional * cantidad).toLocaleString()}</span>
             </div>
           )}
-          <div className="border-top pt-2">
-            <div className="d-flex justify-content-between">
-              <strong>Total:</strong>
-              <strong className="text-primary" style={{ fontSize: '18px' }}>
-                ${precioTotal.toLocaleString()}
-              </strong>
-            </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px dashed var(--rb-charcoal-700)' }}>
+            <strong style={{ color: 'var(--rb-cream-300)', fontSize: '0.9rem' }}>Total</strong>
+            <strong style={{ color: 'var(--rb-gold-400)', fontSize: '1.15rem', fontFamily: 'var(--rb-font-display)' }}>
+              ${precioTotal.toLocaleString()}
+            </strong>
           </div>
         </div>
       </Modal.Body>
 
       <Modal.Footer>
-        <Button variant="secondary" onClick={onHide}>
+        <button type="button" className="rb-btn rb-btn--ghost" onClick={onHide}>
           Cancelar
-        </Button>
-        <Button variant="primary" onClick={handleAgregar} style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }}>
-          ➕ Agregar a Orden
-        </Button>
+        </button>
+        <button type="button" className="rb-btn rb-btn--primary" onClick={handleAgregar}>
+          <IconCheck /> Agregar a orden
+        </button>
       </Modal.Footer>
     </Modal>
   );

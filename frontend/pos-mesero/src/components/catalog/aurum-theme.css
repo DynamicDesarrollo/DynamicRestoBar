@@ -1,0 +1,233 @@
+/* ==========================================================================
+   CATÁLOGO "AURUM" — estilo visual alternativo al catálogo clásico.
+   Todo vive bajo .aurum-catalog con variables propias (--aurum-*) para no
+   tocar los tokens globales --rb-* usados en el resto de la pantalla
+   (ResumenOrden, header, modales) cuando este estilo está activo.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Jost:wght@400;500;600&display=swap');
+
+.aurum-catalog {
+  --aurum-bg: #14100c;
+  --aurum-bg-elevated: #1c1712;
+  --aurum-border: #2c241a;
+  --aurum-accent: #c9a86a;
+  --aurum-accent-soft: rgba(201, 168, 106, 0.16);
+  --aurum-text: #f3ead9;
+  --aurum-text-muted: #a99a83;
+  --aurum-font-display: 'Cormorant Garamond', 'Georgia', serif;
+  --aurum-font-body: 'Jost', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 20px;
+  font-family: var(--aurum-font-body);
+  color: var(--aurum-text);
+}
+
+@media (max-width: 767.98px) {
+  .aurum-catalog {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Sidebar de categorías ---------- */
+
+.aurum-sidebar {
+  background: var(--aurum-bg);
+  border: 1px solid var(--aurum-border);
+  border-radius: 14px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+@media (max-width: 767.98px) {
+  .aurum-sidebar {
+    flex-direction: row;
+  }
+}
+
+.aurum-sidebar__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--aurum-text-muted);
+  font-family: var(--aurum-font-body);
+  font-weight: 500;
+  font-size: 0.88rem;
+  text-align: left;
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.aurum-sidebar__item:hover {
+  background: var(--aurum-accent-soft);
+  color: var(--aurum-text);
+}
+
+.aurum-sidebar__item.is-active {
+  background: var(--aurum-accent-soft);
+  color: var(--aurum-text);
+}
+
+.aurum-sidebar__item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--aurum-accent);
+}
+
+.aurum-sidebar__icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 auto;
+  background: var(--aurum-bg-elevated);
+}
+
+.aurum-sidebar__icon--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--aurum-font-display);
+  font-weight: 600;
+  color: var(--aurum-accent);
+  font-size: 0.8rem;
+}
+
+/* ---------- Showcase de productos ---------- */
+
+.aurum-showcase {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  align-content: start;
+}
+
+@media (max-width: 640px) {
+  .aurum-showcase {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+}
+
+.aurum-card {
+  background: var(--aurum-bg-elevated);
+  border: 1px solid var(--aurum-border);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.aurum-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--aurum-accent);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
+}
+
+.aurum-card__media {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--aurum-bg);
+}
+
+.aurum-card__media--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--aurum-font-display);
+  font-size: 2rem;
+  color: var(--aurum-accent);
+}
+
+.aurum-card__body {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.aurum-card__nombre {
+  font-family: var(--aurum-font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--aurum-text);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.aurum-card__desc {
+  font-size: 0.78rem;
+  color: var(--aurum-text-muted);
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.aurum-card__badge {
+  align-self: flex-start;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.aurum-card__badge--neutral { background: rgba(169, 154, 131, 0.16); color: var(--aurum-text-muted); }
+.aurum-card__badge--success { background: rgba(111, 189, 143, 0.16); color: #8fd4ab; }
+.aurum-card__badge--danger { background: rgba(226, 86, 75, 0.16); color: #f0958c; }
+
+.aurum-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.aurum-card__precio {
+  font-family: var(--aurum-font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--aurum-accent);
+}
+
+.aurum-card__tiempo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--aurum-text-muted);
+}
+
+.aurum-card__tiempo svg { width: 12px; height: 12px; }
+
+.aurum-showcase__empty {
+  grid-column: 1 / -1;
+  border: 1px dashed var(--aurum-border);
+  border-radius: 10px;
+  padding: 24px;
+  text-align: center;
+  color: var(--aurum-text-muted);
+  font-size: 0.85rem;
+}

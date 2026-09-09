@@ -1,244 +1,205 @@
-/* Caja Container */
-.caja-container {
-  background-color: #f8f9fa;
+/* ==========================================================================
+   DYNAMIC RESTOBAR — CAJA
+   ========================================================================== */
+
+.caja-page {
   min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--rb-charcoal-950);
+  color: var(--rb-cream-100);
+  font-family: var(--rb-font-body);
 }
+
+.caja-page--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- Header ---------- */
 
 .caja-header {
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+  background: var(--rb-charcoal-900);
+  border-bottom: 1px solid var(--rb-charcoal-700);
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
-.caja-header h1 {
-  color: white;
-  font-weight: 700;
+.caja-header__inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.caja-header small {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.caja-container .card {
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-}
-
-.caja-container .card-header {
-  background-color: #fff;
-  border-bottom: 2px solid #e9ecef;
+.caja-header__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--rb-font-display);
   font-weight: 600;
-  color: #2c3e50;
+  font-size: 1.4rem;
+  margin: 0;
+  color: var(--rb-cream-100);
 }
 
-.caja-container .card-body {
-  padding: 25px;
+.caja-header__title svg { width: 22px; height: 22px; color: var(--rb-gold-500); }
+
+.caja-header__operario {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  color: var(--rb-cream-500);
 }
 
-.caja-container .btn {
-  border-radius: 6px;
-  font-weight: 500;
-  transition: all 0.3s ease;
+.caja-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.caja-container .btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+/* ---------- Contenido ---------- */
+
+.caja-content {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 24px 56px;
 }
 
-.caja-container .badge {
-  padding: 8px 12px;
+/* ---------- Tarjetas de estado ---------- */
+
+.caja-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.caja-stat {
+  background: var(--rb-charcoal-800);
+  border: 1px solid var(--rb-charcoal-700);
+  border-top: 3px solid var(--rb-charcoal-600);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.caja-stat--green { border-top-color: var(--rb-green-500); }
+.caja-stat--danger { border-top-color: var(--rb-copper-500); }
+.caja-stat--gold { border-top-color: var(--rb-gold-500); }
+
+.caja-stat__label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--rb-cream-500);
+  margin-bottom: 8px;
+}
+
+.caja-stat__value {
+  font-family: var(--rb-font-display);
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: var(--rb-cream-100);
+}
+
+.caja-stat--green .caja-stat__value { color: var(--rb-green-400); }
+.caja-stat--danger .caja-stat__value { color: var(--rb-copper-400); }
+.caja-stat--gold .caja-stat__value { color: var(--rb-gold-400); }
+
+/* ---------- Botón principal de caja + info de apertura ---------- */
+
+.caja-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+
+.caja-actions-row .rb-btn { padding: 13px 26px; font-size: 0.95rem; }
+
+.caja-abierta-desde {
+  font-size: 0.85rem;
+  color: var(--rb-cream-500);
+}
+
+.caja-abierta-desde strong { color: var(--rb-cream-300); }
+
+/* ---------- Panel de Órdenes ---------- */
+
+.caja-panel {
+  background: var(--rb-charcoal-800);
+  border: 1px solid var(--rb-charcoal-700);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.caja-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--rb-charcoal-700);
+  background: linear-gradient(155deg, rgba(201, 154, 70, 0.12), transparent 75%);
+}
+
+.caja-panel__header svg { width: 17px; height: 17px; color: var(--rb-gold-500); }
+
+.caja-panel__header h2 {
+  margin: 0;
+  font-family: var(--rb-font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--rb-cream-100);
+}
+
+.caja-panel__body { padding: 20px; }
+
+.caja-ordenes-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.caja-ordenes-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--rb-cream-500);
+  border-bottom: 1px solid var(--rb-charcoal-700);
+}
+
+.caja-ordenes-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--rb-charcoal-700);
+  color: var(--rb-cream-100);
+}
+
+.caja-ordenes-table tbody tr:last-child td { border-bottom: none; }
+.caja-ordenes-table tbody tr:hover td { background: rgba(201, 154, 70, 0.05); }
+
+.caja-ordenes-table .rb-btn { padding: 7px 12px; font-size: 0.8rem; margin-right: 6px; }
+
+/* ---------- Modales: resumen de totales ---------- */
+
+.caja-modal-linea {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
   font-size: 0.9rem;
 }
 
-.caja-container table {
-  font-size: 0.95rem;
-}
+.caja-modal-linea:last-child { margin-bottom: 0; }
 
-.caja-container .table-striped tbody tr:hover {
-  background-color: #f8f9fa;
-}
-
-.caja-container .form-control,
-.caja-container .form-select {
-  border-radius: 6px;
-  border: 1px solid #dee2e6;
-  padding: 10px 12px;
-}
-
-.caja-container .form-control:focus,
-.caja-container .form-select:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
-}
-
-.caja-container .modal-header {
-  background-color: #f8f9fa;
-  border-bottom: 2px solid #dee2e6;
-}
-
-.caja-container .modal-footer {
-  background-color: #f8f9fa;
-  border-top: 2px solid #dee2e6;
-}
-
-/* Resumenes de caja */
-.caja-container .bg-success {
-  background-color: #28a745 !important;
-}
-
-.caja-container .bg-danger {
-  background-color: #dc3545 !important;
-}
-
-.caja-container .bg-primary {
-  background-color: #007bff !important;
-}
-
-.caja-container .text-white h5 {
-  font-weight: 600;
-  font-size: 1.1rem;
-}
-
-.caja-container .text-white h6 {
-  font-weight: 500;
-  opacity: 0.9;
-}
-
-/* Legacy Caja Page Styles (Keep for backward compatibility) */
-.caja-page {
-  min-height: 100vh;
-  background-color: #f8f9fa;
-}
-
-.caja-header {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  border-bottom: 3px solid #28a745;
-}
-
-.caja-header h2 {
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-
-.items-list {
-  max-height: 300px;
-  overflow-y: auto;
-  padding: 10px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-}
-
-.items-list > div {
-  border-bottom: 1px solid #dee2e6;
-  padding-bottom: 8px;
-}
-
-.items-list > div:last-child {
-  border-bottom: none;
-}
-
-.total-section {
-  background-color: #f8f9fa;
-  padding: 15px;
-  border-radius: 4px;
-}
-
-.total-section .fs-5 {
-  font-size: 1.25rem !important;
-}
-
-.total-section .text-danger {
-  color: #dc3545 !important;
-}
-
-/* Card styling */
-.card {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-}
-
-.card-header {
-  border-bottom: 2px solid rgba(0, 0, 0, 0.1);
-}
-
-.form-control,
-.form-select {
-  border-radius: 4px;
-  border: 1px solid #dee2e6;
-}
-
-.form-control:focus,
-.form-select:focus {
-  border-color: #28a745;
-  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
-}
-
-.btn-success {
-  background-color: #28a745;
-  border-color: #28a745;
-  font-weight: 600;
-}
-
-.btn-success:hover {
-  background-color: #218838;
-  border-color: #1e7e34;
-}
-
-.btn-success:disabled {
-  background-color: #6c757d;
-  border-color: #6c757d;
-  opacity: 0.65;
-}
-
-/* Badge styling */
-.badge {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
-}
-
-/* Modal styling */
-.modal-content {
-  border-radius: 8px;
-}
-
-.modal-header {
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  color: white;
-  border-bottom: none;
-}
-
-.modal-header .btn-close {
-  filter: brightness(0) invert(1);
-}
-
-.modal-footer {
-  border-top: 2px solid #dee2e6;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .caja-header h2 {
-    font-size: 1.25rem;
-  }
-
-  .items-list {
-    max-height: 200px;
-  }
-}
-
-/* Animaciones */
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.card {
-  animation: slideIn 0.3s ease-in-out;
+.caja-modal-linea--total {
+  padding-top: 10px;
+  border-top: 1px dashed rgba(74, 151, 163, 0.35);
 }

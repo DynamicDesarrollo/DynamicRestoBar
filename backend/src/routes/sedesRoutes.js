@@ -1,6 +1,9 @@
 const express = require('express');
 const SedesController = require('../controllers/SedesController');
+const verificarToken = require('../middleware/verificarToken');
 const router = express.Router();
+
+router.use(verificarToken);
 
 // Listar sedes de un cliente
 router.get('/', SedesController.getAll);

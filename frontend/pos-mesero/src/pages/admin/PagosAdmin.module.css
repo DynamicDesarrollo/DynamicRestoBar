@@ -1,0 +1,76 @@
+.pagosCard {
+  background: var(--rb-charcoal-800);
+  border: 1px solid var(--rb-charcoal-700);
+  border-radius: 16px;
+  padding: 28px;
+  margin: 0 auto;
+  max-width: 1200px;
+  color: var(--rb-cream-100);
+  font-family: var(--rb-font-body);
+}
+
+.pagosHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--rb-font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--rb-cream-100);
+  margin: 0 0 6px;
+}
+
+.pagosHeader svg { width: 19px; height: 19px; color: var(--rb-gold-500); }
+
+.pagosSubtitle {
+  color: var(--rb-cream-500);
+  font-size: 0.88rem;
+  margin: 0 0 22px;
+}
+
+.pagosTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--rb-charcoal-900);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.pagosTable th, .pagosTable td {
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 0.88rem;
+  color: var(--rb-cream-100);
+}
+
+.pagosTable th {
+  background: var(--rb-charcoal-900);
+  color: var(--rb-cream-500);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 700;
+  border-bottom: 1px solid var(--rb-charcoal-700);
+}
+
+.pagosTable tr { border-bottom: 1px solid var(--rb-charcoal-700); }
+.pagosTable tr:last-child { border-bottom: none; }
+.pagosTable tr:nth-child(even) { background: rgba(255, 255, 255, 0.015); }
+
+.pagosEmpty {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--rb-cream-700);
+}
+
+.pagosError {
+  color: #f0958c;
+  font-weight: 600;
+}
+
+.pagosLoading {
+  color: var(--rb-cream-500);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

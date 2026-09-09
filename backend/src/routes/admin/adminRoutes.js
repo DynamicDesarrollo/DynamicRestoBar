@@ -5,9 +5,13 @@ const UsuariosController = require('../../controllers/admin/UsuariosController')
 const RolesController = require('../../controllers/admin/RolesController');
 const EstadisticasController = require('../../controllers/admin/EstadisticasController');
 const verificarToken = require('../../middleware/verificarToken');
+const { allowRoles } = require('../../middleware/roles');
 
-// Middleware de autenticación para todas las rutas admin
+// Autenticación Y autorización para TODAS las rutas de este router.
+// Sin el control de rol, cualquier usuario autenticado (un mesero, un cocinero)
+// podía leer y escribir toda la administración del restaurante.
 router.use(verificarToken);
+router.use(allowRoles('Administrador', 'Gerente'));
 
 // ========================================
 // RUTAS DE USUARIOS
@@ -35,20 +39,13 @@ const InventarioController = require('../../controllers/admin/InventarioControll
 const InformesController = require('../../controllers/admin/InformesController');
 const ZonasController = require('../../controllers/admin/ZonasController');
 const ImpresorasController = require('../../controllers/admin/ImpresorasController');
-
-// Middleware de autenticación para todas las rutas admin
-router.use(verificarToken);
-
-// Endpoint para gráfico de barras: ventas por día (ahora protegido)
-router.get('/informes/ventas-por-dia', EstadisticasController.ventasPorDia);
+const uploadProductoFoto = require('../../middleware/uploadProductoFoto');
 
 // ========================================
 // RUTAS DE MESAS
 // ========================================
 // Rutas específicas PRIMERO (antes de :id)
 router.get('/mesas/siguiente-numero', MesasController.obtenerSiguienteNumero);
-router.post('/mesas/limpiar-duplicadas', MesasController.limpiarDuplicadas);
-router.post('/mesas/debug-eliminar-21', MesasController.eliminarTodas21);
 
 // Rutas genéricas DESPUÉS
 router.get('/mesas', MesasController.getMesas);
@@ -66,8 +63,8 @@ router.delete('/categorias/:id', ProductosController.eliminarCategoria);
 router.get('/estaciones', ProductosController.getEstaciones);
 
 router.get('/productos', ProductosController.getProductos);
-router.post('/productos', ProductosController.crearProducto);
-router.put('/productos/:id', ProductosController.actualizarProducto);
+router.post('/productos', uploadProductoFoto.single('foto'), ProductosController.crearProducto);
+router.put('/productos/:id', uploadProductoFoto.single('foto'), ProductosController.actualizarProducto);
 router.delete('/productos/:id', ProductosController.eliminarProducto);
 
 // ========================================
@@ -150,5 +147,24 @@ router.get('/zonas', ZonasController.getZonas);
 router.post('/zonas', ZonasController.crearZona);
 router.put('/zonas/:id', ZonasController.actualizarZona);
 router.delete('/zonas/:id', ZonasController.eliminarZona);
+
+// ========================================
+// RUTAS DE CONCEPTOS DE MOVIMIENTO (catálogo)
+// ========================================
+const ConceptosMovimientoController = require('../../controllers/admin/ConceptosMovimientoController');
+router.get('/conceptos-movimiento', ConceptosMovimientoController.getConceptos);
+router.post('/conceptos-movimiento', ConceptosMovimientoController.crearConcepto);
+router.put('/conceptos-movimiento/:id', ConceptosMovimientoController.actualizarConcepto);
+router.delete('/conceptos-movimiento/:id', ConceptosMovimientoController.eliminarConcepto);
+
+// ========================================
+// RUTAS DE COMPROBANTES DE INGRESOS Y EGRESOS
+// ========================================
+const ComprobantesController = require('../../controllers/admin/ComprobantesController');
+const uploadComprobanteAdjunto = require('../../middleware/uploadComprobanteAdjunto');
+router.get('/comprobantes', ComprobantesController.getComprobantes);
+router.post('/comprobantes', uploadComprobanteAdjunto.single('adjunto'), ComprobantesController.crearComprobante);
+router.put('/comprobantes/:id', uploadComprobanteAdjunto.single('adjunto'), ComprobantesController.actualizarComprobante);
+router.delete('/comprobantes/:id', ComprobantesController.eliminarComprobante);
 
 module.exports = router;

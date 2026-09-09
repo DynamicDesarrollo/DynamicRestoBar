@@ -3,6 +3,10 @@ import axios from '../../../services/api';
 import { useAuthStore } from '../../../stores';
 import AdminLayout from '../AdminLayout';
 import { formatMoney } from '../../../utils/formatters';
+import {
+  IconTrendingUp, IconWallet, IconPlate, IconReceipt, IconTag, IconBox,
+  IconArrowDownCircle, IconArrowUpCircle, IconCash,
+} from '../../../components/Icons';
 import '../admin.css';
 
 const Informes = () => {
@@ -149,45 +153,44 @@ const Informes = () => {
     );
   }
 
+  const TABS = [
+    { id: 'ventas', label: 'Ventas', Icon: IconCash },
+    { id: 'productos', label: 'Productos', Icon: IconPlate },
+    { id: 'utilidad', label: 'Utilidad', Icon: IconReceipt },
+    { id: 'metodos', label: 'Métodos de Pago', Icon: IconTag },
+    { id: 'impacto', label: 'Impacto en Inventario', Icon: IconBox },
+    { id: 'caja', label: 'Caja', Icon: IconWallet },
+  ];
+
   return (
     <AdminLayout>
       <div className="admin-section">
         <div className="section-header">
-          <h2>📈 Informes y Reportes</h2>
+          <h2><IconTrendingUp /> Informes y Reportes</h2>
         </div>
 
         {/* Filtros */}
-        <div style={{
-          background: '#f9f9f9',
-          padding: '15px',
-          borderRadius: '6px',
-          marginBottom: '20px',
-          display: 'flex',
-          gap: '10px',
-          alignItems: 'flex-end'
-        }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>
-              Sede
-            </label>
+        <div className="admin-filter-bar">
+          <div className="admin-filter-field">
+            <label>Sede</label>
             <select
+              className="admin-select"
               value={sedeSeleccionada}
               onChange={e => setSedeSeleccionada(e.target.value)}
-              style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px', minWidth: '180px' }}
+              style={{ minWidth: '180px' }}
             >
               {sedes.map(sede => (
                 <option key={sede.id} value={sede.id}>{sede.nombre}</option>
               ))}
             </select>
           </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>
-              Categoría (utilidad)
-            </label>
+          <div className="admin-filter-field">
+            <label>Categoría (utilidad)</label>
             <select
+              className="admin-select"
               value={categoriaFiltro}
               onChange={(e) => setCategoriaFiltro(e.target.value)}
-              style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px', minWidth: '180px' }}
+              style={{ minWidth: '180px' }}
             >
               <option value="">Todas</option>
               {categorias.map(cat => (
@@ -195,42 +198,37 @@ const Informes = () => {
               ))}
             </select>
           </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>
-              Desde
-            </label>
+          <div className="admin-filter-field">
+            <label>Desde</label>
             <input
               type="date"
               name="fecha_inicio"
               value={filtros.fecha_inicio}
               onChange={handleFiltroChange}
-              style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+              className="admin-date-input"
             />
           </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>
-              Periodo Utilidad
-            </label>
+          <div className="admin-filter-field">
+            <label>Periodo Utilidad</label>
             <select
+              className="admin-select"
               value={utilidadPeriodo}
               onChange={(e) => setUtilidadPeriodo(e.target.value)}
-              style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px', minWidth: '140px' }}
+              style={{ minWidth: '140px' }}
             >
               <option value="diario">Diario</option>
               <option value="semanal">Semanal</option>
               <option value="mensual">Mensual</option>
             </select>
           </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>
-              Hasta
-            </label>
+          <div className="admin-filter-field">
+            <label>Hasta</label>
             <input
               type="date"
               name="fecha_fin"
               value={filtros.fecha_fin}
               onChange={handleFiltroChange}
-              style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+              className="admin-date-input"
             />
           </div>
           <button
@@ -242,35 +240,14 @@ const Informes = () => {
         </div>
 
         {/* Tabs */}
-        <div style={{
-          display: 'flex',
-          gap: '10px',
-          borderBottom: '2px solid #f0f0f0',
-          marginBottom: '20px'
-        }}>
-          {[
-            { id: 'ventas', label: '💰 Ventas', icon: '📊' },
-            { id: 'productos', label: '🍽️ Productos', icon: '📈' },
-            { id: 'utilidad', label: '🧾 Utilidad', icon: '📈' },
-            { id: 'metodos', label: '💳 Métodos de Pago', icon: '💳' },
-            { id: 'impacto', label: '📦 Impacto en Inventario', icon: '📦' },
-            { id: 'caja', label: '💵 Caja', icon: '💰' },
-          ].map(tab => (
+        <div className="admin-tabs">
+          {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              style={{
-                padding: '12px 20px',
-                border: 'none',
-                background: activeTab === tab.id ? '#667eea' : 'transparent',
-                color: activeTab === tab.id ? 'white' : '#666',
-                cursor: 'pointer',
-                borderBottom: activeTab === tab.id ? '3px solid #667eea' : 'none',
-                fontWeight: activeTab === tab.id ? '600' : '400',
-                transition: 'all 0.3s ease'
-              }}
+              className={`admin-tab-btn ${activeTab === tab.id ? 'is-active' : ''}`}
             >
-              {tab.label}
+              <tab.Icon /> {tab.label}
             </button>
           ))}
         </div>
@@ -301,7 +278,7 @@ const Informes = () => {
               </tbody>
             </table>
             {ventasData.length === 0 && (
-              <p style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+              <p style={{ textAlign: 'center', padding: '20px', color: 'var(--rb-cream-500)' }}>
                 No hay datos de ventas para el período seleccionado
               </p>
             )}
@@ -332,7 +309,7 @@ const Informes = () => {
               </tbody>
             </table>
             {productosData.length === 0 && (
-              <p style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+              <p style={{ textAlign: 'center', padding: '20px', color: 'var(--rb-cream-500)' }}>
                 No hay datos de productos para el período seleccionado
               </p>
             )}
@@ -364,7 +341,7 @@ const Informes = () => {
                   );
                 })}
                 {utilidadData.length > 0 && (
-                  <tr style={{ fontWeight: 'bold', borderTop: '2px solid #ddd' }}>
+                  <tr style={{ fontWeight: 700, borderTop: '2px solid var(--rb-charcoal-600)' }}>
                     <td>Total</td>
                     <td style={{ textAlign: 'right' }}>{formatMoney(utilidadTotales.ventas, true)}</td>
                     <td style={{ textAlign: 'right' }}>{formatMoney(utilidadTotales.costo, true)}</td>
@@ -374,7 +351,7 @@ const Informes = () => {
               </tbody>
             </table>
             {utilidadData.length === 0 && (
-              <p style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+              <p style={{ textAlign: 'center', padding: '20px', color: 'var(--rb-cream-500)' }}>
                 No hay datos de utilidad para el período seleccionado
               </p>
             )}
@@ -405,7 +382,7 @@ const Informes = () => {
               </tbody>
             </table>
             {metodosData.length === 0 && (
-              <p style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+              <p style={{ textAlign: 'center', padding: '20px', color: 'var(--rb-cream-500)' }}>
                 No hay datos de pagos para el período seleccionado
               </p>
             )}
@@ -414,21 +391,22 @@ const Informes = () => {
         {/* Tab: Impacto en Inventario */}
         {activeTab === 'impacto' && (
           <div>
-            <h3 style={{ marginBottom: '15px', color: '#333' }}>📦 Impacto de Ventas en Inventario</h3>
+            <h3 className="admin-subtitle"><IconBox /> Impacto de Ventas en Inventario</h3>
 
             {!impactoData ? (
-              <p style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+              <p style={{ textAlign: 'center', padding: '20px', color: 'var(--rb-cream-500)' }}>
                 Cargando datos de impacto...
               </p>
             ) : impactoData.resumen && impactoData.resumen.length === 0 ? (
-              <p style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+              <p style={{ textAlign: 'center', padding: '20px', color: 'var(--rb-cream-500)' }}>
                 No hay datos de impacto para el período seleccionado. Asegúrate de que los productos vendidos tengan recetas configuradas.
               </p>
             ) : (
               <>
                 {/* Resumen por Insumo */}
                 <div style={{ marginBottom: '30px' }}>
-                  <h4 style={{ fontSize: '16px', color: '#666', marginBottom: '10px' }}>Consumo por Insumo</h4>
+                  <h4 className="admin-subtitle" style={{ fontSize: '0.95rem' }}>Consumo por Insumo</h4>
+                  <div className="table-responsive">
                   <table className="table">
                     <thead>
                       <tr>
@@ -449,34 +427,16 @@ const Informes = () => {
                         return (
                           <tr key={idx}>
                             <td><strong>{item.insumo}</strong></td>
-                            <td><span style={{ color: '#1e88e5', fontWeight: '500' }}>{stockAntes}</span></td>
-                            <td><span style={{ color: '#c92a2a', fontWeight: '600' }}>- {consumo}</span></td>
-                            <td><span style={{ color: '#2f9e44', fontWeight: '700', fontSize: '15px' }}>{stockRestante}</span></td>
+                            <td><span style={{ color: 'var(--rb-cyan-400)', fontWeight: 600 }}>{stockAntes}</span></td>
+                            <td><span style={{ color: '#f0958c', fontWeight: 700 }}>- {consumo}</span></td>
+                            <td><span style={{ color: 'var(--rb-green-400)', fontWeight: 700, fontSize: '0.95rem' }}>{stockRestante}</span></td>
                             <td>{item.stock_minimo}</td>
-                            <td><span style={{ color: '#666', fontSize: '13px' }}>{item.unidad_medida}</span></td>
+                            <td><span style={{ color: 'var(--rb-cream-500)', fontSize: '0.82rem' }}>{item.unidad_medida}</span></td>
                             <td>
                               {item.alerta ? (
-                                <span style={{
-                                  background: '#ffebee',
-                                  color: '#c92a2a',
-                                  padding: '4px 8px',
-                                  borderRadius: '4px',
-                                  fontSize: '12px',
-                                  fontWeight: 'bold'
-                                }}>
-                                  ⚠️ Bajo Stock
-                                </span>
+                                <span className="rb-badge rb-badge--danger">Bajo Stock</span>
                               ) : (
-                                <span style={{
-                                  background: '#e8f5e9',
-                                  color: '#2f9e44',
-                                  padding: '4px 8px',
-                                  borderRadius: '4px',
-                                  fontSize: '12px',
-                                  fontWeight: 'bold'
-                                }}>
-                                  ✓ Normal
-                                </span>
+                                <span className="rb-badge rb-badge--success">Normal</span>
                               )}
                             </td>
                           </tr>
@@ -484,11 +444,13 @@ const Informes = () => {
                       })}
                     </tbody>
                   </table>
+                  </div>
                 </div>
 
                 {/* Detalle por Producto */}
                 <div>
-                  <h4 style={{ fontSize: '16px', color: '#666', marginBottom: '10px' }}>Detalle por Producto</h4>
+                  <h4 className="admin-subtitle" style={{ fontSize: '0.95rem' }}>Detalle por Producto</h4>
+                  <div className="table-responsive">
                   <table className="table">
                     <thead>
                       <tr>
@@ -506,10 +468,10 @@ const Informes = () => {
                           <td>{item.producto_nombre}</td>
                           <td>{item.producto_vendido}</td>
                           <td>{item.insumo_nombre}</td>
-                          <td style={{ color: '#3b82f6', fontWeight: '500' }}>{item.cantidad_por_unidad}</td>
+                          <td style={{ color: 'var(--rb-cyan-400)', fontWeight: 600 }}>{item.cantidad_por_unidad}</td>
                           <td><strong>{item.consumo_total}</strong></td>
                           <td>
-                            <span style={{ color: item.porcentaje_consumo > 50 ? '#c92a2a' : '#2f9e44' }}>
+                            <span style={{ color: item.porcentaje_consumo > 50 ? '#f0958c' : 'var(--rb-green-400)', fontWeight: 700 }}>
                               {item.porcentaje_consumo}%
                             </span>
                           </td>
@@ -517,6 +479,7 @@ const Informes = () => {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </>
             )}
@@ -530,28 +493,28 @@ const Informes = () => {
               <>
                 <div className="stats-grid" style={{ marginBottom: '30px' }}>
                   <div className="stat-card">
-                    <div className="stat-icon">💵</div>
+                    <div className="stat-icon"><IconWallet /></div>
                     <div className="stat-content">
                       <h3>Monto Inicial</h3>
                       <p className="stat-value">{formatMoney(parseFloat(cajaData.resumen?.monto_inicial || 0), true)}</p>
                     </div>
                   </div>
                   <div className="stat-card">
-                    <div className="stat-icon">📈</div>
+                    <div className="stat-icon"><IconArrowDownCircle /></div>
                     <div className="stat-content">
                       <h3>Ingresos</h3>
                       <p className="stat-value">{formatMoney(parseFloat(cajaData.resumen?.ingresos || 0), true)}</p>
                     </div>
                   </div>
                   <div className="stat-card">
-                    <div className="stat-icon">📉</div>
+                    <div className="stat-icon"><IconArrowUpCircle /></div>
                     <div className="stat-content">
                       <h3>Egresos</h3>
                       <p className="stat-value">{formatMoney(parseFloat(cajaData.resumen?.egresos || 0), true)}</p>
                     </div>
                   </div>
                   <div className="stat-card">
-                    <div className="stat-icon">💰</div>
+                    <div className="stat-icon"><IconCash /></div>
                     <div className="stat-content">
                       <h3>Total en Caja</h3>
                       <p className="stat-value">{formatMoney(parseFloat(cajaData.resumen?.total_en_caja || 0), true)}</p>
@@ -561,7 +524,7 @@ const Informes = () => {
 
                 {cajaData.movimientos && cajaData.movimientos.length > 0 ? (
                   <div>
-                    <h3 style={{ marginBottom: '15px', color: '#333' }}>Movimientos</h3>
+                    <h3 className="admin-subtitle">Movimientos</h3>
                     <div className="table-responsive">
                       <table className="table">
                         <thead>
@@ -593,15 +556,9 @@ const Informes = () => {
 
                             return (
                               <tr key={idx}>
-                                <td>{fechaFormateada}</td>
+                                <td style={{ fontSize: '0.82rem', color: 'var(--rb-cream-500)' }}>{fechaFormateada}</td>
                                 <td>
-                                  <span style={{
-                                    background: mov.tipo === 'ingreso' ? '#4caf50' : '#f44336',
-                                    color: 'white',
-                                    padding: '4px 8px',
-                                    borderRadius: '4px',
-                                    fontSize: '12px'
-                                  }}>
+                                  <span className={`mov-badge ${mov.tipo === 'ingreso' ? 'mov-badge--entrada' : 'mov-badge--salida'}`}>
                                     {mov.tipo?.toUpperCase()}
                                   </span>
                                 </td>
@@ -615,13 +572,13 @@ const Informes = () => {
                     </div>
                   </div>
                 ) : (
-                  <p style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+                  <p style={{ textAlign: 'center', padding: '20px', color: 'var(--rb-cream-500)' }}>
                     No hay movimientos de caja disponibles para la sede seleccionada.
                   </p>
                 )}
               </>
             ) : (
-              <p style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+              <p style={{ textAlign: 'center', padding: '20px', color: 'var(--rb-cream-500)' }}>
                 No hay datos de caja disponibles para la sede seleccionada.
               </p>
             )}

@@ -24,6 +24,7 @@ import SuperAdminMetricas from './pages/superadmin/SuperAdminMetricas';
 import ActivarCuenta from './pages/ActivarCuenta';
 import ConfiguracionUsuarios from './pages/admin/components/ConfiguracionUsuarios';
 import ConfiguracionImpresoras from './pages/admin/components/ConfiguracionImpresoras';
+import ConfiguracionComprobantes from './pages/admin/components/ConfiguracionComprobantes';
 import './App.css';
 
 function App() {
@@ -35,7 +36,14 @@ function App() {
         <Route path="/activar-cuenta" element={<ActivarCuenta />} />
 
         {/* Super Admin SaaS */}
-        <Route path="/superadmin/*" element={<SuperAdminLayout />}>
+        <Route
+          path="/superadmin/*"
+          element={
+            <ProtectedRoute superAdminOnly>
+              <SuperAdminLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route path="clientes" element={<SuperAdminClientes />} />
           <Route path="pagos" element={<SuperAdminPagos />} />
           <Route path="metricas" element={<SuperAdminMetricas />} />
@@ -153,6 +161,14 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['Administrador', 'Gerente']}>
               <ConfiguracionImpresoras />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/comprobantes"
+          element={
+            <ProtectedRoute requiredRoles={['Administrador', 'Gerente']}>
+              <ConfiguracionComprobantes />
             </ProtectedRoute>
           }
         />

@@ -1,7 +1,7 @@
-
 import styles from './SuperAdminHeaderFooter.module.css';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores';
+import { IconUser, IconLogout } from '../../components/Icons';
 
 export function SuperAdminHeader({ userName }) {
   const navigate = useNavigate();
@@ -12,11 +12,13 @@ export function SuperAdminHeader({ userName }) {
   };
   return (
     <header className={styles.headerBar}>
-      <div className={styles.headerTitle}>DynamicRestoBar - Super Admin</div>
+      <div className={styles.headerTitle}>DynamicRestoBar — Super Admin</div>
       <div className={styles.userInfo}>
+        <IconUser />
         <span className={styles.userName}>{userName}</span>
-        <span role="img" aria-label="user">👤</span>
-        <button className={styles.logoutBtn} onClick={handleLogout}>Salir</button>
+        <button className={styles.logoutBtn} onClick={handleLogout}>
+          <IconLogout /> Salir
+        </button>
       </div>
     </header>
   );

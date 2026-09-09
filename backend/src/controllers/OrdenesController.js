@@ -11,6 +11,12 @@
 
 const db = require('../config/database');
 const PrintDispatchService = require('../services/PrintDispatchService');
+const {
+  validarSedeDeReq,
+  validarRecursoDeReq,
+  sedesDeReq,
+  sedePerteneceACliente,
+} = require('../utils/tenantScope');
 
 class OrdenesController {
   static inferirTipoEstacionDesdeTexto(texto = '') {
@@ -304,22 +310,35 @@ class OrdenesController {
    */
   static async crear(req, res) {
     try {
-      const { mesa_id, usuario_id, sede_id, items, total, canal_id } = req.body;
+      const { mesa_id, items, total, canal_id } = req.body;
+
+      // La sede y el mesero salen del token, NUNCA del body: aceptarlos del
+      // cliente permitía crear órdenes en el restaurante de otro y a nombre
+      // de otra persona.
+      const sede_id = req.usuario?.sedeId || req.usuario?.sede_id;
+      const usuario_id = req.usuario?.userId;
+
+      if (!mesa_id || !items || items.length === 0) {
+        return res.status(400).json({
+          error: 'Datos incompletos. Se requiere: mesa_id e items',
+        });
+      }
+      if (!sede_id || !usuario_id) {
+        return res.status(400).json({
+          error: 'Tu usuario no tiene una sede asociada',
+        });
+      }
 
       console.log(`\n📋 CREAR ORDEN - Mesa: ${mesa_id}, Items: ${items.length}, Total: ${total}`);
       items.forEach((it, i) => console.log(`  ${i+1}. Producto ${it.producto_id} x${it.cantidad}`));
 
-      // Validar datos
-      if (!mesa_id || !usuario_id || !sede_id || !items || items.length === 0) {
-        return res.status(400).json({
-          error: 'Datos incompletos. Se requiere: mesa_id, usuario_id, sede_id, items',
-        });
-      }
-
-      // Obtener mesa
+      // Obtener mesa y comprobar que sea de la sede del usuario
       const mesa = await db('mesas').where('id', mesa_id).first();
       if (!mesa) {
         return res.status(404).json({ error: 'Mesa no encontrada' });
+      }
+      if (Number(mesa.sede_id) !== Number(sede_id)) {
+        return res.status(403).json({ error: 'Esa mesa no pertenece a tu sede' });
       }
 
       // Obtener usuario
@@ -741,11 +760,8 @@ class OrdenesController {
         .where('id', id)
         .first();
 
-      if (!orden) {
-        return res.status(404).json({
-          error: 'Orden no encontrada',
-        });
-      }
+      const permiso = await validarRecursoDeReq(req, orden, 'orden');
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
 
       // Obtener detalles
       const detalles = await db('orden_detalles')
@@ -775,6 +791,10 @@ class OrdenesController {
   static async getByMesa(req, res) {
     try {
       const { mesaId } = req.params;
+
+      const mesa = await db('mesas').where('id', mesaId).whereNull('deleted_at').first();
+      const permiso = await validarRecursoDeReq(req, mesa, 'mesa');
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
 
       const ordenes = await db('ordenes')
         .select('*')
@@ -832,7 +852,15 @@ class OrdenesController {
   static async getPendientes(req, res) {
     try {
       const { sedeId } = req.query;
-      const clienteId = req.usuario?.cliente_id || req.query.clienteId;
+      // Siempre se acota a las sedes del cliente autenticado. Antes, sin
+      // sedeId, esto devolvía las órdenes abiertas de todos los restaurantes.
+      const sedeIds = await sedesDeReq(req);
+      if (sedeIds.length === 0) {
+        return res.json({ success: true, data: [], total: 0 });
+      }
+      if (sedeId && !sedePerteneceACliente(sedeId, sedeIds)) {
+        return res.status(403).json({ error: 'Esa sede no pertenece a tu empresa' });
+      }
 
       let query = db('ordenes')
         .select(
@@ -846,15 +874,13 @@ class OrdenesController {
             0) as monto_pagado`)
         )
         .leftJoin('mesas', 'ordenes.mesa_id', '=', 'mesas.id')
-        .whereIn('ordenes.estado', ['abierta', 'lista']);
+        .whereIn('ordenes.estado', ['abierta', 'lista'])
+        .whereIn('ordenes.sede_id', sedeIds);
 
-      // Filtrar por sede si está presente
+      // Filtrar a una sede concreta si se pidió (ya validada arriba)
       if (sedeId) {
         query = query.andWhere('ordenes.sede_id', sedeId);
       }
-
-      // Nota: la tabla `ordenes` puede tener cliente_id nulo,
-      // por eso no filtramos por cliente automáticamente aquí.
 
       const ordenes = await query.orderBy('ordenes.created_at', 'desc');
 
@@ -890,6 +916,9 @@ class OrdenesController {
       }
 
       const orden = await db('ordenes').where('id', id).first();
+
+      const permiso = await validarRecursoDeReq(req, orden, 'orden');
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
 
       if (!orden) {
         return res.status(404).json({
@@ -929,11 +958,10 @@ class OrdenesController {
 
       const orden = await trx('ordenes').where('id', id).first();
 
-      if (!orden) {
+      const permiso = await validarRecursoDeReq(req, orden, 'orden');
+      if (!permiso.ok) {
         await trx.rollback();
-        return res.status(404).json({
-          error: 'Orden no encontrada',
-        });
+        return res.status(permiso.status).json({ error: permiso.error });
       }
 
       // Actualizar estado de orden
@@ -982,10 +1010,10 @@ class OrdenesController {
    */
   static async getBySedeAbiertas(req, res) {
     try {
-      const { sedeId } = req.params;
-      const clienteId = req.usuario?.cliente_id || req.query.clienteId;
+      const permiso = await validarSedeDeReq(req, req.params.sedeId);
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
 
-      let query = db('ordenes')
+      const ordenes = await db('ordenes')
         .select(
           'ordenes.*',
           'mesas.numero as mesa_numero',
@@ -993,15 +1021,9 @@ class OrdenesController {
         )
         .leftJoin('mesas', 'ordenes.mesa_id', 'mesas.id')
         .leftJoin('usuarios', 'ordenes.usuario_id', 'usuarios.id')
-        .where('ordenes.sede_id', sedeId)
-        .where('ordenes.estado', 'abierta');
-
-      // Filtrar por cliente si está presente
-      if (clienteId) {
-        query = query.andWhere('ordenes.cliente_id', clienteId);
-      }
-
-      const ordenes = await query.orderBy('ordenes.created_at', 'desc');
+        .where('ordenes.sede_id', permiso.sedeId)
+        .where('ordenes.estado', 'abierta')
+        .orderBy('ordenes.created_at', 'desc');
 
       return res.json({
         success: true,

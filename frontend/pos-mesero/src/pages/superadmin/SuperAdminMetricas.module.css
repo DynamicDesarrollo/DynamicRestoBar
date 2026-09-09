@@ -1,9 +1,9 @@
 .dashboardContainer {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px 0 rgba(34,51,107,0.07);
-  padding: 32px 32px 24px 32px;
-  margin-bottom: 32px;
+  background: var(--rb-charcoal-800);
+  border: 1px solid var(--rb-charcoal-700);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 28px;
   max-width: 1100px;
   margin-left: auto;
   margin-right: auto;
@@ -11,163 +11,206 @@
 
 .filtrosRow {
   display: flex;
-  gap: 24px;
-  align-items: center;
+  gap: 20px;
+  align-items: flex-end;
   margin-bottom: 24px;
+  flex-wrap: wrap;
 }
+
+.filtrosRow > div {
+  display: flex;
+  flex-direction: column;
+}
+
 .filtrosRow label {
-  font-weight: 600;
-  color: #22336b;
-  margin-right: 8px;
+  font-weight: 700;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--rb-cream-500);
+  margin-bottom: 8px;
 }
+
 .filtrosRow input[type="date"] {
-  border: 1px solid #e0e7ef;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 1rem;
-  color: #22336b;
-  background: #f8fafc;
+  border: 1px solid var(--rb-charcoal-700);
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 0.88rem;
+  color: var(--rb-cream-100);
+  background: var(--rb-charcoal-900);
+  color-scheme: dark;
+  font-family: var(--rb-font-body);
 }
+
+.filtrosRow input[type="date"]:focus {
+  outline: none;
+  border-color: var(--rb-gold-500);
+  box-shadow: 0 0 0 3px rgba(201, 154, 70, 0.18);
+}
+
 .filtrarBtn {
-  background: #30488b;
-  color: #fff;
+  background: linear-gradient(160deg, var(--rb-gold-400), var(--rb-gold-600));
+  color: var(--rb-charcoal-950);
   border: none;
-  border-radius: 6px;
-  padding: 8px 20px;
-  font-size: 1rem;
-  font-weight: 600;
+  border-radius: 9px;
+  padding: 10px 22px;
+  font-size: 0.86rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: filter 0.15s ease;
+  font-family: var(--rb-font-body);
 }
+
 .filtrarBtn:hover {
-  background: #22336b;
+  filter: brightness(1.08);
 }
 
 .metricasRow {
   display: flex;
-  gap: 24px;
-  margin-bottom: 32px;
+  gap: 16px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
 }
+
 .metricCard {
   flex: 1;
-  background: #f4f6fc;
-  border-radius: 10px;
-  box-shadow: 0 1px 6px 0 rgba(34,51,107,0.06);
+  min-width: 180px;
+  background: linear-gradient(155deg, rgba(201, 154, 70, 0.12), rgba(201, 154, 70, 0.04) 60%), var(--rb-charcoal-900);
+  border: 1px solid rgba(201, 154, 70, 0.28);
+  border-radius: 12px;
   padding: 18px 16px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
+
 .metricLabel {
-  font-size: 1.05rem;
-  color: #22336b;
-  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--rb-cream-500);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
   margin-bottom: 8px;
 }
+
 .metricValue {
-  font-size: 2rem;
+  font-family: var(--rb-font-display);
+  font-size: 1.9rem;
   font-weight: 700;
-  color: #30488b;
+  color: var(--rb-gold-400);
   margin-bottom: 6px;
 }
+
 .metricChange {
-  font-size: 0.95rem;
-  color: #22c55e;
-  font-weight: 500;
+  font-size: 0.82rem;
+  color: var(--rb-green-400);
+  font-weight: 600;
 }
 
 .graficosRow {
   display: flex;
-  gap: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
+
 .graficoCard {
   flex: 1;
-  background: #f8fafc;
-  border-radius: 10px;
-  box-shadow: 0 1px 6px 0 rgba(34,51,107,0.06);
+  min-width: 280px;
+  background: var(--rb-charcoal-900);
+  border: 1px solid var(--rb-charcoal-700);
+  border-radius: 12px;
   padding: 18px 16px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
+
 .graficoTitle {
-  font-size: 1.1rem;
-  color: #22336b;
+  font-family: var(--rb-font-display);
+  font-size: 1rem;
+  color: var(--rb-cream-100);
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
+
 .metricasCard {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px 0 rgba(34,51,107,0.07);
-  padding: 32px 32px 24px 32px;
-  margin-bottom: 32px;
+  background: var(--rb-charcoal-800);
+  border: 1px solid var(--rb-charcoal-700);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 28px;
   max-width: 1100px;
   margin-left: auto;
   margin-right: auto;
 }
 
 .metricasHeader {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #22336b;
+  font-family: var(--rb-font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--rb-cream-100);
   margin-bottom: 18px;
 }
 
 .metricasTable {
   width: 100%;
   border-collapse: collapse;
-  background: #fff;
-  border-radius: 8px;
+  background: var(--rb-charcoal-900);
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 1px 6px 0 rgba(34,51,107,0.06);
 }
 
 .metricasTable th, .metricasTable td {
-  padding: 12px 10px;
+  padding: 12px 14px;
   text-align: left;
+  color: var(--rb-cream-100);
+  font-size: 0.88rem;
 }
 
 .metricasTable th {
-  background: #f4f6fc;
-  color: #22336b;
-  font-size: 1.05rem;
+  background: var(--rb-charcoal-900);
+  color: var(--rb-cream-500);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   font-weight: 700;
-  border-bottom: 2px solid #e0e7ef;
+  border-bottom: 1px solid var(--rb-charcoal-700);
 }
 
 .metricasTable tr {
-  border-bottom: 1px solid #e0e7ef;
+  border-bottom: 1px solid var(--rb-charcoal-700);
 }
 
 .metricasTable tr:nth-child(even) {
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.015);
 }
 
 .badge {
   display: inline-block;
   padding: 3px 12px;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #fff;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
-.badge-green { background: #22c55e; }
-.badge-yellow { background: #f59e42; }
-.badge-red { background: #e53935; }
+.badge-green { background: rgba(77, 157, 111, 0.18); color: var(--rb-green-400); }
+.badge-yellow { background: rgba(201, 154, 70, 0.18); color: var(--rb-gold-400); }
+.badge-red { background: rgba(226, 86, 75, 0.18); color: #f0958c; }
 
 .descargarBtn {
-  background: #22c55e;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 20px;
-  font-size: 1rem;
-  font-weight: 600;
+  background: rgba(77, 157, 111, 0.16);
+  color: var(--rb-green-400);
+  border: 1px solid rgba(77, 157, 111, 0.4);
+  border-radius: 9px;
+  padding: 9px 20px;
+  font-size: 0.86rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.15s ease;
   margin-top: 18px;
+  font-family: var(--rb-font-body);
 }
 .descargarBtn:hover {
-  background: #198754;
+  background: rgba(77, 157, 111, 0.26);
 }

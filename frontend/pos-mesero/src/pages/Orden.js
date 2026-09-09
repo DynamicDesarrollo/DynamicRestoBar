@@ -1,26 +1,17 @@
 import { toast } from 'react-toastify';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Container,
-  Row,
-  Col,
-  Button,
-  Card,
-  Modal,
-  Spinner,
-  Alert,
-} from 'react-bootstrap';
-import { productosService, ordenesService } from '../services/api';
+import { Modal } from 'react-bootstrap';
+import { productosService, ordenesService, canalesService } from '../services/api';
 import { useOrdenStore, useAuthStore } from '../stores';
 import ProductoModal from '../components/ProductoModal';
 import ResumenOrden from '../components/ResumenOrden';
+import { ClassicCatalog, AurumCatalog } from '../components/catalog';
 import { formatMoney } from '../utils/formatters';
+import { IconArrowLeft, IconCheck, IconTrash } from '../components/Icons';
 import './Orden.css';
-import { canalesService } from '../services/api';
 
 export default function Orden() {
-  console.log('Renderizando Orden para mesa:', window.location.pathname);
   const { mesaId } = useParams();
   const navigate = useNavigate();
   const usuario = useAuthStore((state) => state.usuario);
@@ -44,12 +35,14 @@ export default function Orden() {
   const [showProductoModal, setShowProductoModal] = useState(false);
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showCancelarModal, setShowCancelarModal] = useState(false);
   const setItems = useOrdenStore((state) => state.setItems);
   const setMesaActual = useOrdenStore((state) => state.setMesaActual);
   const [tieneOrdenAbierta, setTieneOrdenAbierta] = useState(false);
   const [firmaBaseOrden, setFirmaBaseOrden] = useState([]);
 
   const sedeId = usuario?.sede_id || localStorage.getItem('sedeId') || 1;
+  const estiloCatalogo = usuario?.estiloCatalogo || 'clasico';
   const [canalId, setCanalId] = useState(null);
 
   const construirFirmaItems = useCallback((listaItems) => {
@@ -82,19 +75,16 @@ export default function Orden() {
       setProductos(productosRes.data.data || []);
       setCategoriaSeleccionada(categoriasRes.data.data?.[0]?.id);
 
-      // Buscar canal 'mostrador'
-      const canalMostrador = (canalesRes.data.data || []).find(c => c.nombre === 'mostrador');
+      const canalMostrador = (canalesRes.data.data || []).find((c) => c.nombre === 'mostrador');
       setCanalId(canalMostrador ? canalMostrador.id : null);
 
-      // Si hay orden existente y AÚN NO se han cargado los datos, cargar sus items
       if (ordenesRes.data.data && ordenesRes.data.data.length > 0 && !datoCargado) {
         const orden = ordenesRes.data.data[0];
         setMesaActual(mesaId);
         setTieneOrdenAbierta(true);
-        
-        // Restaurar items del carrito desde la orden
+
         if (orden.items && orden.items.length > 0) {
-          const productosMap = new Map(productosRes.data.data.map(p => [p.id, p]));
+          const productosMap = new Map(productosRes.data.data.map((p) => [p.id, p]));
           const ordenItems = orden.items.map((item) => ({
             id: item.id,
             producto: productosMap.get(item.producto_id),
@@ -123,15 +113,13 @@ export default function Orden() {
   }, [sedeId, mesaId, datoCargado, construirFirmaItems]);
 
   useEffect(() => {
-    // Resetear cuando cambias de mesa
     setDatoCargado(false);
     setTieneOrdenAbierta(false);
     setFirmaBaseOrden([]);
-    limpiarOrden(); // LIMPIAR el carrito también
+    limpiarOrden();
   }, [mesaId, limpiarOrden]);
 
   useEffect(() => {
-    // Cargar datos cuando datoCargado cambia
     cargarDatos();
   }, [datoCargado, cargarDatos]);
 
@@ -153,9 +141,7 @@ export default function Orden() {
   const firmaActualOrden = construirFirmaItems(items);
   const hayCambiosSobreOrdenAbierta =
     JSON.stringify(firmaActualOrden) !== JSON.stringify(firmaBaseOrden);
-  const puedeEnviarOrden = tieneOrdenAbierta
-    ? hayCambiosSobreOrdenAbierta
-    : items.length > 0;
+  const puedeEnviarOrden = tieneOrdenAbierta ? hayCambiosSobreOrdenAbierta : items.length > 0;
 
   const handleEnviarOrden = async () => {
     if (!puedeEnviarOrden) {
@@ -171,10 +157,10 @@ export default function Orden() {
 
     try {
       const datosOrden = {
-        mesa_id: parseInt(mesaId),
+        mesa_id: parseInt(mesaId, 10),
         usuario_id: usuario.id,
-        sede_id: usuario.sede_id || parseInt(sedeId),
-        canal_id: canalId, // Usar el id real
+        sede_id: usuario.sede_id || parseInt(sedeId, 10),
+        canal_id: canalId,
         items: items.map((item) => ({
           producto_id: item.producto.id,
           cantidad: item.cantidad,
@@ -186,7 +172,7 @@ export default function Orden() {
       };
 
       await ordenesService.crear(datosOrden);
-      toast.success('✅ Orden enviada a cocina');
+      toast.success('Orden enviada a cocina');
       limpiarOrden();
       navigate('/mesas');
     } catch (err) {
@@ -197,140 +183,85 @@ export default function Orden() {
 
   const handleCancelar = () => {
     if (items.length > 0) {
-      if (
-        window.confirm('¿Cancelar orden? Se perderán todos los productos agregados.')
-      ) {
-        limpiarOrden();
-        navigate('/mesas');
-      }
+      setShowCancelarModal(true);
     } else {
       navigate('/mesas');
     }
   };
 
+  const confirmarCancelar = () => {
+    setShowCancelarModal(false);
+    limpiarOrden();
+    navigate('/mesas');
+  };
+
   if (loading) {
     return (
-      <Container className="d-flex align-items-center justify-content-center min-vh-100">
-        <Spinner animation="border" variant="primary" />
-      </Container>
+      <div className="orden-page orden-page--loading">
+        <div className="rb-spinner" aria-label="Cargando productos" />
+      </div>
     );
   }
 
   return (
     <div className="orden-page">
-      {/* Header */}
-      <div className="orden-header text-white py-3">
-        <Container>
-          <Row className="align-items-center">
-            <Col>
-              <h2 className="mb-0">Mesa #{mesaId}</h2>
-              <small className="text-muted">Operario: {usuario?.nombre}</small>
-            </Col>
-            <Col className="text-end">
-              <Button
-                variant="outline-light"
-                size="sm"
-                onClick={handleCancelar}
-              >
-                ← Volver
-              </Button>
-            </Col>
-          </Row>
-        </Container>
+      <div className="orden-header">
+        <div className="orden-header__inner">
+          <div>
+            <h1 className="orden-header__title">
+              Mesa <span>#{mesaId}</span>
+            </h1>
+            <p className="orden-header__operario">Operario: {usuario?.nombre}</p>
+          </div>
+          <button type="button" className="rb-btn rb-btn--ghost" onClick={handleCancelar}>
+            <IconArrowLeft /> Volver
+          </button>
+        </div>
       </div>
 
-      {error && (
-        <Container className="mt-3">
-          <Alert variant="danger">{error}</Alert>
-        </Container>
-      )}
+      <div className="orden-content">
+        {error && (
+          <div className="orden-alert-wrap">
+            <div className="rb-alert">{error}</div>
+          </div>
+        )}
 
-      <Container className="py-4">
-        <Row className="g-3">
-          {/* Columna: Productos */}
-          <Col lg={8}>
-            {/* Filtro de categorías */}
-            <div className="categoria-filter mb-4">
-              <div className="categoria-buttons">
-                {categorias.map((cat) => (
-                  <Button
-                    key={cat.id}
-                    variant={
-                      categoriaSeleccionada === cat.id ? 'primary' : 'outline-primary'
-                    }
-                    size="sm"
-                    onClick={() => setCategoriaSeleccionada(cat.id)}
-                    className="me-2 mb-2"
-                  >
-                    {cat.nombre}
-                  </Button>
-                ))}
-              </div>
-            </div>
+        {/* Columna: Productos */}
+        {estiloCatalogo === 'aurum' ? (
+          <AurumCatalog
+            categorias={categorias}
+            productos={productosFiltrados}
+            categoriaSeleccionada={categoriaSeleccionada}
+            onSelectCategoria={setCategoriaSeleccionada}
+            onSelectProducto={handleSelectProducto}
+          />
+        ) : (
+          <ClassicCatalog
+            categorias={categorias}
+            productos={productosFiltrados}
+            categoriaSeleccionada={categoriaSeleccionada}
+            onSelectCategoria={setCategoriaSeleccionada}
+            onSelectProducto={handleSelectProducto}
+          />
+        )}
 
-            {/* Grid de productos */}
-            <div className="productos-grid">
-              {productosFiltrados.length > 0 ? (
-                productosFiltrados.map((producto) => (
-                  <Card
-                    key={producto.id}
-                    className="producto-card cursor-pointer"
-                    onClick={() => handleSelectProducto(producto)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <Card.Body className="p-3">
-                      <h6 className="mb-2">{producto.nombre}</h6>
-                      <p className="text-muted small mb-2">
-                        {producto.descripcion}
-                      </p>
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <strong className="text-primary">
-                          {formatMoney(producto.precio_venta)}
-                        </strong>
-                        {producto.tiempo_preparacion && (
-                          <small className="text-muted">
-                            ⏱️ {producto.tiempo_preparacion}min
-                          </small>
-                        )}
-                      </div>
-                      <div>
-                        {producto.stock_disponible === null ? (
-                          <span className="badge bg-secondary">Sin receta</span>
-                        ) : producto.stock_disponible <= 0 ? (
-                          <span className="badge bg-danger">Agotado</span>
-                        ) : (
-                          <span className="badge bg-success">Disponible: {producto.stock_disponible}</span>
-                        )}
-                      </div>
-                    </Card.Body>
-                  </Card>
-                ))
-              ) : (
-                <Alert variant="warning">No hay productos en esta categoría</Alert>
-              )}
-            </div>
-          </Col>
-
-          {/* Columna: Resumen de Orden */}
-          <Col lg={4}>
-            <ResumenOrden
-              items={items}
-              total={getTotal()}
-              totalItems={getTotalItems()}
-              onConfirmar={() => {
-                if (!puedeEnviarOrden) {
-                  toast.warn('No hay cambios nuevos para enviar.');
-                  return;
-                }
-                setShowConfirmModal(true);
-              }}
-              onCancelar={handleCancelar}
-              bloquearEnvio={!puedeEnviarOrden}
-              mensajeBloqueo={tieneOrdenAbierta ? 'Agrega o edita productos para enviar cambios de esta orden.' : ''}
-            />
-          </Col>
-        </Row>
-      </Container>
+        {/* Columna: Resumen de Orden */}
+        <ResumenOrden
+          items={items}
+          total={getTotal()}
+          totalItems={getTotalItems()}
+          onConfirmar={() => {
+            if (!puedeEnviarOrden) {
+              toast.warn('No hay cambios nuevos para enviar.');
+              return;
+            }
+            setShowConfirmModal(true);
+          }}
+          onCancelar={handleCancelar}
+          bloquearEnvio={!puedeEnviarOrden}
+          mensajeBloqueo={tieneOrdenAbierta ? 'Agrega o edita productos para enviar cambios de esta orden.' : ''}
+        />
+      </div>
 
       {/* Modal: Producto */}
       <ProductoModal
@@ -341,31 +272,53 @@ export default function Orden() {
       />
 
       {/* Modal: Confirmar Orden */}
-      <Modal show={showConfirmModal} onHide={() => setShowConfirmModal(false)}>
+      <Modal show={showConfirmModal} onHide={() => setShowConfirmModal(false)} centered className="rb-modal">
         <Modal.Header closeButton>
-          <Modal.Title>Confirmar Orden</Modal.Title>
+          <Modal.Title>Confirmar orden</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p>
-            <strong>Total Productos:</strong> {getTotalItems()}
+          <p className="rb-modal__line" style={{ marginBottom: 8 }}>
+            Total productos: <strong>{getTotalItems()}</strong>
           </p>
-          <p>
-            <strong>Total:</strong> {formatMoney(getTotal())}
+          <p className="rb-modal__line" style={{ marginBottom: 14 }}>
+            Total: <strong>{formatMoney(getTotal())}</strong>
           </p>
-          <p className="text-muted">
+          <p style={{ color: 'var(--rb-cream-500)', fontSize: '0.88rem', margin: 0 }}>
             ¿Enviar orden a cocina?
           </p>
         </Modal.Body>
         <Modal.Footer>
-          <Button
-            variant="outline-secondary"
-            onClick={() => setShowConfirmModal(false)}
-          >
+          <button type="button" className="rb-btn rb-btn--ghost" onClick={() => setShowConfirmModal(false)}>
             Cancelar
-          </Button>
-          <Button variant="primary" onClick={handleEnviarOrden} disabled={!puedeEnviarOrden}>
-            ✅ Enviar Orden
-          </Button>
+          </button>
+          <button
+            type="button"
+            className="rb-btn rb-btn--primary"
+            onClick={handleEnviarOrden}
+            disabled={!puedeEnviarOrden}
+          >
+            <IconCheck /> Enviar orden
+          </button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Modal: Cancelar Orden */}
+      <Modal show={showCancelarModal} onHide={() => setShowCancelarModal(false)} centered className="rb-modal">
+        <Modal.Header closeButton>
+          <Modal.Title>Cancelar orden</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p style={{ color: 'var(--rb-cream-500)', fontSize: '0.88rem', margin: 0 }}>
+            ¿Cancelar orden? Se perderán todos los productos agregados.
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <button type="button" className="rb-btn rb-btn--ghost" onClick={() => setShowCancelarModal(false)}>
+            Seguir editando
+          </button>
+          <button type="button" className="rb-btn rb-btn--danger" onClick={confirmarCancelar}>
+            <IconTrash /> Sí, cancelar
+          </button>
         </Modal.Footer>
       </Modal>
     </div>

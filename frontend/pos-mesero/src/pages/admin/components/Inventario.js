@@ -3,6 +3,10 @@ import { toast } from 'react-toastify';
 import axios from '../../../services/api';
 import AdminLayout from '../AdminLayout';
 import { formatMoney } from '../../../utils/formatters';
+import {
+  IconBarChart, IconPlus, IconGrid, IconNote, IconAlertTriangle, IconPin,
+  IconArrowDownCircle, IconArrowUpCircle, IconWrench, IconClose,
+} from '../../../components/Icons';
 import '../admin.css';
 
 const Inventario = () => {
@@ -143,13 +147,14 @@ const Inventario = () => {
     <AdminLayout>
       <div className="admin-section">
         <div className="section-header">
-          <h2>📊 Inventario</h2>
+          <h2><IconBarChart /> Inventario</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <label style={{ fontWeight: 'bold' }}>Sede:</label>
+            <label style={{ fontWeight: 600, color: 'var(--rb-cream-300)', fontSize: '0.86rem' }}>Sede:</label>
             <select
+              className="admin-select"
               value={sedeSeleccionada}
               onChange={e => setSedeSeleccionada(e.target.value)}
-              style={{ minWidth: '180px', padding: '6px', borderRadius: '4px' }}
+              style={{ minWidth: '180px' }}
             >
               {sedes.map(sede => (
                 <option key={sede.id} value={sede.id}>{sede.nombre}</option>
@@ -159,40 +164,24 @@ const Inventario = () => {
               setTipoMovimiento('entrada');
               setShowMovimientoModal(true);
             }}>
-              + Entrada de Insumos
+              <IconPlus /> Entrada de Insumos
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid #ddd', paddingBottom: '10px' }}>
+        <div className="admin-tabs">
           <button
             onClick={() => setActiveTab('dashboard')}
-            style={{
-              padding: '10px 20px',
-              background: activeTab === 'dashboard' ? '#7c5cdb' : '#f0f0f0',
-              color: activeTab === 'dashboard' ? 'white' : '#333',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-            }}
+            className={`admin-tab-btn ${activeTab === 'dashboard' ? 'is-active' : ''}`}
           >
-            📈 Dashboard
+            <IconGrid /> Dashboard
           </button>
           <button
             onClick={() => setActiveTab('movimientos')}
-            style={{
-              padding: '10px 20px',
-              background: activeTab === 'movimientos' ? '#7c5cdb' : '#f0f0f0',
-              color: activeTab === 'movimientos' ? 'white' : '#333',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-            }}
+            className={`admin-tab-btn ${activeTab === 'movimientos' ? 'is-active' : ''}`}
           >
-            📋 Movimientos
+            <IconNote /> Movimientos
           </button>
         </div>
 
@@ -200,39 +189,24 @@ const Inventario = () => {
         {activeTab === 'dashboard' && dashboard && (
           <div>
             {/* Resumen */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '30px' }}>
-              <div style={{
-                background: '#e8f5e9',
-                padding: '20px',
-                borderRadius: '8px',
-                borderLeft: '4px solid #4caf50',
-              }}>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>Total Insumos</div>
-                <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#2f9e44' }}>
+            <div className="metrics-grid">
+              <div className="metric-card">
+                <div className="metric-card__label"><IconGrid /> Total Insumos</div>
+                <div className="metric-card__value">
                   {dashboard.totalInsumos}
                 </div>
               </div>
 
-              <div style={{
-                background: '#fff3e0',
-                padding: '20px',
-                borderRadius: '8px',
-                borderLeft: '4px solid #ff9800',
-              }}>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>Valor del Inventario</div>
-                <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#f57c00' }}>
+              <div className="metric-card metric-card--warning">
+                <div className="metric-card__label"><IconBarChart /> Valor del Inventario</div>
+                <div className="metric-card__value">
                   {formatMoney(dashboard.valorTotal, true)}
                 </div>
               </div>
 
-              <div style={{
-                background: '#ffebee',
-                padding: '20px',
-                borderRadius: '8px',
-                borderLeft: '4px solid #c92a2a',
-              }}>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>🔴 Bajo Stock</div>
-                <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#c92a2a' }}>
+              <div className="metric-card metric-card--danger">
+                <div className="metric-card__label"><IconAlertTriangle /> Bajo Stock</div>
+                <div className="metric-card__value">
                   {dashboard.bajoStock}
                 </div>
               </div>
@@ -241,8 +215,8 @@ const Inventario = () => {
             {/* Insumos Bajo Stock */}
             {dashboard.bajoStock > 0 && (
               <div style={{ marginBottom: '30px' }}>
-                <h3 style={{ marginBottom: '15px', color: '#c92a2a' }}>🔴 Insumos Bajo Stock</h3>
-                <div style={{ overflowX: 'auto' }}>
+                <h3 className="admin-heading-danger"><IconAlertTriangle /> Insumos Bajo Stock</h3>
+                <div className="table-responsive">
                   <table className="table table-sm">
                     <thead>
                       <tr>
@@ -255,12 +229,12 @@ const Inventario = () => {
                     </thead>
                     <tbody>
                       {dashboard.insumos.filter(i => i.stock_actual <= i.stock_minimo).map(insumo => (
-                        <tr key={insumo.id} style={{ background: '#fff5f5' }}>
+                        <tr key={insumo.id} className="table-row--low-stock">
                           <td><strong>{insumo.nombre}</strong></td>
-                          <td style={{ color: '#c92a2a', fontWeight: 'bold' }}>{insumo.stock_actual}</td>
+                          <td style={{ color: '#f0958c', fontWeight: 700 }}>{insumo.stock_actual}</td>
                           <td>{insumo.stock_minimo}</td>
                           <td>{insumo.stock_maximo || '∞'}</td>
-                          <td style={{ color: '#c92a2a' }}>-{(insumo.stock_minimo - insumo.stock_actual).toFixed(2)}</td>
+                          <td style={{ color: '#f0958c' }}>-{(insumo.stock_minimo - insumo.stock_actual).toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -272,8 +246,8 @@ const Inventario = () => {
             {/* Movimientos Recientes */}
             {dashboard.movimientosRecientes && dashboard.movimientosRecientes.length > 0 && (
               <div>
-                <h3 style={{ marginBottom: '15px' }}>📌 Movimientos Recientes</h3>
-                <div style={{ overflowX: 'auto' }}>
+                <h3 className="admin-subtitle"><IconPin /> Movimientos Recientes</h3>
+                <div className="table-responsive">
                   <table className="table table-sm">
                     <thead>
                       <tr>
@@ -287,19 +261,12 @@ const Inventario = () => {
                     <tbody>
                       {dashboard.movimientosRecientes.map(mov => (
                         <tr key={mov.id}>
-                          <td style={{ fontSize: '12px' }}>
+                          <td style={{ fontSize: '0.78rem', color: 'var(--rb-cream-500)' }}>
                             {new Date(mov.created_at).toLocaleDateString()}
                           </td>
                           <td>{mov.insumo_nombre}</td>
                           <td>
-                            <span style={{
-                              padding: '4px 8px',
-                              borderRadius: '12px',
-                              fontSize: '11px',
-                              fontWeight: 'bold',
-                              background: mov.tipo === 'entrada' ? '#e8f5e9' : mov.tipo === 'salida' ? '#ffebee' : '#fff3e0',
-                              color: mov.tipo === 'entrada' ? '#2f9e44' : mov.tipo === 'salida' ? '#c92a2a' : '#f57c00',
-                            }}>
+                            <span className={`mov-badge mov-badge--${mov.tipo}`}>
                               {mov.tipo.toUpperCase()}
                             </span>
                           </td>
@@ -323,24 +290,24 @@ const Inventario = () => {
                 setTipoMovimiento('entrada');
                 setShowMovimientoModal(true);
               }}>
-                📥 Entrada
+                <IconArrowDownCircle /> Entrada
               </button>
               <button className="btn btn-warning" onClick={() => {
                 setTipoMovimiento('salida');
                 setShowMovimientoModal(true);
               }}>
-                📤 Salida
+                <IconArrowUpCircle /> Salida
               </button>
               <button className="btn btn-info" onClick={() => {
                 setTipoMovimiento('ajuste');
                 setShowMovimientoModal(true);
               }}>
-                🔧 Ajuste
+                <IconWrench /> Ajuste
               </button>
             </div>
 
             {/* Tabla de Movimientos */}
-            <div style={{ overflowX: 'auto' }}>
+            <div className="table-responsive">
               <table className="table table-hover">
                 <thead>
                   <tr>
@@ -356,26 +323,19 @@ const Inventario = () => {
                 <tbody>
                   {movimientos.map(mov => (
                     <tr key={mov.id}>
-                      <td style={{ fontSize: '12px' }}>
+                      <td style={{ fontSize: '0.78rem', color: 'var(--rb-cream-500)' }}>
                         {new Date(mov.created_at).toLocaleDateString()} {new Date(mov.created_at).toLocaleTimeString()}
                       </td>
                       <td><strong>{mov.insumo_nombre}</strong></td>
                       <td>
-                        <span style={{
-                          padding: '4px 8px',
-                          borderRadius: '12px',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          background: mov.tipo === 'entrada' ? '#e8f5e9' : mov.tipo === 'salida' ? '#ffebee' : '#fff3e0',
-                          color: mov.tipo === 'entrada' ? '#2f9e44' : mov.tipo === 'salida' ? '#c92a2a' : '#f57c00',
-                        }}>
+                        <span className={`mov-badge mov-badge--${mov.tipo}`}>
                           {mov.tipo.toUpperCase()}
                         </span>
                       </td>
                       <td>{mov.cantidad}</td>
                       <td>{formatMoney(mov.precio_unitario || 0, true)}</td>
-                      <td style={{ fontWeight: 'bold' }}>{formatMoney(mov.costo_total || 0, true)}</td>
-                      <td style={{ fontSize: '12px', color: '#666' }}>{mov.observaciones || mov.referencia || '-'}</td>
+                      <td style={{ fontWeight: 700 }}>{formatMoney(mov.costo_total || 0, true)}</td>
+                      <td style={{ fontSize: '0.78rem', color: 'var(--rb-cream-500)' }}>{mov.observaciones || mov.referencia || '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -383,8 +343,9 @@ const Inventario = () => {
             </div>
 
             {movimientos.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-                No hay movimientos registrados
+              <div className="admin-empty-state">
+                <IconNote />
+                <p>No hay movimientos registrados</p>
               </div>
             )}
           </div>
@@ -396,8 +357,10 @@ const Inventario = () => {
         <div className="modal-overlay" onClick={() => setShowMovimientoModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{tipoMovimiento === 'entrada' ? '📥 Entrada' : tipoMovimiento === 'salida' ? '📤 Salida' : '🔧 Ajuste'}</h3>
-              <button className="btn-close" onClick={() => setShowMovimientoModal(false)}>✕</button>
+              <h3>
+                {tipoMovimiento === 'entrada' ? 'Entrada' : tipoMovimiento === 'salida' ? 'Salida' : 'Ajuste'}
+              </h3>
+              <button className="btn-close" onClick={() => setShowMovimientoModal(false)}><IconClose /></button>
             </div>
 
             {tipoMovimiento === 'ajuste' ? (

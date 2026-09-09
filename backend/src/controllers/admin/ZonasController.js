@@ -1,22 +1,24 @@
 const db = require('../../config/database');
+const { sedesDelCliente } = require('../../utils/tenantScope');
 
 class ZonasController {
   static async getZonas(req, res) {
     try {
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
       const querySedeId = req.query?.sedeId;
-      const sede_id = (querySedeId !== undefined && querySedeId !== '')
+      const solicitada = (querySedeId !== undefined && querySedeId !== '')
         ? parseInt(querySedeId, 10)
-        : (req.usuario?.sedeId || req.usuario?.sede_id || req.body?.sede_id);
+        : (req.usuario?.sedeId || req.usuario?.sede_id);
 
-      if (!sede_id) {
+      if (!solicitada || !sedeIds.includes(Number(solicitada))) {
         return res.status(400).json({
           success: false,
-          error: 'Sede no proporcionada en token ni en la petición',
+          error: 'Sede no proporcionada o no pertenece a tu empresa',
         });
       }
-      
+
       const zonas = await db('zonas')
-        .where('sede_id', sede_id)
+        .where('sede_id', solicitada)
         .orderBy('nombre', 'asc');
 
       return res.json({
@@ -67,6 +69,15 @@ class ZonasController {
       const { id } = req.params;
       const { nombre, descripcion } = req.body;
 
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+      const zonaExistente = await db('zonas').where('id', id).first();
+      if (!zonaExistente) {
+        return res.status(404).json({ error: 'Zona no encontrada' });
+      }
+      if (!sedeIds.includes(zonaExistente.sede_id)) {
+        return res.status(403).json({ error: 'No puedes editar una zona de otra empresa' });
+      }
+
       await db('zonas').where('id', id).update({
         nombre,
         descripcion: descripcion || null,
@@ -92,6 +103,15 @@ class ZonasController {
   static async eliminarZona(req, res) {
     try {
       const { id } = req.params;
+
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+      const zonaExistente = await db('zonas').where('id', id).first();
+      if (!zonaExistente) {
+        return res.status(404).json({ error: 'Zona no encontrada' });
+      }
+      if (!sedeIds.includes(zonaExistente.sede_id)) {
+        return res.status(403).json({ error: 'No puedes eliminar una zona de otra empresa' });
+      }
 
       await db('zonas').where('id', id).del();
 

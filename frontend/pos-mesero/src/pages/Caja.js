@@ -1,23 +1,15 @@
 import { toast } from 'react-toastify';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Container,
-  Row,
-  Col,
-  Card,
-  Button,
-  Form,
-  Modal,
-  Alert,
-  Spinner,
-  Badge,
-  Table,
-} from 'react-bootstrap';
+import { Modal, Form } from 'react-bootstrap';
 import { cajaService, ordenesService } from '../services/api';
 import { useAuthStore } from '../stores';
 import FacturaTirilla from '../components/FacturaTirilla';
 import { formatMoney } from '../utils/formatters';
+import {
+  IconWallet, IconCash, IconLogout,
+  IconCheck, IconClose, IconNote, IconArrowSwap,
+} from '../components/Icons';
 import './Caja.css';
 
 export default function Caja() {
@@ -61,22 +53,17 @@ export default function Caja() {
   const [saldoFinal, setSaldoFinal] = useState(0);
   const [observacionesCierre, setObservacionesCierre] = useState('');
 
-  // Funciones de carga ANTES de useEffect
   const cargarApertura = async () => {
     try {
       const res = await cajaService.getAperturaActual();
-      console.log('Respuesta getAperturaActual:', res.data);
       if (res.data.data) {
-        console.log('Hay caja abierta:', res.data.data);
         setAperturaActual(res.data.data);
         setCajaAbierta(true);
       } else {
-        console.log('No hay caja abierta');
         setCajaAbierta(false);
         setAperturaActual(null);
       }
     } catch (err) {
-      console.error('Error al cargar apertura:', err);
       setCajaAbierta(false);
     } finally {
       setLoading(false);
@@ -99,10 +86,9 @@ export default function Caja() {
 
   const cargarOrdenes = async () => {
     try {
-      // Obtener órdenes abiertas o en precuenta
       const res = await ordenesService.getOrdenesPendientes();
       if (res.data.data) {
-        setOrdenes(res.data.data.filter(o => 
+        setOrdenes(res.data.data.filter(o =>
           o.estado === 'abierta' || o.estado === 'lista'
         ));
       }
@@ -111,13 +97,11 @@ export default function Caja() {
     }
   };
 
-  // Cargar datos iniciales
   useEffect(() => {
     cargarApertura();
     cargarMetodosPago();
     cargarOrdenes();
 
-    // Recargar cuando vuelve a la página
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         cargarApertura();
@@ -138,14 +122,13 @@ export default function Caja() {
       const res = await cajaService.abrirCaja({
         monto_inicial: parseFloat(saldoInicial) || 0,
       });
-      
+
       toast.success('Caja abierta');
       setAperturaActual(res.data.data);
       setCajaAbierta(true);
       setShowAbrirCaja(false);
       setSaldoInicial(0);
     } catch (err) {
-      console.error('Error completo:', err);
       toast.error(err.response?.data?.error || 'Error al abrir caja');
     } finally {
       setProcesando(false);
@@ -155,7 +138,7 @@ export default function Caja() {
   const handleCerrarCaja = async () => {
     try {
       setProcesando(true);
-      const res = await cajaService.cerrarCaja({
+      await cajaService.cerrarCaja({
         saldo_final: parseFloat(saldoFinal) || 0,
         observaciones: observacionesCierre,
       });
@@ -171,6 +154,23 @@ export default function Caja() {
       setProcesando(false);
     }
   };
+
+  // ==================== CIERRE: cifras derivadas ====================
+  // Misma fórmula que usa el backend en cerrarCaja. El monto inicial ya está
+  // contado dentro de `ingresos` (abrirCaja lo registra como movimiento), así
+  // que no se vuelve a sumar; y todo valor numérico llega como string desde
+  // la API, por eso el Number() explícito.
+  const montoInicialCierre = Number(aperturaActual?.resumen?.monto_inicial) || 0;
+  const ingresosCierre = Number(aperturaActual?.resumen?.ingresos) || 0;
+  const egresosCierre = Number(aperturaActual?.resumen?.egresos) || 0;
+  const totalVendidoCierre = ingresosCierre - montoInicialCierre;
+  const totalEsperadoCierre = ingresosCierre - egresosCierre;
+  const diferenciaCierre = (Number(saldoFinal) || 0) - totalEsperadoCierre;
+  const colorDiferencia = diferenciaCierre === 0
+    ? 'var(--rb-green-400, #74b98d)'
+    : diferenciaCierre > 0
+      ? 'var(--rb-gold-400)'
+      : 'var(--rb-red-400, #e8776b)';
 
   // ==================== PAGOS ====================
   const handleRegistrarPago = async () => {
@@ -190,14 +190,12 @@ export default function Caja() {
       });
 
       toast.success(res.data.message);
-      
-      // Si el pago está completo, mostrar factura
+
       if (res.data.data?.orden?.pagado) {
         toast.success('Factura enviada a impresora de red de Caja/Bar');
-        // Obtener datos completos para la factura
         const facturaData = res.data.data.factura;
         const ordenData = res.data.data.orden;
-        
+
         setFacturaActual(facturaData);
         setOrdenFactura({
           ...ordenSeleccionada,
@@ -206,17 +204,16 @@ export default function Caja() {
           usuario_nombre: ordenData?.usuario_nombre || ordenSeleccionada?.usuario_nombre || usuario?.nombre || null,
           items: ordenData.items || [],
         });
-        
-        // Simplemente usar el pago actual registrado
+
         setPagosFactura([{
           metodo_nombre: metodosPago.find(m => m.id === parseInt(metodoPagoId))?.nombre || 'Sin definir',
           monto: parseFloat(montoPago),
           referencia: referencia || '',
         }]);
-        
+
         setShowFactura(true);
       }
-      
+
       setShowPago(false);
       setMontoPago(0);
       setReferencia('');
@@ -240,7 +237,7 @@ export default function Caja() {
 
     try {
       setProcesando(true);
-      const res = await cajaService.procesarDevolucion({
+      await cajaService.procesarDevolucion({
         orden_id: ordenSeleccionada.id,
         motivo: motivoDevolucion,
         monto_devuelto: parseFloat(montoDevolucion) || ordenSeleccionada.total,
@@ -262,7 +259,6 @@ export default function Caja() {
 
   const abrirModalPago = (orden) => {
     setOrdenSeleccionada(orden);
-    // Calcular el saldo pendiente (total - lo ya pagado)
     const montoPendiente = orden.total - (orden.monto_pagado || 0);
     setMontoPago(montoPendiente);
     setEsAbono(false);
@@ -277,146 +273,98 @@ export default function Caja() {
 
   if (loading) {
     return (
-      <Container className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
-        <Spinner animation="border" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </Spinner>
-      </Container>
+      <div className="caja-page caja-page--loading">
+        <div className="rb-spinner" aria-label="Cargando caja" />
+      </div>
     );
   }
 
   return (
-    <Container fluid className="caja-container p-0">
+    <div className="caja-page">
       {/* HEADER */}
-      <div className="caja-header text-white py-3 mb-4">
-        <Container fluid className="px-4">
-          <Row className="align-items-center">
-            <Col>
-              <h1 className="mb-0">💳 Gestión de Caja</h1>
-              <small>Operario: {usuario?.nombre}</small>
-            </Col>
-            <Col className="text-end d-flex align-items-center justify-content-end gap-2">
-              {cajaAbierta ? (
-                <Badge bg="success" className="fs-6">
-                  ✅ Caja Abierta
-                </Badge>
-              ) : (
-                <Badge bg="danger" className="fs-6">
-                  ❌ Caja Cerrada
-                </Badge>
-              )}
-              <Button
-                variant="outline-light"
-                size="sm"
-                onClick={() => {
-                  logout();
-                  toast.success('Sesión cerrada');
-                  navigate('/login');
-                }}
-              >
-                🚪 Cerrar Sesión
-              </Button>
-            </Col>
-          </Row>
-        </Container>
-      </div>
-      
-      <Container fluid className="px-4">
-
-      {/* ESTADO DE CAJA */}
-      {cajaAbierta && aperturaActual && (
-        <Row className="mb-4">
-          <Col md={3}>
-            <Card className="text-center">
-              <Card.Body>
-                <h6>Saldo Inicial</h6>
-                <h5>{formatMoney(aperturaActual.monto_inicial)}</h5>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={3}>
-            <Card className="text-center bg-success text-white">
-              <Card.Body>
-                <h6>Ingresos</h6>
-                <h5>{formatMoney(aperturaActual.resumen?.ingresos || 0)}</h5>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={3}>
-            <Card className="text-center bg-danger text-white">
-              <Card.Body>
-                <h6>Egresos</h6>
-                <h5>{formatMoney(aperturaActual.resumen?.egresos || 0)}</h5>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={3}>
-            <Card className="text-center bg-primary text-white">
-              <Card.Body>
-                <h6>Total en Caja</h6>
-                <h5>{formatMoney(aperturaActual.resumen?.total || 0)}</h5>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-      )}
-
-      {/* BOTONES DE CAJA */}
-      <Row className="mb-4 gap-2">
-        {!cajaAbierta ? (
-          <Col>
-            <Button
-              variant="success"
-              size="lg"
-              className="w-100"
-              onClick={() => setShowAbrirCaja(true)}
+      <div className="caja-header">
+        <div className="caja-header__inner">
+          <div>
+            <h1 className="caja-header__title"><IconWallet /> Gestión de Caja</h1>
+            <p className="caja-header__operario">Operario: {usuario?.nombre}</p>
+          </div>
+          <div className="caja-header__actions">
+            <span className={`rb-badge ${cajaAbierta ? 'rb-badge--success' : 'rb-badge--danger'}`}>
+              {cajaAbierta ? <><IconCheck style={{ width: 11, height: 11 }} /> Caja Abierta</> : <><IconClose style={{ width: 11, height: 11 }} /> Caja Cerrada</>}
+            </span>
+            <button
+              className="rb-btn rb-btn--ghost"
+              onClick={() => {
+                logout();
+                toast.success('Sesión cerrada');
+                navigate('/login');
+              }}
             >
-              🟢 Abrir Caja
-            </Button>
-          </Col>
-        ) : (
-          <>
-            <Col md={6}>
-              <Button
-                variant="warning"
-                size="lg"
-                className="w-100"
-                onClick={() => setShowCerrarCaja(true)}
-              >
-                🔴 Cerrar Caja
-              </Button>
-            </Col>
-            <Col md={6} className="text-muted">
-              Abierta desde{' '}
-              {aperturaActual && (
-                <>
-                  <strong>
-                    {new Date(aperturaActual.hora_apertura).toLocaleDateString('es-CO')}
-                  </strong>
-                  {' - '}
-                  <strong>
-                    {new Date(aperturaActual.hora_apertura).toLocaleTimeString('es-CO')}
-                  </strong>
-                </>
-              )}
-            </Col>
-          </>
-        )}
-      </Row>
+              <IconLogout /> Cerrar Sesión
+            </button>
+          </div>
+        </div>
+      </div>
 
-      {/* ÓRDENES A PAGAR */}
-      {cajaAbierta && (
-        <Row>
-          <Col>
-            <Card>
-              <Card.Header>
-                <h5>📋 Órdenes Pendientes de Pago</h5>
-              </Card.Header>
-              <Card.Body>
-                {ordenes.length === 0 ? (
-                  <Alert variant="info">No hay órdenes pendientes</Alert>
-                ) : (
-                  <Table striped hover>
+      <div className="caja-content">
+        {/* ESTADO DE CAJA */}
+        {cajaAbierta && aperturaActual && (
+          <div className="caja-stats">
+            <div className="caja-stat">
+              <div className="caja-stat__label">Saldo Inicial</div>
+              <div className="caja-stat__value">{formatMoney(aperturaActual.monto_inicial)}</div>
+            </div>
+            <div className="caja-stat caja-stat--green">
+              <div className="caja-stat__label">Ingresos</div>
+              <div className="caja-stat__value">{formatMoney(aperturaActual.resumen?.ingresos || 0)}</div>
+            </div>
+            <div className="caja-stat caja-stat--danger">
+              <div className="caja-stat__label">Egresos</div>
+              <div className="caja-stat__value">{formatMoney(aperturaActual.resumen?.egresos || 0)}</div>
+            </div>
+            <div className="caja-stat caja-stat--gold">
+              <div className="caja-stat__label">Total en Caja</div>
+              <div className="caja-stat__value">{formatMoney(aperturaActual.resumen?.total || 0)}</div>
+            </div>
+          </div>
+        )}
+
+        {/* BOTONES DE CAJA */}
+        <div className="caja-actions-row">
+          {!cajaAbierta ? (
+            <button className="rb-btn rb-btn--primary" onClick={() => setShowAbrirCaja(true)}>
+              <IconCheck /> Abrir Caja
+            </button>
+          ) : (
+            <>
+              <button className="rb-btn rb-btn--primary" onClick={() => setShowCerrarCaja(true)}>
+                <IconClose /> Cerrar Caja
+              </button>
+              {aperturaActual && (
+                <span className="caja-abierta-desde">
+                  Abierta desde{' '}
+                  <strong>{new Date(aperturaActual.hora_apertura).toLocaleDateString('es-CO')}</strong>
+                  {' - '}
+                  <strong>{new Date(aperturaActual.hora_apertura).toLocaleTimeString('es-CO')}</strong>
+                </span>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* ÓRDENES A PAGAR */}
+        {cajaAbierta && (
+          <div className="caja-panel">
+            <div className="caja-panel__header">
+              <IconNote />
+              <h2>Órdenes Pendientes de Pago</h2>
+            </div>
+            <div className="caja-panel__body">
+              {ordenes.length === 0 ? (
+                <div className="rb-alert rb-alert--warning">No hay órdenes pendientes</div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="caja-ordenes-table">
                     <thead>
                       <tr>
                         <th>Orden</th>
@@ -432,42 +380,30 @@ export default function Caja() {
                           <td>#{orden.numero_orden}</td>
                           <td>{orden.mesa_numero || '-'}</td>
                           <td>{formatMoney(orden.total)}</td>
+                          <td><span className="rb-badge rb-badge--neutral">{orden.estado}</span></td>
                           <td>
-                            <Badge bg="warning">{orden.estado}</Badge>
-                          </td>
-                          <td>
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              className="me-2"
-                              onClick={() => abrirModalPago(orden)}
-                            >
-                              Pagar
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="me-2"
-                              onClick={() => abrirModalDevolucion(orden)}
-                            >
-                              Devolver
-                            </Button>
+                            <button className="rb-btn rb-btn--primary" onClick={() => abrirModalPago(orden)}>
+                              <IconCash /> Pagar
+                            </button>
+                            <button className="rb-btn rb-btn--ghost" onClick={() => abrirModalDevolucion(orden)}>
+                              <IconArrowSwap /> Devolver
+                            </button>
                           </td>
                         </tr>
                       ))}
                     </tbody>
-                  </Table>
-                )}
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-      )}
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ==================== MODALES ==================== */}
 
       {/* MODAL: ABRIR CAJA */}
-      <Modal show={showAbrirCaja} onHide={() => setShowAbrirCaja(false)}>
+      <Modal show={showAbrirCaja} onHide={() => setShowAbrirCaja(false)} className="rb-modal">
         <Modal.Header closeButton>
           <Modal.Title>Abrir Caja</Modal.Title>
         </Modal.Header>
@@ -483,21 +419,17 @@ export default function Caja() {
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowAbrirCaja(false)}>
+          <button className="rb-btn rb-btn--ghost" onClick={() => setShowAbrirCaja(false)}>
             Cancelar
-          </Button>
-          <Button
-            variant="success"
-            onClick={handleAbrirCaja}
-            disabled={procesando}
-          >
-            {procesando ? <Spinner size="sm" /> : '✅ Abrir'}
-          </Button>
+          </button>
+          <button className="rb-btn rb-btn--primary" onClick={handleAbrirCaja} disabled={procesando}>
+            <IconCheck /> {procesando ? 'Abriendo...' : 'Abrir'}
+          </button>
         </Modal.Footer>
       </Modal>
 
       {/* MODAL: PAGO */}
-      <Modal show={showPago} onHide={() => setShowPago(false)} size="lg">
+      <Modal show={showPago} onHide={() => setShowPago(false)} size="lg" className="rb-modal">
         <Modal.Header closeButton>
           <Modal.Title>
             Registrar Pago - Orden #{ordenSeleccionada?.numero_orden}
@@ -505,26 +437,26 @@ export default function Caja() {
         </Modal.Header>
         <Modal.Body>
           <Form>
-            <Alert variant="info" className="mb-3">
-              <div className="d-flex justify-content-between mb-2">
+            <div className="rb-alert" style={{ background: 'rgba(74, 151, 163, 0.1)', border: '1px solid rgba(74, 151, 163, 0.35)', color: 'var(--rb-cyan-400)', marginBottom: 18 }}>
+              <div className="caja-modal-linea">
                 <span>Total de la Orden:</span>
                 <strong>{formatMoney(ordenSeleccionada?.total)}</strong>
               </div>
               {ordenSeleccionada?.monto_pagado > 0 && (
                 <>
-                  <div className="d-flex justify-content-between mb-2">
+                  <div className="caja-modal-linea">
                     <span>Ya Pagado:</span>
-                    <strong className="text-success">{formatMoney(ordenSeleccionada?.monto_pagado)}</strong>
+                    <strong style={{ color: 'var(--rb-green-400)' }}>{formatMoney(ordenSeleccionada?.monto_pagado)}</strong>
                   </div>
-                  <div className="d-flex justify-content-between border-top pt-2">
+                  <div className="caja-modal-linea caja-modal-linea--total">
                     <span>Saldo Pendiente:</span>
-                    <strong className="text-danger">
+                    <strong style={{ color: '#f0958c' }}>
                       {formatMoney(ordenSeleccionada?.total - ordenSeleccionada?.monto_pagado)}
                     </strong>
                   </div>
                 </>
               )}
-            </Alert>
+            </div>
 
             <Form.Group className="mb-3">
               <Form.Label>Método de Pago</Form.Label>
@@ -552,7 +484,7 @@ export default function Caja() {
                 max={ordenSeleccionada?.total - (ordenSeleccionada?.monto_pagado || 0)}
               />
               <Form.Text className="text-muted">
-                {esAbono 
+                {esAbono
                   ? 'Ingrese el monto del abono (puede ser menor al total)'
                   : 'Para pago completo, deje el monto total'}
               </Form.Text>
@@ -578,7 +510,6 @@ export default function Caja() {
                 onChange={(e) => {
                   setEsAbono(e.target.checked);
                   if (!e.target.checked) {
-                    // Si desmarca abono, volver al monto completo
                     setMontoPago(ordenSeleccionada?.total - (ordenSeleccionada?.monto_pagado || 0));
                   }
                 }}
@@ -590,21 +521,17 @@ export default function Caja() {
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowPago(false)}>
+          <button className="rb-btn rb-btn--ghost" onClick={() => setShowPago(false)}>
             Cancelar
-          </Button>
-          <Button
-            variant="success"
-            onClick={handleRegistrarPago}
-            disabled={procesando}
-          >
-            {procesando ? <Spinner size="sm" /> : '💰 Registrar Pago'}
-          </Button>
+          </button>
+          <button className="rb-btn rb-btn--primary" onClick={handleRegistrarPago} disabled={procesando}>
+            <IconCash /> {procesando ? 'Registrando...' : 'Registrar Pago'}
+          </button>
         </Modal.Footer>
       </Modal>
 
       {/* MODAL: DEVOLUCIÓN */}
-      <Modal show={showDevolucion} onHide={() => setShowDevolucion(false)}>
+      <Modal show={showDevolucion} onHide={() => setShowDevolucion(false)} className="rb-modal">
         <Modal.Header closeButton>
           <Modal.Title>
             Procesar Devolución - Orden #{ordenSeleccionada?.numero_orden}
@@ -624,7 +551,7 @@ export default function Caja() {
 
             <Form.Group className="mb-3">
               <Form.Label>
-                Monto a Devolver (Total: ${ordenSeleccionada?.total})
+                Monto a Devolver (Total: {formatMoney(ordenSeleccionada?.total)})
               </Form.Label>
               <Form.Control
                 type="number"
@@ -636,41 +563,40 @@ export default function Caja() {
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDevolucion(false)}>
+          <button className="rb-btn rb-btn--ghost" onClick={() => setShowDevolucion(false)}>
             Cancelar
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleProcesarDevolucion}
-            disabled={procesando}
-            style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }}
-          >
-            {procesando ? <Spinner size="sm" /> : '🔄 Procesar Devolución'}
-          </Button>
+          </button>
+          <button className="rb-btn rb-btn--primary" onClick={handleProcesarDevolucion} disabled={procesando}>
+            <IconArrowSwap /> {procesando ? 'Procesando...' : 'Procesar Devolución'}
+          </button>
         </Modal.Footer>
       </Modal>
 
       {/* MODAL: CERRAR CAJA */}
-      <Modal show={showCerrarCaja} onHide={() => setShowCerrarCaja(false)}>
+      <Modal show={showCerrarCaja} onHide={() => setShowCerrarCaja(false)} className="rb-modal">
         <Modal.Header closeButton>
           <Modal.Title>Cerrar Caja</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {aperturaActual && (
-            <>
-              <p>
-                <strong>Saldo Inicial:</strong> {formatMoney(aperturaActual.monto_inicial)}
-              </p>
-              <p>
-                <strong>Total Vendido:</strong> {formatMoney(aperturaActual.resumen?.ingresos || 0)}
-              </p>
-              <p>
-                <strong>Devoluciones:</strong> {formatMoney(aperturaActual.resumen?.egresos || 0)}
-              </p>
-              <p>
-                <strong>Total Esperado:</strong> {formatMoney(aperturaActual.resumen?.total || 0)}
-              </p>
-            </>
+            <div style={{ marginBottom: 16, fontSize: '0.9rem', color: 'var(--rb-cream-300)' }}>
+              <div className="caja-modal-linea">
+                <span>Saldo Inicial:</span>
+                <strong>{formatMoney(montoInicialCierre)}</strong>
+              </div>
+              <div className="caja-modal-linea">
+                <span>Total Vendido:</span>
+                <strong>{formatMoney(totalVendidoCierre)}</strong>
+              </div>
+              <div className="caja-modal-linea">
+                <span>Devoluciones:</span>
+                <strong>{formatMoney(egresosCierre)}</strong>
+              </div>
+              <div className="caja-modal-linea caja-modal-linea--total">
+                <span>Total Esperado:</span>
+                <strong style={{ color: 'var(--rb-gold-400)' }}>{formatMoney(totalEsperadoCierre)}</strong>
+              </div>
+            </div>
           )}
 
           <Form.Group className="mb-3">
@@ -682,6 +608,21 @@ export default function Caja() {
               step="100"
             />
           </Form.Group>
+
+          {aperturaActual && (
+            <div
+              className="caja-modal-linea caja-modal-linea--total"
+              style={{ marginBottom: 16 }}
+            >
+              <span>Diferencia:</span>
+              <strong style={{ color: colorDiferencia }}>
+                {diferenciaCierre > 0 ? '+' : ''}{formatMoney(diferenciaCierre)}
+                <span style={{ fontWeight: 400, fontSize: '0.82rem', marginLeft: 8, color: 'var(--rb-cream-500)' }}>
+                  {diferenciaCierre === 0 ? 'cuadra' : diferenciaCierre > 0 ? 'sobrante' : 'faltante'}
+                </span>
+              </strong>
+            </div>
+          )}
 
           <Form.Group className="mb-3">
             <Form.Label>Observaciones</Form.Label>
@@ -695,17 +636,12 @@ export default function Caja() {
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowCerrarCaja(false)}>
+          <button className="rb-btn rb-btn--ghost" onClick={() => setShowCerrarCaja(false)}>
             Cancelar
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleCerrarCaja}
-            disabled={procesando}
-            style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }}
-          >
-            {procesando ? <Spinner size="sm" /> : '🔴 Cerrar Caja'}
-          </Button>
+          </button>
+          <button className="rb-btn rb-btn--primary" onClick={handleCerrarCaja} disabled={procesando}>
+            <IconClose /> {procesando ? 'Cerrando...' : 'Cerrar Caja'}
+          </button>
         </Modal.Footer>
       </Modal>
 
@@ -717,7 +653,6 @@ export default function Caja() {
         orden={ordenFactura}
         pagos={pagosFactura}
       />
-      </Container>
-    </Container>
+    </div>
   );
 }

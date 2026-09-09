@@ -1,0 +1,166 @@
+/* ==========================================================================
+   DYNAMIC RESTOBAR — COMPONENTES COMPARTIDOS
+   Modal, botones, alertas y spinner reutilizados en Mesas, Orden, Admin...
+   Requiere que restobar-tokens.css esté cargado antes.
+   ========================================================================== */
+
+/* ---------- Modal (vence .modal-header azul !important de theme.css) ---------- */
+
+.rb-modal .modal-content {
+  background: var(--rb-charcoal-800);
+  border: 1px solid var(--rb-charcoal-700);
+  border-radius: 16px;
+  color: var(--rb-cream-100);
+  font-family: var(--rb-font-body);
+}
+
+.rb-modal .modal-header {
+  background: var(--rb-charcoal-800) !important;
+  border-bottom: 1px solid var(--rb-charcoal-700) !important;
+  color: var(--rb-cream-100) !important;
+}
+
+.rb-modal .modal-title {
+  font-family: var(--rb-font-display);
+  font-weight: 600;
+  color: var(--rb-cream-100) !important;
+}
+
+.rb-modal .modal-header .btn-close {
+  filter: none;
+  opacity: 0.6;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath stroke='%23f7f1e6' stroke-width='1.6' stroke-linecap='round' d='M2 2l12 12M14 2 2 14'/%3E%3C/svg%3E");
+}
+
+.rb-modal .modal-footer {
+  border-top: 1px solid var(--rb-charcoal-700);
+}
+
+.rb-modal .modal-body {
+  color: var(--rb-cream-100);
+}
+
+/* ---------- Botones ---------- */
+
+.rb-btn {
+  border: none;
+  border-radius: 9px;
+  padding: 9px 18px;
+  font-family: var(--rb-font-body);
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.rb-btn svg { width: 15px; height: 15px; }
+
+.rb-btn--ghost {
+  background: var(--rb-charcoal-700);
+  color: var(--rb-cream-300);
+}
+
+.rb-btn--ghost:hover:not(:disabled) { background: var(--rb-charcoal-600); }
+
+.rb-btn--primary {
+  background: linear-gradient(160deg, var(--rb-gold-400), var(--rb-gold-600));
+  color: var(--rb-charcoal-950);
+}
+
+.rb-btn--primary:hover:not(:disabled) { filter: brightness(1.07); }
+
+.rb-btn--danger {
+  background: var(--rb-error-500);
+  color: var(--rb-cream-100);
+}
+
+.rb-btn--danger:hover:not(:disabled) { filter: brightness(1.1); }
+
+.rb-btn--icon {
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.rb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Stepper de cantidad (- valor +) */
+.rb-stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rb-stepper__btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--rb-charcoal-700);
+  background: var(--rb-charcoal-900);
+  color: var(--rb-cream-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.rb-stepper__btn:hover { border-color: var(--rb-gold-600); background: var(--rb-charcoal-800); }
+.rb-stepper__btn svg { width: 15px; height: 15px; }
+
+.rb-stepper__value {
+  min-width: 32px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Alertas ---------- */
+
+.rb-alert {
+  background: rgba(226, 86, 75, 0.12);
+  border: 1px solid rgba(226, 86, 75, 0.35);
+  color: #f3b6b0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.rb-alert--warning {
+  background: rgba(201, 154, 70, 0.1);
+  border-color: rgba(201, 154, 70, 0.35);
+  color: var(--rb-gold-300);
+}
+
+/* ---------- Spinner ---------- */
+
+.rb-spinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid var(--rb-charcoal-700);
+  border-top-color: var(--rb-gold-500);
+  animation: rb-spin 0.8s linear infinite;
+}
+
+@keyframes rb-spin { to { transform: rotate(360deg); } }
+
+/* ---------- Badges de estado (stock / disponibilidad) ---------- */
+
+.rb-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.rb-badge--success { background: rgba(77, 157, 111, 0.15); color: var(--rb-green-400); }
+.rb-badge--danger { background: rgba(226, 86, 75, 0.15); color: #f0958c; }
+.rb-badge--neutral { background: var(--rb-charcoal-700); color: var(--rb-cream-500); }

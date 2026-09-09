@@ -1,12 +1,11 @@
 import { toast } from 'react-toastify';
-import { useEffect } from 'react';
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Container, Form, Button, Alert, Card, Tabs, Tab } from 'react-bootstrap';
 import { authService } from '../services/api';
 import { useAuthStore } from '../stores';
+import logo from '../image/LogoRestoBar.png';
+import { IconMail, IconLock, IconKeypad, IconAlert, IconBackspace, IconArrowLeft } from './Icons';
 import './Login.css';
-import { Navigate } from 'react-router-dom';
 
 // Mapeo de rutas según rol
 const RUTAS_POR_ROL = {
@@ -31,8 +30,6 @@ const obtenerRutaPorRol = (rol, usuario) => {
   return RUTAS_POR_ROL[rol?.nombre] || '/mesas';
 };
 
-
-
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -51,6 +48,11 @@ export default function Login() {
 
   // Login por PIN
   const [pin, setPin] = useState('');
+  // Cuando el PIN existe en más de un restaurante, SIEMPRE se pide el correo
+  // asociado (sin excepción y sin "recordar" el dispositivo) — el correo +
+  // el PIN juntos identifican una única cuenta real.
+  const [pinRequiereCorreo, setPinRequiereCorreo] = useState(false);
+  const [correoDesambiguar, setCorreoDesambiguar] = useState('');
 
   // Redirección automática usando useEffect para evitar bucles infinitos
   React.useEffect(() => {
@@ -68,21 +70,14 @@ export default function Login() {
     setLoading(true);
 
     try {
-      console.log('📧 Intentando login con email:', formEmail.email);
       const response = await authService.login(formEmail.email, formEmail.contraseña);
-      console.log('✅ Respuesta del servidor:', response.data);
       const { token, usuario } = response.data;
 
       setUsuario(usuario, token);
       toast.success(`¡Bienvenido, ${usuario.nombre}!`);
-      console.log('[LOGIN] usuario recibido:', usuario);
-      // Redirigir al dashboard de métricas si es Super Admin SaaS
       const ruta = obtenerRutaPorRol(usuario.rol, usuario);
       navigate(ruta);
     } catch (err) {
-      console.error('❌ Error completo:', err);
-      console.error('❌ err.response:', err.response);
-      console.error('❌ err.response?.data:', err.response?.data);
       const mensaje = err.response?.data?.message || err.response?.data?.error || 'Error en la autenticación';
       setError(mensaje);
       toast.error(mensaje);
@@ -91,159 +86,238 @@ export default function Login() {
     }
   };
 
-  const handleLoginPin = async (e) => {
-    e.preventDefault();
+  const intentarLoginPin = async (email) => {
     setError('');
     setLoading(true);
 
     try {
-      console.log('🔍 Intentando login con PIN:', pin); // Debug
-      const response = await authService.loginPin(pin.trim());
+      const response = await authService.loginPin(pin.trim(), email);
       const { token, usuario } = response.data;
 
       setUsuario(usuario, token);
       toast.success(`¡Bienvenido, ${usuario.nombre}!`);
-      console.log('[LOGIN] usuario recibido:', usuario);
       const ruta = obtenerRutaPorRol(usuario.rol, usuario);
       navigate(ruta);
     } catch (err) {
+      if (err.response?.data?.code === 'PIN_AMBIGUO') {
+        setPinRequiereCorreo(true);
+        setError('');
+        return;
+      }
       const mensaje = err.response?.data?.message || err.response?.data?.error || 'PIN incorrecto';
       setError(mensaje);
       toast.error(mensaje);
-      console.error('❌ Error PIN:', err.response?.data); // Debug
     } finally {
       setLoading(false);
     }
   };
 
+  const handleLoginPin = (e) => {
+    e.preventDefault();
+    intentarLoginPin();
+  };
+
+  const handleConfirmarCorreoPin = (e) => {
+    e.preventDefault();
+    intentarLoginPin(correoDesambiguar.trim());
+  };
+
+  const handleVolverAlPin = () => {
+    setPinRequiereCorreo(false);
+    setCorreoDesambiguar('');
+    setPin('');
+    setError('');
+  };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setError('');
+    setPinRequiereCorreo(false);
+    setCorreoDesambiguar('');
+  };
+
   return (
-    <Container className="login-container d-flex align-items-center justify-content-center min-vh-100">
-      <Card className="login-card" style={{ width: '100%', maxWidth: '450px' }}>
-        <Card.Body className="p-5">
-          <div className="text-center mb-4">
-            <h1 className="mb-2" style={{ fontSize: '2.5rem', color: '#2563eb' }}>
-              🍽️
-            </h1>
-            <h2 className="h3 fw-bold" style={{ color: '#1e40af' }}>DynamicRestoBar</h2>
-            <p className="text-muted">Sistema POS para Meseros</p>
+    <div className="login-page">
+      {/* Panel de marca */}
+      <div className="login-brand">
+        <img src={logo} alt="DynamicRestoBar" className="login-brand__mark" />
+        <h1 className="login-brand__title">
+          Dynamic<em>Resto</em>Bar
+        </h1>
+        <div className="login-brand__rule" />
+        <p className="login-brand__tagline">
+          El sistema que lleva el ritmo de la barra, la cocina y el salón — sin perder ningún pedido.
+        </p>
+      </div>
+
+      {/* Panel de formulario */}
+      <div className="login-form-panel">
+        <div className="login-card">
+          <p className="login-card__eyebrow">Acceso al sistema</p>
+          <h2 className="login-card__heading">Bienvenido de nuevo</h2>
+
+          {error && (
+            <div className="login-alert" role="alert">
+              <IconAlert />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <div className="login-switch" role="tablist" aria-label="Método de acceso">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'email'}
+              className={`login-switch__btn ${activeTab === 'email' ? 'is-active' : ''}`}
+              onClick={() => handleTabChange('email')}
+            >
+              <IconMail /> Email
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'pin'}
+              className={`login-switch__btn ${activeTab === 'pin' ? 'is-active' : ''}`}
+              onClick={() => handleTabChange('pin')}
+            >
+              <IconKeypad /> PIN
+            </button>
           </div>
 
-          {error && <Alert variant="danger">{error}</Alert>}
-
-          <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mb-4">
-            {/* TAB: Email/Contraseña */}
-            <Tab eventKey="email" title="Email" className="pt-3">
-              <Form onSubmit={handleLoginEmail}>
-                <Form.Group className="mb-3">
-                  <Form.Label>📧 Email</Form.Label>
-                  <Form.Control
-                    type="email"
-                    placeholder="usuario@dinamicrestobar.com"
-                    value={formEmail.email}
-                    onChange={(e) =>
-                      setFormEmail({ ...formEmail, email: e.target.value })
-                    }
-                    disabled={loading}
-                    required
-                  />
-                </Form.Group>
-
-                <Form.Group className="mb-4">
-                  <Form.Label>🔒 Contraseña</Form.Label>
-                  <Form.Control
-                    type="password"
-                    placeholder="Ingresa tu contraseña"
-                    value={formEmail.contraseña}
-                    onChange={(e) =>
-                      setFormEmail({ ...formEmail, contraseña: e.target.value })
-                    }
-                    disabled={loading}
-                    required
-                  />
-                </Form.Group>
-
-                <Button
-                  variant="primary"
-                  type="submit"
-                  className="w-100 py-2 fw-bold"
+          {activeTab === 'email' ? (
+            <form onSubmit={handleLoginEmail}>
+              <div className="login-field">
+                <label className="login-label" htmlFor="login-email">
+                  <IconMail /> Email
+                </label>
+                <input
+                  id="login-email"
+                  className="login-input"
+                  type="email"
+                  placeholder="usuario@dynamicrestobar.com"
+                  value={formEmail.email}
+                  onChange={(e) => setFormEmail({ ...formEmail, email: e.target.value })}
                   disabled={loading}
-                  style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }}
-                >
-                  {loading ? 'Ingresando...' : 'Ingresar'}
-                </Button>
-              </Form>
-            </Tab>
+                  required
+                />
+              </div>
 
-            {/* TAB: PIN (Tablets) */}
-            <Tab eventKey="pin" title="PIN (Tablets)" className="pt-3">
-              <Form onSubmit={handleLoginPin}>
-                <div className="mb-4">
-                  <p className="text-center text-muted small">
-                    Ingresa tu PIN de 4 dígitos para acceso rápido
-                  </p>
-                </div>
+              <div className="login-field">
+                <label className="login-label" htmlFor="login-password">
+                  <IconLock /> Contraseña
+                </label>
+                <input
+                  id="login-password"
+                  className="login-input"
+                  type="password"
+                  placeholder="Ingresa tu contraseña"
+                  value={formEmail.contraseña}
+                  onChange={(e) => setFormEmail({ ...formEmail, contraseña: e.target.value })}
+                  disabled={loading}
+                  required
+                />
+              </div>
 
-                <Form.Group className="mb-4">
-                  <Form.Control
-                    type="password"
-                    placeholder="••••"
-                    maxLength="4"
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value)}
-                    disabled={loading}
-                    required
-                    className="text-center fs-3 tracking-widest"
-                  />
-                </Form.Group>
+              <button type="submit" className="login-submit" disabled={loading}>
+                {loading ? 'Ingresando…' : 'Ingresar'}
+              </button>
+            </form>
+          ) : pinRequiereCorreo ? (
+            <form onSubmit={handleConfirmarCorreoPin}>
+              <p className="login-pin-hint">
+                Por seguridad, digita tu correo asociado.
+              </p>
+              <div className="login-field">
+                <label className="login-label" htmlFor="login-pin-email">
+                  <IconMail /> Email
+                </label>
+                <input
+                  id="login-pin-email"
+                  className="login-input"
+                  type="email"
+                  placeholder="usuario@dynamicrestobar.com"
+                  value={correoDesambiguar}
+                  onChange={(e) => setCorreoDesambiguar(e.target.value)}
+                  disabled={loading}
+                  autoFocus
+                  required
+                />
+              </div>
+              <button type="submit" className="login-submit" disabled={loading}>
+                {loading ? 'Ingresando…' : 'Ingresar'}
+              </button>
+              <button type="button" className="login-switch__btn" style={{ marginTop: 10, width: '100%' }} onClick={handleVolverAlPin}>
+                <IconArrowLeft /> Volver
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleLoginPin}>
+              <p className="login-pin-hint">Ingresa tu PIN de 4 dígitos para acceso rápido</p>
 
-                {/* Teclado numérico virtual */}
-                <div className="numeric-keypad mb-4">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((num) => (
-                    <Button
-                      key={num}
-                      variant="outline-secondary"
-                      className="numeric-btn"
-                      onClick={() => setPin((p) => p + num)}
-                      disabled={loading || pin.length >= 4}
-                    >
-                      {num}
-                    </Button>
-                  ))}
-                  <Button
-                    variant="outline-primary"
-                    className="numeric-btn"
-                    onClick={() => setPin(pin.slice(0, -1))}
-                    disabled={loading}
+              <div className="login-pin-display" aria-hidden="true">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className={`login-pin-dot ${pin[i] ? 'is-filled' : ''}`}>
+                    {pin[i] ? '•' : ''}
+                  </div>
+                ))}
+              </div>
+
+              <div className="numeric-keypad">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    className="keypad-btn"
+                    onClick={() => setPin((p) => (p.length < 4 ? p + num : p))}
+                    disabled={loading || pin.length >= 4}
                   >
-                    ⌫
-                  </Button>
-                </div>
-
-                <Button
-                  variant="primary"
-                  type="submit"
-                  className="w-100 py-2 fw-bold"
-                  disabled={loading || pin.length !== 4}
-                  style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }}
+                    {num}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="keypad-btn keypad-btn--ghost"
+                  onClick={() => setPin('')}
+                  disabled={loading || pin.length === 0}
+                  aria-label="Borrar todo"
                 >
-                  {loading ? 'Ingresando...' : 'Ingresar'}
-                </Button>
-              </Form>
-            </Tab>
-          </Tabs>
+                  C
+                </button>
+                <button
+                  key={0}
+                  type="button"
+                  className="keypad-btn"
+                  onClick={() => setPin((p) => (p.length < 4 ? p + '0' : p))}
+                  disabled={loading || pin.length >= 4}
+                >
+                  0
+                </button>
+                <button
+                  type="button"
+                  className="keypad-btn keypad-btn--ghost"
+                  onClick={() => setPin((p) => p.slice(0, -1))}
+                  disabled={loading || pin.length === 0}
+                  aria-label="Borrar último dígito"
+                >
+                  <IconBackspace />
+                </button>
+              </div>
 
-          <div className="mt-4 pt-3 border-top">
-            <p className="text-center text-muted small mb-0">
-              💡 <strong>Credenciales de prueba:</strong>
-            </p>
-            <p className="text-center text-muted small">
-              Email: juan@dynamicrestobar.com<br />
-              Contraseña: 1234<br />
+              <button type="submit" className="login-submit" disabled={loading || pin.length !== 4}>
+                {loading ? 'Ingresando…' : 'Ingresar'}
+              </button>
+            </form>
+          )}
+
+          <div className="login-devnote">
+            <p className="login-devnote__label">Credenciales de prueba</p>
+            <p className="login-devnote__body">
+              Email: juan@dynamicrestobar.com · Contraseña: 1234<br />
               PIN: 5678
             </p>
           </div>
-        </Card.Body>
-      </Card>
-    </Container>
+        </div>
+      </div>
+    </div>
   );
 }

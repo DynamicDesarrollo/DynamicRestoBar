@@ -11,6 +11,29 @@
 
 const db = require('../config/database');
 const { io } = require('../server');
+const { sedesDeReq, sedePerteneceACliente } = require('../utils/tenantScope');
+
+/**
+ * Sede sobre la que consultar el catálogo: la pedida por query si pertenece
+ * al cliente autenticado, o la del propio usuario. Sin esta validación, y
+ * sobre todo sin sedeId, estas consultas devolvían el catálogo de todos los
+ * restaurantes del sistema.
+ */
+const resolverSedeCatalogo = async (req) => {
+  const solicitada = req.query.sedeId;
+  if (solicitada) {
+    const sedeIds = await sedesDeReq(req);
+    if (!sedePerteneceACliente(solicitada, sedeIds)) {
+      return { ok: false, status: 403, error: 'Esa sede no pertenece a tu empresa' };
+    }
+    return { ok: true, sedeId: Number(solicitada) };
+  }
+  const propia = req.usuario?.sedeId || req.usuario?.sede_id;
+  if (!propia) {
+    return { ok: false, status: 400, error: 'sedeId es requerido' };
+  }
+  return { ok: true, sedeId: Number(propia) };
+};
 
 class ProductosController {
   /**
@@ -20,25 +43,16 @@ class ProductosController {
    */
   static async getCategorias(req, res) {
     try {
-      const { sedeId } = req.query;
+      const permiso = await resolverSedeCatalogo(req);
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
+      const sedeId = permiso.sedeId;
 
-      let query = db('categorias')
+      const categorias = await db('categorias')
         .select('id', 'nombre', 'descripcion', 'icono_url', 'orden')
         .where('activa', true)
-        .andWhere((q) => {
-          // Categorías generales O específicas de la sede
-          q.whereNull('sede_id').orWhere('sede_id', sedeId);
-        })
+        .andWhere('sede_id', sedeId)
         .andWhere('deleted_at', null)
         .orderBy('orden', 'asc');
-
-      if (sedeId) {
-        query.andWhere((q) => {
-          q.whereNull('sede_id').orWhere('sede_id', sedeId);
-        });
-      }
-
-      const categorias = await query;
 
       return res.json({
         success: true,
@@ -60,7 +74,10 @@ class ProductosController {
    */
   static async getProductos(req, res) {
     try {
-      const { categoriaId, sedeId, activos } = req.query;
+      const { categoriaId, activos } = req.query;
+      const permiso = await resolverSedeCatalogo(req);
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
+      const sedeId = permiso.sedeId;
 
       let query = db('productos')
         .select(
@@ -118,12 +135,8 @@ class ProductosController {
         query.andWhere('productos.categoria_id', categoriaId);
       }
 
-      // Filtro: sede
-      if (sedeId) {
-        query.andWhere((q) => {
-          q.whereNull('productos.sede_id').orWhere('productos.sede_id', sedeId);
-        });
-      }
+      // Filtro: sede (siempre, ya validada contra el cliente autenticado)
+      query.andWhere('productos.sede_id', sedeId);
 
       const productos = await query.orderBy('productos.nombre', 'asc');
 
@@ -165,6 +178,11 @@ class ProductosController {
         return res.status(404).json({
           error: 'Producto no encontrado',
         });
+      }
+
+      const sedeIds = await sedesDeReq(req);
+      if (!sedePerteneceACliente(producto.sede_id, sedeIds)) {
+        return res.status(403).json({ error: 'Ese producto no pertenece a tu empresa' });
       }
 
       // Obtener modificadores del producto
@@ -387,7 +405,9 @@ class ProductosController {
    */
   static async getCombos(req, res) {
     try {
-      const { sedeId } = req.query;
+      const permiso = await resolverSedeCatalogo(req);
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
+      const sedeId = permiso.sedeId;
 
       let query = db('combos')
         .select(
@@ -402,11 +422,7 @@ class ProductosController {
         .where('combos.activo', true)
         .andWhere('combos.deleted_at', null);
 
-      if (sedeId) {
-        query.andWhere((q) => {
-          q.whereNull('combos.sede_id').orWhere('combos.sede_id', sedeId);
-        });
-      }
+      query.andWhere('combos.sede_id', sedeId);
 
       const combos = await query;
 

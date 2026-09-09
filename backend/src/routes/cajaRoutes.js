@@ -36,7 +36,6 @@ router.get('/resumen/:sedeId', CajaController.getResumenCaja);
 router.get('/resumen-hoy/:sedeId', CajaController.getResumenHoy);
 
 // POST - Cerrar orden (DEPRECATED)
-router.post('/cerrar-orden/:ordenId', CajaController.cerrarOrden);
 
 // POST - Registrar devolución (DEPRECATED)
 router.post('/devoluciones', CajaController.crearDevolucion);

@@ -1,14 +1,18 @@
 const db = require('../../config/database');
+const { sedesDelCliente, sedePerteneceACliente } = require('../../utils/tenantScope');
 
 class MesasController {
   // Obtener siguiente número disponible
   static async obtenerSiguienteNumero(req, res) {
     try {
-      const sede_id = req.usuario?.sedeId || req.query?.sedeId || req.body?.sede_id;
+      const clienteId = req.usuario?.cliente_id;
+      const sedeIds = await sedesDelCliente(clienteId);
+      const solicitada = req.query?.sedeId || req.body?.sede_id || req.usuario?.sedeId;
+      const sede_id = sedePerteneceACliente(solicitada, sedeIds) ? Number(solicitada) : req.usuario?.sedeId;
 
-      if (!sede_id) {
+      if (!sede_id || !sedeIds.includes(Number(sede_id))) {
         return res.status(400).json({
-          error: 'Sede no proporcionada en token ni en la petición',
+          error: 'Sede no proporcionada o no pertenece a tu empresa',
         });
       }
 
@@ -40,21 +44,21 @@ class MesasController {
     }
   }
 
-  // Obtener todas las mesas
+  // Obtener todas las mesas del cliente autenticado
   static async getMesas(req, res) {
     try {
-      const querySedeId = req.query?.sedeId;
-      const sede_id = (querySedeId !== undefined && querySedeId !== '')
-        ? parseInt(querySedeId)
-        : req.usuario?.sedeId || req.body?.sede_id;
+      const clienteId = req.usuario?.cliente_id;
+      const sedeIds = await sedesDelCliente(clienteId);
 
       const query = db('mesas')
         .whereNull('deleted_at')
         .select('*')
+        .whereIn('sede_id', sedeIds)
         .orderByRaw('CAST(numero AS INTEGER) ASC');
 
-      if (sede_id) {
-        query.andWhere('sede_id', sede_id);
+      const querySedeId = req.query?.sedeId;
+      if (querySedeId !== undefined && querySedeId !== '' && sedePerteneceACliente(querySedeId, sedeIds)) {
+        query.andWhere('sede_id', Number(querySedeId));
       }
 
       const mesas = await query;
@@ -75,14 +79,17 @@ class MesasController {
   // Crear mesa
   static async crearMesa(req, res) {
     try {
-      const sede_id = req.usuario?.sedeId || req.body?.sede_id;
+      const clienteId = req.usuario?.cliente_id;
+      const sedeIds = await sedesDelCliente(clienteId);
+      const solicitada = req.body?.sede_id || req.usuario?.sedeId;
       const { numero, zona_id, capacidad } = req.body;
 
-      if (!sede_id) {
+      if (!solicitada || !sedeIds.includes(Number(solicitada))) {
         return res.status(400).json({
-          error: 'Sede no proporcionada en token ni en el cuerpo de la petición',
+          error: 'Sede no proporcionada o no pertenece a tu empresa',
         });
       }
+      const sede_id = Number(solicitada);
 
       if (!numero || !zona_id) {
         return res.status(400).json({
@@ -120,22 +127,21 @@ class MesasController {
   static async actualizarMesa(req, res) {
     try {
       const { id } = req.params;
-      const sede_id = req.usuario?.sedeId || req.body?.sede_id;
+      const clienteId = req.usuario?.cliente_id;
+      const sedeIds = await sedesDelCliente(clienteId);
       const { numero, zona_id, capacidad, estado } = req.body;
 
-      if (!sede_id) {
-        return res.status(400).json({
-          error: 'Sede no proporcionada en token ni en el cuerpo de la petición',
-        });
-      }
-
-      const mesa = await db('mesas')
-        .where('id', id)
-        .where('sede_id', sede_id)
-        .first();
+      // La sede que manda a validar es SIEMPRE la de la mesa ya guardada en
+      // BD, nunca la que venga en el body — de lo contrario basta con que el
+      // atacante mande el sede_id real de la mesa ajena para "aprobar" el
+      // check y luego mutarla igual.
+      const mesa = await db('mesas').where('id', id).first();
 
       if (!mesa) {
         return res.status(404).json({ error: 'Mesa no encontrada' });
+      }
+      if (!sedeIds.includes(mesa.sede_id)) {
+        return res.status(403).json({ error: 'No puedes editar una mesa de otra empresa' });
       }
 
       const updateData = {};
@@ -145,7 +151,7 @@ class MesasController {
       if (estado !== undefined) updateData.estado = estado;
       updateData.updated_at = new Date();
 
-      await db('mesas').where('id', id).update(updateData);
+      await db('mesas').where('id', id).where('sede_id', mesa.sede_id).update(updateData);
 
       console.log(`✅ Mesa ${id} actualizada`);
 
@@ -166,25 +172,20 @@ class MesasController {
   static async eliminarMesa(req, res) {
     try {
       const { id } = req.params;
-      const sede_id = req.usuario?.sedeId || req.body?.sede_id;
+      const clienteId = req.usuario?.cliente_id;
+      const sedeIds = await sedesDelCliente(clienteId);
 
-      if (!sede_id) {
-        return res.status(400).json({
-          error: 'Sede no proporcionada en token ni en el cuerpo de la petición',
-        });
-      }
-
-      const mesa = await db('mesas')
-        .where('id', id)
-        .where('sede_id', sede_id)
-        .first();
+      const mesa = await db('mesas').where('id', id).first();
 
       if (!mesa) {
         return res.status(404).json({ error: 'Mesa no encontrada' });
       }
+      if (!sedeIds.includes(mesa.sede_id)) {
+        return res.status(403).json({ error: 'No puedes eliminar una mesa de otra empresa' });
+      }
 
       // Soft delete
-      await db('mesas').where('id', id).update({
+      await db('mesas').where('id', id).where('sede_id', mesa.sede_id).update({
         deleted_at: new Date(),
       });
 
@@ -198,86 +199,6 @@ class MesasController {
       console.error('❌ Error en eliminarMesa:', err.message);
       return res.status(500).json({
         error: 'Error al eliminar mesa',
-        message: err.message,
-      });
-    }
-  }
-
-  // Endpoint DEBUG: Eliminar todas las mesas 21
-  static async eliminarTodas21(req, res) {
-    try {
-      const { sedeId: sede_id } = req.usuario;
-      
-      const result = await db('mesas')
-        .where('sede_id', sede_id)
-        .where('numero', '21')
-        .update({ deleted_at: new Date() });
-
-      return res.json({
-        success: true,
-        message: `${result} mesa(s) con número 21 eliminada(s)`,
-      });
-    } catch (err) {
-      console.error('❌ Error en eliminarTodas21:', err.message);
-      return res.status(500).json({
-        error: 'Error',
-        message: err.message,
-      });
-    }
-  }
-
-  // Limpiar mesas duplicadas (endpoint temporal)
-  static async limpiarDuplicadas(req, res) {
-    try {
-      const { sedeId: sede_id } = req.usuario;
-
-      // Obtener TODOS los números con duplicados
-      const duplicadas = await db('mesas')
-        .where('sede_id', sede_id)
-        .select('numero')
-        .groupBy('numero')
-        .havingRaw('COUNT(*) > 1')
-        .orHavingRaw('COUNT(*) > 1');
-
-      console.log('Duplicadas encontradas:', duplicadas);
-
-      let totalLimpiadas = 0;
-
-      // Para cada número duplicado
-      for (const dup of duplicadas) {
-        const numero = dup.numero;
-        
-        // Obtener todas las mesas con ese número (activas)
-        const mesas = await db('mesas')
-          .where('sede_id', sede_id)
-          .where('numero', numero)
-          .whereNull('deleted_at')
-          .orderBy('id', 'asc');
-
-        console.log(`Número ${numero}: ${mesas.length} mesas encontradas`);
-
-        // Si hay más de una, eliminar (soft delete) todas excepto la primera
-        if (mesas.length > 1) {
-          const idsAEliminar = mesas.slice(1).map(m => m.id);
-          await db('mesas')
-            .whereIn('id', idsAEliminar)
-            .update({ deleted_at: new Date() });
-          
-          totalLimpiadas += idsAEliminar.length;
-          console.log(`✅ Eliminadas ${idsAEliminar.length} mesa(s) duplicada(s) con número ${numero}`);
-        }
-      }
-
-      return res.json({
-        success: true,
-        message: `Limpieza completada. ${totalLimpiadas} mesa(s) duplicada(s) eliminada(s).`,
-        duplicadas: duplicadas.length,
-        totalLimpiadas,
-      });
-    } catch (err) {
-      console.error('❌ Error en limpiarDuplicadas:', err.message);
-      return res.status(500).json({
-        error: 'Error al limpiar duplicadas',
         message: err.message,
       });
     }

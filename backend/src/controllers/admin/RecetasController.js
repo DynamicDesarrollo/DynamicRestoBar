@@ -1,24 +1,35 @@
 const db = require('../../config/database');
+const { sedesDelCliente } = require('../../utils/tenantScope');
+
+// Verifica que el producto dueño de la receta pertenezca al cliente
+// autenticado (las recetas no tienen tenant propio, cuelgan de productos).
+const productoPerteneceACliente = async (productoId, sedeIds) => {
+  const producto = await db('productos').where('id', productoId).first();
+  if (!producto) return { producto: null, permitido: false };
+  return { producto, permitido: sedeIds.includes(producto.sede_id) };
+};
 
 class RecetasController {
-  // Obtener todas las recetas con sus insumos
+  // Obtener todas las recetas con sus insumos, del cliente autenticado
   static async getRecetas(req, res) {
     try {
       const { sedeId } = req.query;
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
 
       let query = db('recetas')
-        .leftJoin('productos', 'recetas.producto_id', 'productos.id')
+        .innerJoin('productos', 'recetas.producto_id', 'productos.id')
         .select(
           'recetas.id',
           'recetas.producto_id',
           'productos.nombre as producto_nombre',
           'recetas.activa'
         )
-        .where('recetas.activa', true);
+        .where('recetas.activa', true)
+        .whereIn('productos.sede_id', sedeIds);
 
-      // Filtrar por sede si está presente
-      if (sedeId) {
-        query = query.andWhere('recetas.sede_id', sedeId);
+      // Filtrar por una sede puntual, solo si es del propio cliente
+      if (sedeId && sedeIds.includes(Number(sedeId))) {
+        query = query.andWhere('productos.sede_id', sedeId);
       }
 
       const recetas = await query.orderBy('productos.nombre', 'asc');
@@ -40,6 +51,7 @@ class RecetasController {
   static async getRecetaById(req, res) {
     try {
       const { id } = req.params;
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
 
       const receta = await db('recetas')
         .where('recetas.id', id)
@@ -48,6 +60,10 @@ class RecetasController {
 
       if (!receta) {
         return res.status(404).json({ error: 'Receta no encontrada' });
+      }
+      const { permitido } = await productoPerteneceACliente(receta.producto_id, sedeIds);
+      if (!permitido) {
+        return res.status(403).json({ error: 'No puedes ver una receta de otra empresa' });
       }
 
       // Obtener los insumos de la receta
@@ -84,6 +100,11 @@ class RecetasController {
   static async getRecetaByProducto(req, res) {
     try {
       const { producto_id } = req.params;
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+      const { permitido } = await productoPerteneceACliente(producto_id, sedeIds);
+      if (!permitido) {
+        return res.status(403).json({ error: 'No puedes ver la receta de un producto de otra empresa' });
+      }
 
       const receta = await db('recetas')
         .where('producto_id', producto_id)
@@ -132,7 +153,7 @@ class RecetasController {
   // Crear receta
   static async crearReceta(req, res) {
     try {
-      const { producto_id, descripcion, rendimiento, insumos, sede_id } = req.body;
+      const { producto_id, descripcion, rendimiento, insumos } = req.body;
 
       if (!producto_id || !insumos || insumos.length === 0) {
         return res.status(400).json({
@@ -140,10 +161,14 @@ class RecetasController {
         });
       }
 
-      // Verificar que el producto existe
-      const producto = await db('productos').where('id', producto_id).first();
+      // Verificar que el producto existe y pertenece a tu empresa
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+      const { producto, permitido } = await productoPerteneceACliente(producto_id, sedeIds);
       if (!producto) {
         return res.status(404).json({ error: 'Producto no encontrado' });
+      }
+      if (!permitido) {
+        return res.status(403).json({ error: 'No puedes crear una receta para un producto de otra empresa' });
       }
 
       // Calcular costo total de la receta
@@ -167,7 +192,7 @@ class RecetasController {
         rendimiento: rendimiento || 1,
         costo_total: parseFloat(costo_produccion.toFixed(2)),
         costo_produccion: parseFloat(costo_produccion.toFixed(2)),
-        sede_id: sede_id || null,
+        sede_id: producto.sede_id,
         activa: true,
       }).returning('*');
 
@@ -212,6 +237,11 @@ class RecetasController {
 
       if (!recetaAnterior) {
         return res.status(404).json({ error: 'Receta no encontrada' });
+      }
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+      const { permitido } = await productoPerteneceACliente(recetaAnterior.producto_id, sedeIds);
+      if (!permitido) {
+        return res.status(403).json({ error: 'No puedes editar una receta de otra empresa' });
       }
 
       // Calcular nuevo costo total
@@ -276,6 +306,11 @@ class RecetasController {
       if (!receta) {
         return res.status(404).json({ error: 'Receta no encontrada' });
       }
+      const sedeIdsAgregar = await sedesDelCliente(req.usuario?.cliente_id);
+      const { permitido: permitidoAgregar } = await productoPerteneceACliente(receta.producto_id, sedeIdsAgregar);
+      if (!permitidoAgregar) {
+        return res.status(403).json({ error: 'No puedes modificar una receta de otra empresa' });
+      }
 
       // Verificar si el insumo ya está en la receta
       const existe = await db('receta_insumos')
@@ -327,6 +362,11 @@ class RecetasController {
       if (!receta) {
         return res.status(404).json({ error: 'Receta no encontrada' });
       }
+      const sedeIdsQuitar = await sedesDelCliente(req.usuario?.cliente_id);
+      const { permitido: permitidoQuitar } = await productoPerteneceACliente(receta.producto_id, sedeIdsQuitar);
+      if (!permitidoQuitar) {
+        return res.status(403).json({ error: 'No puedes modificar una receta de otra empresa' });
+      }
 
       await db('receta_insumos')
         .where('receta_id', id)
@@ -366,6 +406,11 @@ class RecetasController {
       const receta = await db('recetas').where('id', id).first();
       if (!receta) {
         return res.status(404).json({ error: 'Receta no encontrada' });
+      }
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+      const { permitido } = await productoPerteneceACliente(receta.producto_id, sedeIds);
+      if (!permitido) {
+        return res.status(403).json({ error: 'No puedes eliminar una receta de otra empresa' });
       }
 
       await db('recetas').where('id', id).update({

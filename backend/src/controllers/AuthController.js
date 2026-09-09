@@ -41,9 +41,11 @@ class AuthController {
           'usuarios.sede_id',
           'usuarios.estado',
           'usuarios.cliente_id',
-          'roles.nombre as rol_nombre'
+          'roles.nombre as rol_nombre',
+          'sedes.estilo_catalogo as estilo_catalogo'
         )
         .join('roles', 'usuarios.rol_id', 'roles.id')
+        .leftJoin('sedes', 'usuarios.sede_id', 'sedes.id')
         .where('usuarios.email', email)
         .andWhere('usuarios.deleted_at', null)
         .first();
@@ -78,6 +80,7 @@ class AuthController {
           roleName: usuario.rol_nombre,
           sedeId: usuario.sede_id,
           cliente_id: usuario.cliente_id,
+          estiloCatalogo: usuario.estilo_catalogo || 'clasico',
         },
         process.env.JWT_SECRET || 'secret-key-change-in-prod',
         { expiresIn: '8h' }
@@ -111,6 +114,7 @@ class AuthController {
           },
           sedeId: usuario.sede_id,
           cliente_id: usuario.cliente_id,
+          estiloCatalogo: usuario.estilo_catalogo || 'clasico',
         },
       });
     } catch (error) {
@@ -130,7 +134,7 @@ class AuthController {
    */
   static async loginPin(req, res) {
     try {
-      const { pin } = req.body;
+      const { pin, email } = req.body;
 
       if (!pin) {
         return res.status(400).json({
@@ -139,10 +143,17 @@ class AuthController {
       }
 
       const pinTrimmed = String(pin).trim();
-      console.log('🔍 Login PIN backend - Buscando PIN:', pinTrimmed); // Debug
+      const emailTrimmed = email ? String(email).trim() : null;
 
-      // Buscar usuario por PIN
-      const usuario = await db('usuarios')
+      // El PIN solo es único DENTRO de una sede — dos restaurantes distintos
+      // pueden tener, sin saberlo, un usuario con el mismo PIN (ej. "6666").
+      // Nunca se confía en un sedeId que mande el cliente: eso permitiría
+      // que alguien con un PIN válido en SU restaurante lo intente a
+      // propósito contra otra sede que por coincidencia tenga el mismo PIN.
+      // Cuando el PIN es ambiguo, SIEMPRE se pide el correo asociado — sin
+      // "recordar" el dispositivo — porque el correo + el PIN son lo único
+      // que identifica una única cuenta real.
+      let query = db('usuarios')
         .select(
           'usuarios.id',
           'usuarios.nombre',
@@ -151,19 +162,40 @@ class AuthController {
           'usuarios.sede_id',
           'usuarios.cliente_id',
           'usuarios.estado',
-          'roles.nombre as rol_nombre'
+          'roles.nombre as rol_nombre',
+          'sedes.nombre as sede_nombre',
+          'sedes.estilo_catalogo as estilo_catalogo',
+          'clientes.nombre as cliente_nombre'
         )
         .join('roles', 'usuarios.rol_id', 'roles.id')
+        .leftJoin('sedes', 'usuarios.sede_id', 'sedes.id')
+        .leftJoin('clientes', 'usuarios.cliente_id', 'clientes.id')
         .where('usuarios.pin', pinTrimmed)
-        .andWhere('usuarios.deleted_at', null)
-        .first();
+        .andWhere('usuarios.deleted_at', null);
 
-      if (!usuario) {
-        console.log('❌ PIN no encontrado. PIN buscado:', pinTrimmed); // Debug
+      if (emailTrimmed) {
+        query = query.andWhereRaw('LOWER(usuarios.email) = LOWER(?)', [emailTrimmed]);
+      }
+
+      const coincidencias = await query;
+
+      if (coincidencias.length === 0) {
         return res.status(401).json({
-          error: 'PIN incorrecto',
+          error: emailTrimmed ? 'PIN o correo incorrectos' : 'PIN incorrecto',
         });
       }
+
+      if (coincidencias.length > 1) {
+        // Mismo PIN en más de un restaurante — no hay forma segura de saber
+        // a cuál entrar solo con el PIN. Siempre se pide el correo asociado,
+        // sin excepción y sin recordar el dispositivo para la próxima vez.
+        return res.status(409).json({
+          error: 'Por seguridad, digita tu correo asociado.',
+          code: 'PIN_AMBIGUO',
+        });
+      }
+
+      const usuario = coincidencias[0];
 
       if (usuario.estado !== 'activo') {
         return res.status(403).json({
@@ -180,6 +212,7 @@ class AuthController {
           roleName: usuario.rol_nombre,
           sedeId: usuario.sede_id,
           cliente_id: usuario.cliente_id,
+          estiloCatalogo: usuario.estilo_catalogo || 'clasico',
         },
         process.env.JWT_SECRET || 'secret-key-change-in-prod',
         { expiresIn: '8h' }
@@ -202,6 +235,7 @@ class AuthController {
           },
           sedeId: usuario.sede_id,
           cliente_id: usuario.cliente_id,
+          estiloCatalogo: usuario.estilo_catalogo || 'clasico',
         },
       });
     } catch (error) {
@@ -235,11 +269,24 @@ class AuthController {
         process.env.JWT_REFRESH_SECRET || 'refresh-secret-key-change-in-prod'
       );
 
-      // Buscar usuario
+      // Buscar usuario. El payload debe quedar idéntico al del login: si falta
+      // roleName o cliente_id, el token refrescado pierde el rol y la empresa,
+      // y tanto el control de roles como el aislamiento por cliente fallan.
       const usuario = await db('usuarios')
-        .select('id', 'email', 'rol_id', 'sede_id', 'estado')
-        .where('id', decoded.userId)
-        .andWhere('deleted_at', null)
+        .join('roles', 'usuarios.rol_id', 'roles.id')
+        .leftJoin('sedes', 'usuarios.sede_id', 'sedes.id')
+        .select(
+          'usuarios.id',
+          'usuarios.email',
+          'usuarios.rol_id',
+          'usuarios.sede_id',
+          'usuarios.estado',
+          'usuarios.cliente_id',
+          'roles.nombre as rol_nombre',
+          'sedes.estilo_catalogo as estilo_catalogo'
+        )
+        .where('usuarios.id', decoded.userId)
+        .andWhere('usuarios.deleted_at', null)
         .first();
 
       if (!usuario || usuario.estado !== 'activo') {
@@ -254,7 +301,10 @@ class AuthController {
           userId: usuario.id,
           email: usuario.email,
           roleId: usuario.rol_id,
+          roleName: usuario.rol_nombre,
           sedeId: usuario.sede_id,
+          cliente_id: usuario.cliente_id,
+          estiloCatalogo: usuario.estilo_catalogo || 'clasico',
         },
         process.env.JWT_SECRET || 'secret-key-change-in-prod',
         { expiresIn: '8h' }

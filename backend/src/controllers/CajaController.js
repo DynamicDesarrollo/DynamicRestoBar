@@ -11,6 +11,7 @@
 
 const db = require('../config/database');
 const PrintDispatchService = require('../services/PrintDispatchService');
+const { validarSedeDeReq } = require('../utils/tenantScope');
 
 class CajaController {
   /**
@@ -536,9 +537,12 @@ class CajaController {
       const { userId: usuario_id, sedeId: sede_id } = req.usuario;
       const { saldo_final, observaciones } = req.body;
 
-      // Obtener apertura actual
+      // Obtener apertura actual. Se acota por sede igual que abrirCaja y
+      // getAperturaActual: sin este filtro, un cajero de un cliente con varias
+      // sedes cerraba desde la sede B la caja que dejó abierta en la sede A.
       const apertura = await db('aperturas_caja')
         .where('usuario_id', usuario_id)
+        .where('sede_id', sede_id)
         .where('estado', 'abierta')
         .where('activa', true)
         .first();
@@ -559,19 +563,24 @@ class CajaController {
         .filter(m => m.tipo === 'egreso')
         .reduce((sum, m) => sum + parseFloat(m.monto || 0), 0);
 
-      const totalVendido = ingresos;
-      const totalEsperado = apertura.monto_inicial + totalVendido - egresos;
-      const diferencia = (parseFloat(saldo_final) || 0) - totalEsperado;
+      // El monto inicial YA está registrado como movimiento de ingreso por
+      // abrirCaja, así que no se vuelve a sumar (getAperturaActual hace lo
+      // mismo). Además PostgreSQL devuelve numeric como string: sin Number()
+      // el "+" concatenaba en vez de sumar y el esperado salía corrupto.
+      const montoInicial = Number(apertura.monto_inicial) || 0;
+      const totalVendido = ingresos - montoInicial;
+      const totalEsperado = ingresos - egresos;
+      const diferencia = (Number(saldo_final) || 0) - totalEsperado;
 
       // Crear cierre (usando los nombres y campos correctos)
       const cierreProcesado = await db('cierres_caja').insert({
         apertura_caja_id: apertura.id,
         usuario_id,
-        monto_inicial: apertura.monto_inicial,
+        monto_inicial: montoInicial,
         total_ingresos: ingresos,
         total_egresos: egresos,
         monto_esperado: totalEsperado,
-        monto_contado: saldo_final || 0,
+        monto_contado: Number(saldo_final) || 0,
         diferencia,
         observaciones: observaciones || null,
       }).returning('*');
@@ -593,11 +602,11 @@ class CajaController {
         data: {
           cierre,
           resumen: {
-            monto_inicial: apertura.monto_inicial,
+            monto_inicial: montoInicial,
             total_vendido: totalVendido,
             devoluciones: egresos,
             total_esperado: totalEsperado,
-            saldo_final: saldo_final || 0,
+            saldo_final: Number(saldo_final) || 0,
             diferencia,
           },
         },
@@ -607,7 +616,6 @@ class CajaController {
       return res.status(500).json({
         error: 'Error al cerrar caja',
         message: err.message,
-        stack: err.stack,
       });
     }
   }
@@ -636,90 +644,14 @@ class CajaController {
   }
 
   /**
-   * POST /caja/cerrar-orden/:ordenId
-   * DEPRECATED: Usar registrarPago en su lugar
-   * Cerrar una orden con sus detalles de pago
-   * Cuerpo: {
-   *   metodo_pago: 'efectivo'|'tarjeta'|'transferencia'|'mixto',
-   *   monto_pagado: 100.00,
-   *   propina: 5.00,
-   *   observaciones: ''
-   * }
-   */
-  static async cerrarOrden(req, res) {
-    try {
-      const { ordenId } = req.params;
-      const { metodo_pago, monto_pagado, propina = 0, observaciones = '' } = req.body;
-
-      // Validar orden
-      const orden = await db('ordenes').where('id', ordenId).first();
-      if (!orden) {
-        return res.status(404).json({ error: 'Orden no encontrada' });
-      }
-
-      if (orden.estado === 'pagada' || orden.estado === 'anulada') {
-        return res.status(400).json({ error: 'La orden ya está cerrada' });
-      }
-
-      // Calcular cambio
-      const total = parseFloat(orden.total) || 0;
-      const cambio = monto_pagado - total;
-
-      // Actualizar orden a pagada
-      await db('ordenes').where('id', ordenId).update({
-        estado: 'pagada',
-        updated_at: new Date(),
-      });
-
-      // Registrar pago en tabla facturas
-      const resultFactura = await db('facturas').insert({
-        orden_id: ordenId,
-        numero_factura: `FAC-${Date.now()}`,
-        subtotal: total,
-        total,
-        pagado: true,
-        estado: 'pagada',
-        created_at: new Date(),
-        updated_at: new Date(),
-      }).returning('id');
-      
-      const facturaId = Array.isArray(resultFactura) ? resultFactura[0].id : resultFactura.id;
-
-      // Actualizar mesa a disponible
-      if (orden.mesa_id) {
-        await db('mesas').where('id', orden.mesa_id).update({
-          estado: 'disponible',
-          updated_at: new Date(),
-        });
-      }
-
-      return res.json({
-        success: true,
-        message: 'Orden pagada exitosamente',
-        data: {
-          orden_id: ordenId,
-          factura_id: facturaId,
-          metodo_pago,
-          total,
-          cambio,
-        },
-      });
-    } catch (err) {
-      console.error('❌ Error al cerrar orden:', err.message);
-      return res.status(500).json({
-        error: 'Error al cerrar orden',
-        message: err.message,
-      });
-    }
-  }
-
-  /**
    * GET /caja/facturas/:sedeId
    * Obtener todas las facturas/pagos de una sede
    */
   static async getFacturasBySede(req, res) {
     try {
-      const { sedeId } = req.params;
+      const permisoSede = await validarSedeDeReq(req, req.params.sedeId);
+      if (!permisoSede.ok) return res.status(permisoSede.status).json({ error: permisoSede.error });
+      const sedeId = permisoSede.sedeId;
       const { fecha_inicio, fecha_fin } = req.query;
 
       let query = db('facturas').where('sede_id', sedeId);
@@ -747,56 +679,79 @@ class CajaController {
   }
 
   /**
+   * Resumen de dinero efectivamente cobrado en una sede.
+   *
+   * Se calcula sobre `pago_facturas` (el detalle real de cobro) y no sobre
+   * `facturas`: esa tabla no tiene columnas `metodo_pago` ni `propina`, y su
+   * estado no incluye 'pagada' — una factura saldada queda como 'cancelada'
+   * (deuda cancelada) y una devuelta como 'anulada'. Aquí se suman los pagos
+   * y solo se descartan los de facturas anuladas.
+   *
+   * Nota: el sistema no modela propinas en ninguna tabla, por eso no se
+   * devuelven; si se necesitan habría que añadir la columna primero.
+   */
+  static async resumenDePagos({ sedeId, desde = null, hasta = null }) {
+    const base = () => {
+      let q = db('pago_facturas as pf')
+        .innerJoin('facturas as f', 'pf.factura_id', 'f.id')
+        .where('f.sede_id', sedeId)
+        .whereNot('f.estado', 'anulada')
+        .whereNull('f.deleted_at')
+        .whereNull('pf.deleted_at');
+      if (desde) q = q.where('pf.created_at', '>=', desde);
+      if (hasta) q = q.where('pf.created_at', '<', hasta);
+      return q;
+    };
+
+    const totales = await base()
+      .sum('pf.monto as total')
+      .countDistinct('f.id as facturas')
+      .first();
+
+    const porMetodo = await base()
+      .leftJoin('metodos_pago as mp', 'pf.metodo_pago_id', 'mp.id')
+      .select('mp.id as metodo_pago_id', 'mp.nombre as metodo_pago')
+      .sum('pf.monto as total')
+      .groupBy('mp.id', 'mp.nombre')
+      .orderBy('total', 'desc');
+
+    // PostgreSQL devuelve sum() y count() como string: hay que convertirlos.
+    const totalVentas = Number(totales?.total) || 0;
+    const totalTransacciones = Number(totales?.facturas) || 0;
+
+    return {
+      totalVentas,
+      totalTransacciones,
+      ticketPromedio: totalTransacciones > 0
+        ? Number((totalVentas / totalTransacciones).toFixed(2))
+        : 0,
+      ventasPorMetodo: porMetodo.map((m) => ({
+        metodo_pago_id: m.metodo_pago_id,
+        metodo_pago: m.metodo_pago || 'Sin especificar',
+        total: Number(m.total) || 0,
+      })),
+    };
+  }
+
+  /**
    * GET /caja/resumen/:sedeId
    * Obtener resumen de caja por sede
    */
   static async getResumenCaja(req, res) {
     try {
-      const { sedeId } = req.params;
+      const permisoSede = await validarSedeDeReq(req, req.params.sedeId);
+      if (!permisoSede.ok) return res.status(permisoSede.status).json({ error: permisoSede.error });
+      const sedeId = permisoSede.sedeId;
 
-      // Total de ventas
-      const ventasTotal = await db('facturas')
-        .sum('total as total')
-        .where('sede_id', sedeId)
-        .where('estado', 'pagada')
-        .first();
-
-      // Ventas por método de pago
-      const ventasPorMetodo = await db('facturas')
-        .select('metodo_pago')
-        .sum('total as total')
-        .where('sede_id', sedeId)
-        .where('estado', 'pagada')
-        .groupBy('metodo_pago');
-
-      // Total en propinas
-      const propinasTotal = await db('facturas')
-        .sum('propina as total')
-        .where('sede_id', sedeId)
-        .where('estado', 'pagada')
-        .first();
-
-      // Número de transacciones
-      const transacciones = await db('facturas')
-        .count('* as total')
-        .where('sede_id', sedeId)
-        .where('estado', 'pagada')
-        .first();
-
-      // Ticket promedio
-      const promedio =
-        transacciones.total > 0
-          ? (ventasTotal.total || 0) / transacciones.total
-          : 0;
+      const resumen = await CajaController.resumenDePagos({ sedeId });
 
       return res.json({
         success: true,
         data: {
-          total_ventas: ventasTotal.total || 0,
-          total_propinas: propinasTotal.total || 0,
-          total_transacciones: transacciones.total || 0,
-          ticket_promedio: promedio.toFixed(2),
-          ventas_por_metodo: ventasPorMetodo,
+          total_ventas: resumen.totalVentas,
+          total_transacciones: resumen.totalTransacciones,
+          ticket_promedio: resumen.ticketPromedio,
+          ventas_por_metodo: resumen.ventasPorMetodo,
         },
       });
     } catch (err) {
@@ -814,63 +769,29 @@ class CajaController {
    */
   static async getResumenHoy(req, res) {
     try {
-      const { sedeId } = req.params;
+      const permisoSede = await validarSedeDeReq(req, req.params.sedeId);
+      if (!permisoSede.ok) return res.status(permisoSede.status).json({ error: permisoSede.error });
+      const sedeId = permisoSede.sedeId;
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
 
       const mañana = new Date(hoy);
       mañana.setDate(mañana.getDate() + 1);
 
-      // Total del día
-      const ventasHoy = await db('facturas')
-        .sum('total as total')
-        .where('sede_id', sedeId)
-        .where('estado', 'pagada')
-        .where('created_at', '>=', hoy)
-        .where('created_at', '<', mañana)
-        .first();
-
-      // Propinas del día
-      const propinasHoy = await db('facturas')
-        .sum('propina as total')
-        .where('sede_id', sedeId)
-        .where('estado', 'pagada')
-        .where('created_at', '>=', hoy)
-        .where('created_at', '<', mañana)
-        .first();
-
-      // Transacciones del día
-      const transaccionesHoy = await db('facturas')
-        .count('* as total')
-        .where('sede_id', sedeId)
-        .where('estado', 'pagada')
-        .where('created_at', '>=', hoy)
-        .where('created_at', '<', mañana)
-        .first();
-
-      // Por método de pago
-      const metodosPago = await db('facturas')
-        .select('metodo_pago')
-        .sum('total as total')
-        .where('sede_id', sedeId)
-        .where('estado', 'pagada')
-        .where('created_at', '>=', hoy)
-        .where('created_at', '<', mañana)
-        .groupBy('metodo_pago');
+      const resumen = await CajaController.resumenDePagos({
+        sedeId,
+        desde: hoy,
+        hasta: mañana,
+      });
 
       return res.json({
         success: true,
         data: {
           fecha: hoy.toISOString().split('T')[0],
-          total_ventas: ventasHoy.total || 0,
-          total_propinas: propinasHoy.total || 0,
-          total_transacciones: transaccionesHoy.total || 0,
-          ticket_promedio: (
-            transaccionesHoy.total > 0
-              ? (ventasHoy.total || 0) / transaccionesHoy.total
-              : 0
-          ).toFixed(2),
-          metodos_pago: metodosPago,
+          total_ventas: resumen.totalVentas,
+          total_transacciones: resumen.totalTransacciones,
+          ticket_promedio: resumen.ticketPromedio,
+          metodos_pago: resumen.ventasPorMetodo,
         },
       });
     } catch (err) {

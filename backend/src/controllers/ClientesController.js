@@ -1,5 +1,9 @@
 const db = require('../config/database');
 
+const ESTILOS_CATALOGO_VALIDOS = ['clasico', 'aurum'];
+const normalizarEstiloCatalogo = (valor) =>
+  ESTILOS_CATALOGO_VALIDOS.includes(valor) ? valor : 'clasico';
+
 const ClientesController = {
   async listarClientes(req, res) {
     // Traer todos los clientes
@@ -20,6 +24,7 @@ const ClientesController = {
 
   async crearCliente(req, res) {
     const { nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan } = req.body;
+    const estilo_catalogo = normalizarEstiloCatalogo(req.body.estilo_catalogo);
     let foto_url = null;
     if (req.file) {
       // Construir la URL pública para la foto
@@ -28,7 +33,7 @@ const ClientesController = {
     }
     // Crear cliente
     const [cliente] = await db('clientes')
-      .insert({ nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan, foto_url })
+      .insert({ nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan, foto_url, estilo_catalogo })
       .returning('*');
 
     // Crear sede principal asociada al cliente
@@ -41,6 +46,8 @@ const ClientesController = {
         email,
         descripcion: 'Sede principal creada automáticamente',
         activa: true,
+        cliente_id: cliente.id,
+        estilo_catalogo,
         created_at: db.fn.now(),
         updated_at: db.fn.now()
       })
@@ -95,7 +102,8 @@ const ClientesController = {
   async actualizarCliente(req, res) {
     const { id } = req.params;
     const { nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan } = req.body;
-    let updateData = { nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan };
+    const estilo_catalogo = normalizarEstiloCatalogo(req.body.estilo_catalogo);
+    let updateData = { nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan, estilo_catalogo };
     if (req.file) {
       const baseUrl = `${req.protocol}://${req.get('host')}`;
       updateData.foto_url = `${baseUrl}/uploads/clientes/${req.file.filename}`;
@@ -105,6 +113,12 @@ const ClientesController = {
       .update(updateData)
       .returning('*');
     if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
+
+    // Propagar el estilo a todas las sedes del cliente (hoy solo hay una "Sede Principal").
+    await db('sedes')
+      .where({ cliente_id: id })
+      .update({ estilo_catalogo, updated_at: db.fn.now() });
+
     res.json(cliente);
   },
 

@@ -7,15 +7,19 @@ const getClienteIdColumnSupported = async () => db.schema.hasColumn('sedes', 'cl
 const SedesController = {
   async getSedes(req, res) {
     try {
-      let clienteId = req.query.clienteId;
-      if (!clienteId && req.usuario && req.usuario.cliente_id) {
-        clienteId = req.usuario.cliente_id;
-      }
-      let query = db('sedes');
+      // El cliente SIEMPRE sale del token, nunca de la query — de lo
+      // contrario cualquier admin podría listar las sedes de otra empresa
+      // con solo cambiar ?clienteId= en la URL.
+      const clienteId = req.usuario?.cliente_id;
       const soportaClienteId = await getClienteIdColumnSupported();
-      if (clienteId && soportaClienteId) query = query.where('cliente_id', clienteId);
-      query = query.whereNull('deleted_at');
-      const sedes = await query;
+
+      if (!soportaClienteId || !clienteId) {
+        return res.json([]);
+      }
+
+      const sedes = await db('sedes')
+        .where('cliente_id', clienteId)
+        .whereNull('deleted_at');
       res.json(sedes);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -25,8 +29,14 @@ const SedesController = {
   async getSedeById(req, res) {
     try {
       const { id } = req.params;
+      const clienteId = req.usuario?.cliente_id;
+      const soportaClienteId = await getClienteIdColumnSupported();
+
       const sede = await db('sedes').where({ id }).whereNull('deleted_at').first();
       if (!sede) return res.status(404).json({ error: 'Sede no encontrada' });
+      if (soportaClienteId && sede.cliente_id != null && sede.cliente_id !== clienteId) {
+        return res.status(403).json({ error: 'No puedes ver una sede de otra empresa' });
+      }
       res.json(sede);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -35,12 +45,21 @@ const SedesController = {
 
   async crearSede(req, res) {
     try {
-      const { nombre, cliente_id, direccion, ciudad, telefono, email, descripcion, activa } = req.body;
-      if (!nombre || !cliente_id) return res.status(400).json({ error: 'nombre y cliente_id requeridos' });
+      const { nombre, direccion, ciudad, telefono, email, descripcion, activa } = req.body;
+      const clienteId = req.usuario?.cliente_id;
+      if (!nombre || !clienteId) return res.status(400).json({ error: 'nombre requerido y usuario debe pertenecer a un cliente' });
+
       const soportaClienteId = await getClienteIdColumnSupported();
       const payload = { nombre, direccion, ciudad, telefono, email, descripcion, activa };
       if (soportaClienteId) {
-        payload.cliente_id = cliente_id;
+        // El cliente_id SIEMPRE es el del usuario autenticado, nunca el que
+        // venga en el body — de lo contrario un admin podría crear una sede
+        // colgada de otra empresa.
+        payload.cliente_id = clienteId;
+        const cliente = await db('clientes').where({ id: clienteId }).first();
+        if (cliente?.estilo_catalogo) {
+          payload.estilo_catalogo = cliente.estilo_catalogo;
+        }
       }
       const [inserted] = await db('sedes').insert(payload).returning('id');
       const sede = await db('sedes').where({ id: inserted.id }).first();
@@ -53,6 +72,17 @@ const SedesController = {
   async actualizarSede(req, res) {
     try {
       const { id } = req.params;
+      const clienteId = req.usuario?.cliente_id;
+      const soportaClienteId = await getClienteIdColumnSupported();
+
+      const existente = await db('sedes').where({ id }).whereNull('deleted_at').first();
+      if (!existente) return res.status(404).json({ error: 'Sede no encontrada' });
+      if (soportaClienteId && existente.cliente_id != null && existente.cliente_id !== clienteId) {
+        return res.status(403).json({ error: 'No puedes editar una sede de otra empresa' });
+      }
+
+      // No agregar estilo_catalogo aquí: solo el super-admin del SaaS puede fijarlo
+      // (vía ClientesController), nunca el admin del restaurante.
       const { nombre, direccion } = req.body;
       await db('sedes').where({ id }).whereNull('deleted_at').update({ nombre, direccion, updated_at: db.fn.now() });
       const sede = await db('sedes').where({ id }).whereNull('deleted_at').first();
@@ -65,6 +95,15 @@ const SedesController = {
   async eliminarSede(req, res) {
     try {
       const { id } = req.params;
+      const clienteId = req.usuario?.cliente_id;
+      const soportaClienteId = await getClienteIdColumnSupported();
+
+      const existente = await db('sedes').where({ id }).whereNull('deleted_at').first();
+      if (!existente) return res.status(404).json({ error: 'Sede no encontrada' });
+      if (soportaClienteId && existente.cliente_id != null && existente.cliente_id !== clienteId) {
+        return res.status(403).json({ error: 'No puedes eliminar una sede de otra empresa' });
+      }
+
       const updated = await db('sedes')
         .where({ id })
         .whereNull('deleted_at')

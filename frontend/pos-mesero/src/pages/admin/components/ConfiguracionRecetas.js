@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import axios from '../../../services/api';
 import AdminLayout from '../AdminLayout';
 import { formatMoney } from '../../../utils/formatters';
+import { IconChefHat, IconCheck, IconPlus, IconTrash, IconEdit } from '../../../components/Icons';
 import '../admin.css';
 
 const ConfiguracionRecetas = () => {
@@ -232,42 +233,27 @@ const ConfiguracionRecetas = () => {
     <AdminLayout>
       <div className="admin-section">
         <div className="section-header">
-          <h2>🍳 Gestión de Recetas</h2>
+          <h2><IconChefHat /> Gestión de Recetas</h2>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '20px' }}>
+        <div className="recetas-layout">
           {/* Panel Izquierdo - Seleccionar Producto */}
-          <div style={{ 
-            background: '#f8f9fa', 
-            padding: '20px', 
-            borderRadius: '8px',
-            borderLeft: '4px solid #7c5cdb'
-          }}>
-            <h4 style={{ marginBottom: '15px' }}>Productos</h4>
-            <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+          <div className="recetas-sidebar">
+            <h4>Productos</h4>
+            <div className="recetas-lista">
               {productos.map(producto => (
                 <button
                   key={producto.id}
                   onClick={() => handleSelectProducto(producto.id)}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    marginBottom: '8px',
-                    border: selectedProducto === producto.id ? '2px solid #7c5cdb' : '1px solid #ddd',
-                    background: selectedProducto === producto.id ? '#e8e0ff' : 'white',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    fontSize: '13px',
-                  }}
+                  className={`receta-producto-btn ${selectedProducto === producto.id ? 'is-active' : ''}`}
                 >
-                  <div style={{ fontWeight: 'bold' }}>{producto.nombre}</div>
-                  <div style={{ fontSize: '11px', color: '#666' }}>
+                  <div className="receta-producto-btn__nombre">{producto.nombre}</div>
+                  <div className="receta-producto-btn__precio">
                     {formatMoney(producto.precio, true)}
                   </div>
                   {recetas.find(r => r.producto_id === producto.id) && (
-                    <div style={{ fontSize: '11px', color: '#2f9e44', marginTop: '4px' }}>
-                      ✅ Con receta
+                    <div className="receta-producto-btn__badge">
+                      <IconCheck /> Con receta
                     </div>
                   )}
                 </button>
@@ -278,27 +264,27 @@ const ConfiguracionRecetas = () => {
           {/* Panel Derecho - Editor de Receta */}
           <div>
             {selectedProducto ? (
-              <form onSubmit={handleGuardarReceta} style={{ background: 'white', padding: '20px', borderRadius: '8px' }}>
-                <h4 style={{ marginBottom: '20px' }}>
+              <form onSubmit={handleGuardarReceta} className="receta-panel">
+                <h4>
                   Receta para: {productos.find(p => p.id === selectedProducto)?.nombre}
                 </h4>
 
                 <div className="form-row">
-                                  <div className="form-group">
-                                    <label>Sede *</label>
-                                    <select
-                                      name="sede_id"
-                                      value={formData.sede_id || (sedes.length === 1 ? sedes[0].id : '')}
-                                      onChange={e => setFormData(prev => ({ ...prev, sede_id: e.target.value }))}
-                                      required
-                                      disabled={sedes.length === 1}
-                                    >
-                                      <option value="">Seleccione una sede</option>
-                                      {sedes.map(sede => (
-                                        <option key={sede.id} value={sede.id}>{sede.nombre}</option>
-                                      ))}
-                                    </select>
-                                  </div>
+                  <div className="form-group">
+                    <label>Sede *</label>
+                    <select
+                      name="sede_id"
+                      value={formData.sede_id || (sedes.length === 1 ? sedes[0].id : '')}
+                      onChange={e => setFormData(prev => ({ ...prev, sede_id: e.target.value }))}
+                      required
+                      disabled={sedes.length === 1}
+                    >
+                      <option value="">Seleccione una sede</option>
+                      {sedes.map(sede => (
+                        <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="form-group">
                     <label>Descripción</label>
                     <input
@@ -323,8 +309,8 @@ const ConfiguracionRecetas = () => {
                 </div>
 
                 {/* Agregar Insumo */}
-                <div style={{ background: '#f0f0f0', padding: '15px', borderRadius: '4px', marginBottom: '20px' }}>
-                  <h5 style={{ marginBottom: '15px' }}>➕ Agregar Insumo</h5>
+                <div className="receta-agregar-box">
+                  <h5><IconPlus /> Agregar Insumo</h5>
 
                   <div className="form-row">
                     <div className="form-group">
@@ -353,7 +339,7 @@ const ConfiguracionRecetas = () => {
                       />
                       {/* Mostrar conversión sugerida */}
                       {nuevoInsumo.cantidad && nuevoInsumo.insumo_id && nuevoInsumo.unidad_medida_id && (
-                        <div style={{ fontSize: '11px', color: '#7c5cdb', marginTop: '5px', fontStyle: 'italic' }}>
+                        <div className="receta-conversion-hint">
                           {(() => {
                             const insumo = insumos.find(i => i.id === parseInt(nuevoInsumo.insumo_id));
                             const unidadActual = unidades.find(u => u.id === parseInt(nuevoInsumo.unidad_medida_id));
@@ -406,7 +392,7 @@ const ConfiguracionRecetas = () => {
                         className="btn btn-primary"
                         onClick={agregarInsumo}
                       >
-                        Agregar Insumo
+                        <IconPlus /> Agregar Insumo
                       </button>
                     </div>
                   </div>
@@ -415,70 +401,67 @@ const ConfiguracionRecetas = () => {
                 {/* Tabla de Insumos */}
                 {insumosReceta.length > 0 && (
                   <div style={{ marginBottom: '20px' }}>
-                    <h5 style={{ marginBottom: '10px' }}>Insumos en Receta:</h5>
-                    <table className="table table-sm" style={{ fontSize: '12px' }}>
-                      <thead>
-                        <tr>
-                          <th>Insumo</th>
-                          <th>Cantidad</th>
-                          <th>Costo Unitario</th>
-                          <th>Costo Total</th>
-                          <th>Acción</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {insumosReceta.map((item, idx) => {
-                          const cantidad = parseFloat(item.cantidad) || 0;
-                          const costoUnitario = parseFloat(item.costo_unitario) || 0;
-                          const costoTotal = cantidad * costoUnitario;
-                          
-                          return (
-                            <tr key={idx}>
-                              <td>{item.insumo_nombre}</td>
-                              <td>
-                                {cantidad.toFixed(2)} {item.unidad_medida || 'und'}
-                              </td>
-                              <td>${costoUnitario.toFixed(2)}</td>
-                              <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                                ${costoTotal.toFixed(2)}
-                              </td>
-                              <td>
-                                <button
-                                  type="button"
-                                  className="btn btn-sm btn-danger"
-                                  onClick={() => eliminarInsumo(idx)}
-                                >
-                                  🗑️
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                    <h5 className="receta-insumos-titulo">Insumos en Receta:</h5>
+                    <div className="table-responsive">
+                      <table className="table table-sm">
+                        <thead>
+                          <tr>
+                            <th>Insumo</th>
+                            <th>Cantidad</th>
+                            <th>Costo Unitario</th>
+                            <th>Costo Total</th>
+                            <th>Acción</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {insumosReceta.map((item, idx) => {
+                            const cantidad = parseFloat(item.cantidad) || 0;
+                            const costoUnitario = parseFloat(item.costo_unitario) || 0;
+                            const costoTotal = cantidad * costoUnitario;
+
+                            return (
+                              <tr key={idx}>
+                                <td>{item.insumo_nombre}</td>
+                                <td>
+                                  {cantidad.toFixed(2)} {item.unidad_medida || 'und'}
+                                </td>
+                                <td>${costoUnitario.toFixed(2)}</td>
+                                <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                                  ${costoTotal.toFixed(2)}
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-danger"
+                                    onClick={() => eliminarInsumo(idx)}
+                                    aria-label="Eliminar insumo"
+                                  >
+                                    <IconTrash />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
 
                     {/* Resumen de Costos */}
-                    <div style={{
-                      background: '#e8f5e9',
-                      padding: '15px',
-                      borderRadius: '4px',
-                      marginTop: '15px',
-                      borderLeft: '4px solid #4caf50'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div className="receta-resumen-costos">
+                      <div className="receta-resumen-linea">
                         <span><strong>Costo Total Producción:</strong></span>
-                        <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#c92a2a' }}>
+                        <span className="receta-resumen-total">
                           ${costoTotal.toFixed(2)}
                         </span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div className="receta-resumen-linea">
                         <span><strong>Costo por Unidad/Porción:</strong></span>
-                        <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#2f9e44' }}>
+                        <span className="receta-resumen-unidad">
                           ${costoPorUnidad.toFixed(2)}
                         </span>
                       </div>
                       {recetaActual && (
-                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#666', borderTop: '1px solid #ddd', paddingTop: '8px' }}>
+                        <div className="receta-version-info">
                           <strong>Versión {recetaActual.version}</strong> • Costo anterior: ${recetaActual.costo_total}
                         </div>
                       )}
@@ -500,18 +483,13 @@ const ConfiguracionRecetas = () => {
                     Cancelar
                   </button>
                   <button type="submit" className="btn btn-primary" disabled={insumosReceta.length === 0}>
-                    {recetaActual ? '✏️ Actualizar Receta' : '➕ Crear Receta'}
+                    {recetaActual ? <><IconEdit /> Actualizar Receta</> : <><IconPlus /> Crear Receta</>}
                   </button>
                 </div>
               </form>
             ) : (
-              <div style={{
-                background: '#f8f9fa',
-                padding: '40px',
-                borderRadius: '8px',
-                textAlign: 'center',
-                color: '#999'
-              }}>
+              <div className="admin-empty-state" style={{ background: 'var(--rb-charcoal-800)', border: '1px solid var(--rb-charcoal-700)', borderRadius: 14 }}>
+                <IconChefHat />
                 <p>Seleccione un producto para crear/editar su receta</p>
               </div>
             )}

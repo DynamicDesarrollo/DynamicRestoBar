@@ -1,14 +1,19 @@
 const db = require('../../config/database');
 const PrintDispatchService = require('../../services/PrintDispatchService');
+const { sedesDelCliente } = require('../../utils/tenantScope');
 
 class ImpresorasController {
 
   // GET /admin/impresoras
   static async getImpresoras(req, res) {
     try {
-      const sede_id = req.query.sede_id || req.usuario?.sedeId;
-      let query = db('impresoras').whereNull('deleted_at').orderBy('nombre');
-      if (sede_id) query = query.where('sede_id', sede_id);
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+      let query = db('impresoras').whereNull('deleted_at').whereIn('sede_id', sedeIds).orderBy('nombre');
+
+      const querySedeId = req.query.sede_id;
+      if (querySedeId && sedeIds.includes(Number(querySedeId))) {
+        query = query.where('sede_id', querySedeId);
+      }
 
       const impresoras = await query.select(
         'id', 'sede_id', 'nombre', 'tipo', 'modelo',
@@ -16,9 +21,9 @@ class ImpresorasController {
       );
 
       // Adjuntar la sede a cada impresora
-      const sedeIds = [...new Set(impresoras.map(i => i.sede_id))];
-      const sedes = sedeIds.length
-        ? await db('sedes').whereIn('id', sedeIds).select('id', 'nombre')
+      const sedeIdsEnResultado = [...new Set(impresoras.map(i => i.sede_id))];
+      const sedes = sedeIdsEnResultado.length
+        ? await db('sedes').whereIn('id', sedeIdsEnResultado).select('id', 'nombre')
         : [];
       const sedeMap = Object.fromEntries(sedes.map(s => [s.id, s.nombre]));
 
@@ -41,6 +46,11 @@ class ImpresorasController {
 
       if (!sede_id || !nombre || !ip_address) {
         return res.status(400).json({ error: 'sede_id, nombre e ip_address son obligatorios' });
+      }
+
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+      if (!sedeIds.includes(Number(sede_id))) {
+        return res.status(403).json({ error: 'La sede indicada no pertenece a tu empresa' });
       }
 
       const [id] = await db('impresoras').insert({
@@ -69,6 +79,18 @@ class ImpresorasController {
       const { id } = req.params;
       const { sede_id, nombre, tipo, modelo, ip_address, puerto, estado } = req.body;
 
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+      const impresora = await db('impresoras').where('id', id).whereNull('deleted_at').first();
+      if (!impresora) {
+        return res.status(404).json({ error: 'Impresora no encontrada' });
+      }
+      if (!sedeIds.includes(impresora.sede_id)) {
+        return res.status(403).json({ error: 'No puedes editar una impresora de otra empresa' });
+      }
+      if (sede_id !== undefined && !sedeIds.includes(Number(sede_id))) {
+        return res.status(403).json({ error: 'La sede indicada no pertenece a tu empresa' });
+      }
+
       const updates = { updated_at: new Date() };
       if (sede_id   !== undefined) updates.sede_id    = sede_id;
       if (nombre    !== undefined) updates.nombre     = nombre;
@@ -79,8 +101,8 @@ class ImpresorasController {
       if (estado    !== undefined) updates.estado     = estado;
 
       await db('impresoras').where('id', id).update(updates);
-      const impresora = await db('impresoras').where('id', id).first();
-      return res.json({ success: true, data: impresora });
+      const actualizada = await db('impresoras').where('id', id).first();
+      return res.json({ success: true, data: actualizada });
     } catch (err) {
       console.error('❌ actualizarImpresora:', err.message);
       return res.status(500).json({ error: err.message });
@@ -91,6 +113,15 @@ class ImpresorasController {
   static async eliminarImpresora(req, res) {
     try {
       const { id } = req.params;
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+      const impresora = await db('impresoras').where('id', id).whereNull('deleted_at').first();
+      if (!impresora) {
+        return res.status(404).json({ error: 'Impresora no encontrada' });
+      }
+      if (!sedeIds.includes(impresora.sede_id)) {
+        return res.status(403).json({ error: 'No puedes eliminar una impresora de otra empresa' });
+      }
+
       await db('impresoras').where('id', id).update({ deleted_at: new Date() });
       return res.json({ success: true });
     } catch (err) {
@@ -103,10 +134,14 @@ class ImpresorasController {
   static async testImpresora(req, res) {
     try {
       const { id } = req.params;
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
       const impresora = await db('impresoras').where('id', id).whereNull('deleted_at').first();
 
       if (!impresora) {
         return res.status(404).json({ error: 'Impresora no encontrada' });
+      }
+      if (!sedeIds.includes(impresora.sede_id)) {
+        return res.status(403).json({ error: 'No puedes probar una impresora de otra empresa' });
       }
       if (!impresora.ip_address) {
         return res.status(400).json({ error: 'La impresora no tiene IP configurada' });

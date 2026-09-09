@@ -1,0 +1,194 @@
+.comprobante-print-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(10, 7, 5, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  padding: 24px 16px;
+}
+
+.comprobante-print-toolbar {
+  width: 100%;
+  max-width: 8.5in;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--rb-cream-100, #f7f1e6);
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.comprobante-print-toolbar__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.comprobante-print-page {
+  background: #fff;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  width: 8.5in;
+  height: 5.5in;
+  flex-shrink: 0;
+}
+
+.comprobante-doc {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0.4in 0.5in;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  color: #201811;
+  display: flex;
+  flex-direction: column;
+}
+
+.comprobante-doc__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.comprobante-doc__negocio h1 {
+  margin: 0 0 4px;
+  font-size: 1.3rem;
+  letter-spacing: 0.02em;
+}
+
+.comprobante-doc__negocio p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #5a4c3b;
+}
+
+.comprobante-doc__tipo {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.comprobante-doc__tipo span {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #5a4c3b;
+}
+
+.comprobante-doc__tipo strong {
+  display: block;
+  font-size: 1.15rem;
+  margin-top: 2px;
+}
+
+.comprobante-doc--ingreso .comprobante-doc__tipo strong { color: #1e7d34; }
+.comprobante-doc--egreso .comprobante-doc__tipo strong { color: #a3312a; }
+
+.comprobante-doc__divider {
+  border-top: 1.5px solid #201811;
+  margin: 14px 0;
+}
+
+.comprobante-doc__filas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 24px;
+}
+
+.comprobante-doc__fila {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.comprobante-doc__label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7a6a54;
+}
+
+.comprobante-doc__valor {
+  font-size: 0.92rem;
+}
+
+.comprobante-doc__monto {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: 1.5px solid #201811;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.comprobante-doc__monto span {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.comprobante-doc__monto strong {
+  font-size: 1.25rem;
+}
+
+.comprobante-doc__observaciones {
+  margin-top: 12px;
+}
+
+.comprobante-doc__observaciones p {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+}
+
+.comprobante-doc__firmas {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+}
+
+.comprobante-doc__firma {
+  flex: 1;
+  text-align: center;
+}
+
+.comprobante-doc__firma-linea {
+  border-top: 1px solid #5a4c3b;
+  margin-bottom: 6px;
+}
+
+.comprobante-doc__firma span {
+  font-size: 0.72rem;
+  color: #5a4c3b;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .comprobante-print-page,
+  .comprobante-print-page * {
+    visibility: visible;
+  }
+  .comprobante-print-overlay {
+    position: static;
+    background: none;
+    padding: 0;
+    display: block;
+  }
+  .comprobante-print-page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    box-shadow: none;
+  }
+  .no-print {
+    display: none !important;
+  }
+  @page {
+    size: 8.5in 5.5in;
+    margin: 0;
+  }
+}

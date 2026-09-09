@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import axios from '../../../services/api';
 import AdminLayout from '../AdminLayout';
+import { IconUser, IconPlus, IconEdit, IconTrash, IconClose, IconCheck } from '../../../components/Icons';
 import '../admin.css';
 
 const initialForm = {
@@ -88,7 +89,9 @@ const ConfiguracionUsuarios = () => {
     setForm({
       nombre: usuario.nombre,
       email: usuario.email,
-      pin: usuario.pin,
+      // El PIN no se devuelve desde la API: se deja vacío y solo se envía
+      // si el administrador escribe uno nuevo.
+      pin: '',
       rol_id: usuario.rol_id,
       sede_id: usuario.sede_id,
     });
@@ -110,16 +113,17 @@ const ConfiguracionUsuarios = () => {
     <AdminLayout>
       <div className="admin-section">
         <div className="section-header">
-          <h2>👤 Gestión de Usuarios</h2>
-          <button className="btn btn-primary" onClick={() => { setShowModal(true); setForm(initialForm); setEditingId(null); }}>+ Crear Usuario</button>
+          <h2><IconUser /> Gestión de Usuarios</h2>
+          <button className="btn btn-primary" onClick={() => { setShowModal(true); setForm(initialForm); setEditingId(null); }}>
+            <IconPlus /> Crear Usuario
+          </button>
         </div>
-        <div style={{ marginTop: '20px' }}>
+        <div className="table-responsive">
           <table className="table table-hover">
             <thead>
               <tr>
                 <th>Nombre</th>
                 <th>Email</th>
-                <th>PIN</th>
                 <th>Rol</th>
                 <th>Sede</th>
                 <th>Acciones</th>
@@ -128,24 +132,38 @@ const ConfiguracionUsuarios = () => {
             <tbody>
               {usuarios.map(u => (
                 <tr key={u.id}>
-                  <td>{u.nombre}</td>
-                  <td>{u.email}</td>
-                  <td>{u.pin}</td>
+                  <td><strong>{u.nombre}</strong></td>
+                  <td style={{ color: 'var(--rb-cream-500)' }}>{u.email}</td>
                   <td>{roles.find(r => r.id === u.rol_id)?.nombre || u.rol_id}</td>
-                  <td>{sedes.find(s => s.id === u.sede_id)?.nombre || u.sede_id}</td>
+                  <td style={{ color: 'var(--rb-cream-500)' }}>{sedes.find(s => s.id === u.sede_id)?.nombre || u.sede_id}</td>
                   <td>
-                    <button className="btn btn-sm btn-warning" onClick={() => handleEditar(u)}>Editar</button>
-                    <button className="btn btn-sm btn-danger" onClick={() => handleEliminar(u.id)}>Eliminar</button>
+                    <button className="btn btn-sm btn-warning" style={{ marginRight: 6 }} onClick={() => handleEditar(u)}>
+                      <IconEdit /> Editar
+                    </button>
+                    <button className="btn btn-sm btn-danger" onClick={() => handleEliminar(u.id)}>
+                      <IconTrash /> Eliminar
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        {usuarios.length === 0 && (
+          <div className="admin-empty-state">
+            <IconUser />
+            <p>No hay usuarios registrados</p>
+          </div>
+        )}
+
         {showModal && (
           <div className="modal-overlay" onClick={() => setShowModal(false)}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
-              <h3>{editingId ? 'Editar Usuario' : 'Crear Usuario'}</h3>
+              <div className="modal-header">
+                <h3>{editingId ? 'Editar Usuario' : 'Crear Usuario'}</h3>
+                <button className="btn-close" onClick={() => setShowModal(false)}><IconClose /></button>
+              </div>
               <form onSubmit={handleGuardar}>
                 <div className="form-group">
                   <label>Nombre *</label>
@@ -156,8 +174,15 @@ const ConfiguracionUsuarios = () => {
                   <input name="email" value={form.email} onChange={handleInputChange} required type="email" />
                 </div>
                 <div className="form-group">
-                  <label>PIN *</label>
-                  <input name="pin" value={form.pin} onChange={handleInputChange} required maxLength={4} />
+                  <label>PIN {editingId ? '' : '*'}</label>
+                  <input
+                    name="pin"
+                    value={form.pin}
+                    onChange={handleInputChange}
+                    required={!editingId}
+                    maxLength={4}
+                    placeholder={editingId ? 'Dejar vacío para no cambiarlo' : ''}
+                  />
                 </div>
                 <div className="form-group">
                   <label>Rol *</label>
@@ -179,7 +204,7 @@ const ConfiguracionUsuarios = () => {
                 </div>
                 <div className="form-actions">
                   <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary">Guardar</button>
+                  <button type="submit" className="btn btn-primary"><IconCheck /> Guardar</button>
                 </div>
               </form>
             </div>

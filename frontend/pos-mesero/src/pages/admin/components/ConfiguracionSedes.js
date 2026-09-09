@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../../stores';
 import { sedesService } from '../../../services/api';
 import AdminLayout from '../AdminLayout';
+import { IconBuilding, IconPlus, IconEdit, IconTrash, IconCheck } from '../../../components/Icons';
 import './SedeForm.css';
 
 // ...existing code...
@@ -99,81 +100,113 @@ const ConfiguracionSedes = () => {
   return (
     <AdminLayout>
       <div className="admin-section">
-        <h2>Gestión de Sedes</h2>
-        <button className="btn btn-primary" onClick={handleNew}>+ Nueva Sede</button>
-        <table className="table mt-3">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Dirección</th>
-              <th>Ciudad</th>
-              <th>Teléfono</th>
-              <th>Email</th>
-              <th>Activa</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sedes.map((sede) => (
-              <tr key={sede.id}>
-                <td>{sede.nombre}</td>
-                <td>{sede.direccion}</td>
-                <td>{sede.ciudad}</td>
-                <td>{sede.telefono}</td>
-                <td>{sede.email}</td>
-                <td>{sede.activa ? 'Sí' : 'No'}</td>
-                <td>
-                  <button className="btn btn-sm btn-info" onClick={() => handleEdit(sede)}>Editar</button>
-                  <button className="btn btn-sm btn-danger" title="Eliminar" style={{marginLeft: 6}} onClick={() => handleDelete(sede)}>
-                    <span role="img" aria-label="delete">🗑️</span>
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="section-header">
+          <h2><IconBuilding /> Gestión de Sedes</h2>
+          <button className="btn btn-primary" onClick={handleNew}>
+            <IconPlus /> Nueva Sede
+          </button>
+        </div>
+
+        {sedes.length > 0 ? (
+          <div className="table-responsive">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Dirección</th>
+                  <th>Ciudad</th>
+                  <th>Teléfono</th>
+                  <th>Email</th>
+                  <th>Activa</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sedes.map((sede) => (
+                  <tr key={sede.id}>
+                    <td>{sede.nombre}</td>
+                    <td>{sede.direccion}</td>
+                    <td>{sede.ciudad}</td>
+                    <td>{sede.telefono}</td>
+                    <td>{sede.email}</td>
+                    <td>
+                      <span className={sede.activa ? 'badge-disponible' : 'badge-ocupada'}>
+                        {sede.activa ? 'Sí' : 'No'}
+                      </span>
+                    </td>
+                    <td>
+                      <button className="btn btn-sm btn-info" onClick={() => handleEdit(sede)}>
+                        <IconEdit /> Editar
+                      </button>
+                      <button
+                        className="btn btn-sm btn-danger"
+                        title="Eliminar"
+                        style={{ marginLeft: 6 }}
+                        onClick={() => handleDelete(sede)}
+                      >
+                        <IconTrash />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="admin-empty-state">
+            <IconBuilding />
+            <p>Aún no has registrado ninguna sede.</p>
+          </div>
+        )}
+
         {showModal && (
-          <div className="sede-modal-nuevo">
-            <div className="sede-modal-header-nuevo">
-              <h3>{editingId ? 'Editar Sede' : 'Nueva Sede'}</h3>
-              <button type="button" className="close" onClick={() => setShowModal(false)}>&times;</button>
+          <div className="sede-modal-overlay" onClick={() => setShowModal(false)}>
+            <div className="sede-modal-nuevo" onClick={(e) => e.stopPropagation()}>
+              <div className="sede-modal-header-nuevo">
+                <h3>{editingId ? 'Editar Sede' : 'Nueva Sede'}</h3>
+                <button type="button" className="close" onClick={() => setShowModal(false)}>&times;</button>
+              </div>
+              <form onSubmit={handleSubmit} className="sede-form-nuevo">
+                <div className="sede-form-grid-nuevo">
+                  <div className="sede-form-group-nuevo">
+                    <label>Nombre</label>
+                    <input name="nombre" value={form.nombre} onChange={handleChange} required />
+                  </div>
+                  <div className="sede-form-group-nuevo">
+                    <label>Dirección</label>
+                    <input name="direccion" value={form.direccion} onChange={handleChange} />
+                  </div>
+                  <div className="sede-form-group-nuevo">
+                    <label>Ciudad</label>
+                    <input name="ciudad" value={form.ciudad} onChange={handleChange} />
+                  </div>
+                  <div className="sede-form-group-nuevo">
+                    <label>Teléfono</label>
+                    <input name="telefono" value={form.telefono} onChange={handleChange} />
+                  </div>
+                  <div className="sede-form-group-nuevo">
+                    <label>Email</label>
+                    <input name="email" value={form.email} onChange={handleChange} />
+                  </div>
+                  <div className="sede-form-group-nuevo sede-form-group--full-nuevo">
+                    <label>Descripción</label>
+                    <textarea name="descripcion" value={form.descripcion} onChange={handleChange} rows={2} />
+                  </div>
+                  <div className="sede-form-group-nuevo sede-form-group--full-nuevo sede-form-check-nuevo">
+                    <input type="checkbox" name="activa" checked={form.activa} onChange={handleChange} id="activaCheck" />
+                    <label htmlFor="activaCheck">Activa</label>
+                  </div>
+                </div>
+                <div className="sede-modal-footer-nuevo">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    <IconCheck /> Guardar
+                  </button>
+                </div>
+              </form>
             </div>
-            <form onSubmit={handleSubmit} className="sede-form-nuevo">
-              <div className="sede-form-grid-nuevo">
-                <div className="sede-form-group-nuevo">
-                  <label>Nombre</label>
-                  <input name="nombre" value={form.nombre} onChange={handleChange} required />
-                </div>
-                <div className="sede-form-group-nuevo">
-                  <label>Dirección</label>
-                  <input name="direccion" value={form.direccion} onChange={handleChange} />
-                </div>
-                <div className="sede-form-group-nuevo">
-                  <label>Ciudad</label>
-                  <input name="ciudad" value={form.ciudad} onChange={handleChange} />
-                </div>
-                <div className="sede-form-group-nuevo">
-                  <label>Teléfono</label>
-                  <input name="telefono" value={form.telefono} onChange={handleChange} />
-                </div>
-                <div className="sede-form-group-nuevo">
-                  <label>Email</label>
-                  <input name="email" value={form.email} onChange={handleChange} />
-                </div>
-                <div className="sede-form-group-nuevo sede-form-group--full-nuevo">
-                  <label>Descripción</label>
-                  <textarea name="descripcion" value={form.descripcion} onChange={handleChange} rows={2} />
-                </div>
-                <div className="sede-form-group-nuevo sede-form-group--full-nuevo sede-form-check-nuevo">
-                  <input type="checkbox" name="activa" checked={form.activa} onChange={handleChange} id="activaCheck" />
-                  <label htmlFor="activaCheck">Activa</label>
-                </div>
-              </div>
-              <div className="sede-modal-footer-nuevo">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary">Guardar</button>
-              </div>
-            </form>
           </div>
         )}
       </div>

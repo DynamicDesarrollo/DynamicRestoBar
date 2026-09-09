@@ -23,46 +23,63 @@ const bridgeRoutes = require('./routes/bridgeRoutes');
 const app = express();
 const server = http.createServer(app);
 
+// ========================================
+// ORÍGENES PERMITIDOS (CORS y Socket.IO)
+// ========================================
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL_POS || 'http://localhost:3001',
+  process.env.FRONTEND_URL_KDS || 'http://localhost:3002',
+  process.env.FRONTEND_URL_ADMIN || 'http://localhost:3003',
+];
+
+// Origen de red local (localhost o IP privada), para que fuera de producción
+// se pueda entrar desde otro equipo de la misma red sin abrir el CORS a
+// cualquier sitio de internet. Esto importa porque el backend se instala en
+// el PC del cliente para imprimir y ese despliegue suele quedar con
+// NODE_ENV=development.
+const esOrigenDeRedLocal = (origin) => {
+  try {
+    const { hostname } = new URL(origin);
+    return (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '::1' ||
+      /^10\./.test(hostname) ||
+      /^192\.168\./.test(hostname) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+    );
+  } catch {
+    return false;
+  }
+};
+
+const origenPermitido = (origin) => {
+  // Sin origin: peticiones del propio servidor, curl, apps de escritorio.
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  return process.env.NODE_ENV !== 'production' && esOrigenDeRedLocal(origin);
+};
+
 // Socket.IO setup
 const io = new SocketIOServer(server, {
   cors: {
-    origin: [
-      process.env.FRONTEND_URL_POS || 'http://localhost:3001',
-      process.env.FRONTEND_URL_KDS || 'http://localhost:3002',
-      process.env.FRONTEND_URL_ADMIN || 'http://localhost:3003',
-      'http://192.168.1.34:3001', // IP local para desarrollo
-      'http://192.168.1.34:3002',
-      'http://192.168.1.34:3003',
-    ],
+    origin: (origin, callback) => {
+      if (origenPermitido(origin)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST'],
   },
   transports: ['websocket', 'polling'],
 });
 
-// Aplicación y servidor configurados
-// (io se usa localmente en este archivo)
-
 // Middleware de seguridad
 app.use(helmet());
 
-// CORS
 const corsOptions = {
-  origin: function (origin, callback) {
-    // En desarrollo, permitir todas las conexiones
-    if (process.env.NODE_ENV === 'development') {
-      callback(null, true);
-    } else {
-      const allowedOrigins = [
-        process.env.FRONTEND_URL_POS || 'http://localhost:3001',
-        process.env.FRONTEND_URL_KDS || 'http://localhost:3002',
-        process.env.FRONTEND_URL_ADMIN || 'http://localhost:3003',
-      ];
-      if (allowedOrigins.includes(origin) || !origin) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    }
+  origin: (origin, callback) => {
+    if (origenPermitido(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
 };
@@ -83,6 +100,40 @@ app.use('/uploads/clientes', (req, res, next) => {
   next();
 });
 app.use('/uploads/clientes', express.static(path.join(__dirname, 'uploads/clientes'), {
+  setHeaders: (res, path, stat) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
+// Servir archivos estáticos de fotos de productos (platos) con CORS
+app.use('/uploads/productos', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+app.use('/uploads/productos', express.static(path.join(__dirname, 'uploads/productos'), {
+  setHeaders: (res, path, stat) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
+// Servir archivos estáticos de adjuntos de comprobantes (foto/PDF) con CORS
+app.use('/uploads/comprobantes', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+app.use('/uploads/comprobantes', express.static(path.join(__dirname, 'uploads/comprobantes'), {
   setHeaders: (res, path, stat) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
@@ -138,13 +189,9 @@ app.use('/api/v1/activar-cuenta', activacionRoutes);
 app.use('/api/v1/bridge', bridgeRoutes);
 const sedesRoutes = require('./routes/sedesRoutes');
 app.use('/api/v1/sedes', sedesRoutes);
-const adminEmpresaRoutes = require('./routes/adminEmpresaRoutes');
-app.use('/api/v1/admin-empresa', adminEmpresaRoutes);
-// Pagos de clientes
+// Pagos de clientes (facturación del SaaS: solo super-admin)
 const pagosClientesRoutes = require('./routes/pagosClientesRoutes');
 app.use('/api/v1/pagos-clientes', pagosClientesRoutes);
-const activacionUsuarioRoutes = require('./routes/activacionUsuarioRoutes');
-app.use('/api/v1/usuarios', activacionUsuarioRoutes);
 
 // Token de activación (exponer endpoint para obtener token por usuario)
 const tokenActivacionRoutes = require('./routes/tokenActivacionRoutes');

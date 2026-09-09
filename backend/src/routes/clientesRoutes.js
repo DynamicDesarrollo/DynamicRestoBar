@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const verificarToken = require('../middleware/verificarToken');
-const { allowRoles } = require('../middleware/roles');
+const { requireSuperAdmin } = require('../middleware/roles');
 
 const uploadClienteFoto = require('../middleware/uploadClienteFoto');
 const ClientesController = require('../controllers/ClientesController');
 
-// Proteger todas las rutas de clientes
+// Proteger todas las rutas de clientes: solo el super-admin del SaaS
 router.use(verificarToken);
-router.use(allowRoles('SUPER_ADMIN'));
+router.use(requireSuperAdmin);
 
 // CRUD Clientes
 router.get('/', ClientesController.listarClientes);

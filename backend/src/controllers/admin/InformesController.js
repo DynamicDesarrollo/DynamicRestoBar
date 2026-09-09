@@ -1,10 +1,23 @@
 const db = require('../../config/database');
+const { sedesDelCliente } = require('../../utils/tenantScope');
+
+// El sede_id de query solo se respeta si pertenece al cliente autenticado;
+// de lo contrario cualquier admin podría leer los reportes de otro
+// restaurante con solo cambiar ese parámetro en la URL.
+const resolverSedeValidada = async (req) => {
+  const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+  const solicitada = req.query.sede_id;
+  if (solicitada && sedeIds.includes(Number(solicitada))) {
+    return Number(solicitada);
+  }
+  return req.usuario?.sedeId || req.usuario?.sede_id;
+};
 
 class InformesController {
   // Reporte de ventas diarias
   static async getReporteVentas(req, res) {
     try {
-      const sede_id = req.query.sede_id || req.usuario?.sedeId;
+      const sede_id = await resolverSedeValidada(req);
       const { fecha_inicio, fecha_fin } = req.query;
 
       let query = db('ordenes')
@@ -45,7 +58,7 @@ class InformesController {
   // Reporte de productos más vendidos
   static async getReporteProductos(req, res) {
     try {
-      const sede_id = req.query.sede_id || req.usuario?.sedeId;
+      const sede_id = await resolverSedeValidada(req);
       const { fecha_inicio, fecha_fin, limite = 10 } = req.query;
 
       let query = db('orden_items')
@@ -90,7 +103,7 @@ class InformesController {
   // Reporte de inventario
   static async getReporteInventario(req, res) {
     try {
-      const sede_id = req.query.sede_id || req.usuario?.sedeId;
+      const sede_id = await resolverSedeValidada(req);
 
       const inventarioData = await db('insumos')
         .where('sede_id', sede_id)
@@ -135,7 +148,7 @@ class InformesController {
   // Reporte de caja
   static async getReporteCaja(req, res) {
     try {
-      const sede_id = req.query.sede_id || req.usuario?.sedeId;
+      const sede_id = await resolverSedeValidada(req);
       const { fecha } = req.query;
 
 
@@ -248,7 +261,7 @@ class InformesController {
   // Reporte de utilidad
   static async getReporteUtilidad(req, res) {
     try {
-      const sede_id = req.query.sede_id || req.usuario?.sedeId;
+      const sede_id = await resolverSedeValidada(req);
       const { periodo = 'diario', fecha_inicio, fecha_fin, categoria_id } = req.query;
 
       const periodoMap = {
@@ -309,7 +322,7 @@ class InformesController {
   // Reporte de métodos de pago
   static async getReporteMetodosPago(req, res) {
     try {
-      const sede_id = req.query.sede_id || req.usuario?.sedeId;
+      const sede_id = await resolverSedeValidada(req);
       const { fecha_inicio, fecha_fin } = req.query;
 
       let query = db('pago_facturas')

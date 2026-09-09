@@ -1,11 +1,13 @@
 const db = require('../../config/database');
+const { sedesDelCliente } = require('../../utils/tenantScope');
 
 class InsumosController {
-  // Obtener todos los insumos
+  // Obtener todos los insumos del cliente autenticado
   static async getInsumos(req, res) {
     try {
       const { sedeId } = req.query;
-      const clienteId = req.usuario?.cliente_id || req.query.clienteId;
+      const clienteId = req.usuario?.cliente_id;
+      const sedeIds = await sedesDelCliente(clienteId);
 
       let query = db('insumos')
         .leftJoin('unidad_medida', 'insumos.unidad_medida_id', 'unidad_medida.id')
@@ -21,18 +23,19 @@ class InsumosController {
           'insumos.costo_unitario',
           'insumos.costo_promedio',
           'insumos.proveedor_principal_id',
+          'insumos.sede_id',
           'unidad_medida.nombre as unidad_medida',
           'proveedores.nombre as proveedor'
         )
-        .where('insumos.activo', true);
+        .where('insumos.activo', true)
+        .andWhere((q) => {
+          q.whereNull('insumos.sede_id').orWhereIn('insumos.sede_id', sedeIds);
+        });
 
-      // Filtrar por sede si está presente
-      if (sedeId) {
+      // Filtrar por una sede puntual, solo si es del propio cliente
+      if (sedeId && sedeIds.includes(Number(sedeId))) {
         query = query.andWhere('insumos.sede_id', sedeId);
       }
-
-      // Nota: la tabla `insumos` no contiene columna `cliente_id` en el esquema.
-      // Evitamos filtrar por cliente aquí para prevenir errores SQL cuando la columna no exista.
 
       const insumos = await query.orderBy('insumos.nombre', 'asc');
 
@@ -53,6 +56,7 @@ class InsumosController {
   static async getInsumoById(req, res) {
     try {
       const { id } = req.params;
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
 
       const insumo = await db('insumos')
         .leftJoin('unidad_medida', 'insumos.unidad_medida_id', 'unidad_medida.id')
@@ -69,6 +73,9 @@ class InsumosController {
       if (!insumo) {
         return res.status(404).json({ error: 'Insumo no encontrado' });
       }
+      if (insumo.sede_id != null && !sedeIds.includes(insumo.sede_id)) {
+        return res.status(403).json({ error: 'No puedes ver un insumo de otra empresa' });
+      }
 
       return res.json({
         success: true,
@@ -83,9 +90,11 @@ class InsumosController {
     }
   }
 
-  // Obtener insumos bajo stock
+  // Obtener insumos bajo stock del cliente autenticado
   static async getInsumosBajoStock(req, res) {
     try {
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+
       const insumos = await db('insumos')
         .leftJoin('unidad_medida', 'insumos.unidad_medida_id', 'unidad_medida.id')
         .select(
@@ -96,6 +105,9 @@ class InsumosController {
           'unidad_medida.nombre as unidad_medida'
         )
         .where('insumos.activo', true)
+        .andWhere((q) => {
+          q.whereNull('insumos.sede_id').orWhereIn('insumos.sede_id', sedeIds);
+        })
         .whereRaw('insumos.stock_actual <= insumos.stock_minimo')
         .orderBy('insumos.stock_actual', 'asc');
 
@@ -125,13 +137,21 @@ class InsumosController {
         stock_maximo,
         costo_unitario,
         proveedor_principal_id,
-        sede_id,
       } = req.body;
 
       if (!nombre || !unidad_medida_id || costo_unitario === undefined || costo_unitario === null) {
         return res.status(400).json({
           error: 'Nombre, unidad de medida y costo unitario son requeridos',
         });
+      }
+
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+      let sede_id = req.body.sede_id || null;
+      if (sede_id && !sedeIds.includes(Number(sede_id))) {
+        return res.status(403).json({ error: 'La sede indicada no pertenece a tu empresa' });
+      }
+      if (!sede_id) {
+        sede_id = req.usuario?.sede_id || null;
       }
 
       // Verificar si el SKU ya existe (si se proporciona)
@@ -158,7 +178,7 @@ class InsumosController {
         costo_unitario: parseFloat(costo_unitario),
         costo_promedio: parseFloat(costo_unitario),
         proveedor_principal_id: proveedor_principal_id || null,
-        sede_id: sede_id || null,
+        sede_id,
         activo: true,
       }).returning('*');
 
@@ -199,6 +219,10 @@ class InsumosController {
 
       if (!insumo) {
         return res.status(404).json({ error: 'Insumo no encontrado' });
+      }
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+      if (insumo.sede_id != null && !sedeIds.includes(insumo.sede_id)) {
+        return res.status(403).json({ error: 'No puedes editar un insumo de otra empresa' });
       }
 
       // Verificar SKU duplicado si cambió
@@ -262,6 +286,10 @@ class InsumosController {
       if (!insumo) {
         return res.status(404).json({ error: 'Insumo no encontrado' });
       }
+      const sedeIdsStock = await sedesDelCliente(req.usuario?.cliente_id);
+      if (insumo.sede_id != null && !sedeIdsStock.includes(insumo.sede_id)) {
+        return res.status(403).json({ error: 'No puedes modificar el stock de un insumo de otra empresa' });
+      }
 
       let nuevoStock = insumo.stock_actual;
 
@@ -312,6 +340,10 @@ class InsumosController {
       if (!insumo) {
         return res.status(404).json({ error: 'Insumo no encontrado' });
       }
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+      if (insumo.sede_id != null && !sedeIds.includes(insumo.sede_id)) {
+        return res.status(403).json({ error: 'No puedes eliminar un insumo de otra empresa' });
+      }
 
       await db('insumos').where('id', id).update({
         activo: false,
@@ -353,12 +385,17 @@ class InsumosController {
     }
   }
 
-  // Obtener proveedores
+  // Obtener proveedores del cliente autenticado
   static async getProveedores(req, res) {
     try {
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+
       const proveedores = await db('proveedores')
         .select('*')
         .where('activo', true)
+        .andWhere((q) => {
+          q.whereNull('sede_id').orWhereIn('sede_id', sedeIds);
+        })
         .orderBy('nombre', 'asc');
 
       return res.json({
@@ -389,6 +426,7 @@ class InsumosController {
         email: email || null,
         telefono: telefono || null,
         direccion: direccion || null,
+        sede_id: req.usuario?.sede_id || null,
         activo: true,
       }).returning('*');
 

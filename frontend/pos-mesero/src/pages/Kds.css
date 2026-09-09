@@ -1,149 +1,300 @@
-/* KDS Page Styles */
+/* ==========================================================================
+   DYNAMIC RESTOBAR — KDS (Kitchen Display System)
+   ========================================================================== */
 
 .kds-page {
   min-height: 100vh;
-  background-color: #f8f9fa;
+  min-height: 100dvh;
+  background: var(--rb-charcoal-950);
+  color: var(--rb-cream-100);
+  font-family: var(--rb-font-body);
 }
+
+.kds-page--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+}
+
+.kds-page--loading small { color: var(--rb-cream-700); display: block; font-size: 0.78rem; }
+
+/* ---------- Header ---------- */
 
 .kds-header {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  border-bottom: none;
-  color: white;
+  background: var(--rb-charcoal-900);
+  border-bottom: 1px solid var(--rb-charcoal-700);
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
-.kds-header h2 {
+.kds-header__inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.kds-header__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--rb-font-display);
+  font-weight: 600;
+  font-size: 1.4rem;
+  margin: 0;
+  color: var(--rb-cream-100);
+}
+
+.kds-header__title svg { width: 22px; height: 22px; color: var(--rb-gold-500); }
+
+.kds-header__operario {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  color: var(--rb-cream-500);
+}
+
+.kds-header__actions { display: flex; gap: 10px; }
+
+/* ---------- Contenido ---------- */
+
+.kds-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px 24px 56px;
+}
+
+/* ---------- Selector de estaciones ---------- */
+
+.kds-estaciones {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.kds-estacion-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: var(--rb-charcoal-900);
+  color: var(--rb-cream-300);
+  border: 1px solid var(--rb-charcoal-700);
+  border-radius: 10px;
+  cursor: pointer;
   font-weight: 700;
-  letter-spacing: 1px;
+  font-size: 0.88rem;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.kds-estacion-btn svg { width: 15px; height: 15px; }
+
+.kds-estacion-btn:hover { border-color: var(--rb-gold-600); color: var(--rb-cream-100); }
+
+.kds-estacion-btn.is-active {
+  background: linear-gradient(160deg, var(--rb-gold-400), var(--rb-gold-600));
+  color: var(--rb-charcoal-950);
+  border-color: transparent;
+}
+
+/* ---------- Grid de comandas ---------- */
+
+.kds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
 }
 
 .comanda-card {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  background: var(--rb-charcoal-800);
+  border: 1px solid var(--rb-charcoal-700);
+  border-top: 4px solid var(--rb-charcoal-600);
+  border-radius: 14px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.comanda-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+.comanda-card--pendiente { border-top-color: var(--rb-copper-500); }
+.comanda-card--en_preparacion { border-top-color: var(--rb-gold-500); }
+.comanda-card--lista { border-top-color: var(--rb-green-500); }
+.comanda-card--entregada { border-top-color: var(--rb-charcoal-600); }
+
+.comanda-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: linear-gradient(155deg, rgba(201, 154, 70, 0.1), transparent 75%);
+  border-bottom: 1px solid var(--rb-charcoal-700);
 }
 
-.comanda-card.border-danger {
-  border-left: 5px solid #2563eb !important;
+.comanda-card__numero {
+  font-family: var(--rb-font-display);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--rb-cream-100);
+  margin: 0;
 }
 
-.comanda-card.border-warning {
-  border-left: 5px solid #3b82f6 !important;
+.comanda-card__mesa {
+  font-size: 0.78rem;
+  color: var(--rb-cream-500);
 }
 
-.comanda-card.border-success {
-  border-left: 5px solid #28a745 !important;
+.kds-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.comanda-card.border-secondary {
-  border-left: 5px solid #6c757d !important;
+.kds-badge svg { width: 10px; height: 10px; }
+
+.kds-badge--pendiente { background: rgba(177, 85, 43, 0.18); color: var(--rb-copper-400); }
+.kds-badge--en_preparacion { background: rgba(201, 154, 70, 0.18); color: var(--rb-gold-400); }
+.kds-badge--lista, .kds-badge--listo { background: rgba(77, 157, 111, 0.18); color: var(--rb-green-400); }
+.kds-badge--entregada, .kds-badge--entregado { background: var(--rb-charcoal-700); color: var(--rb-cream-500); }
+
+.comanda-card__body { padding: 14px 16px; flex: 1; }
+
+.kds-item {
+  background: var(--rb-charcoal-900);
+  border: 1px solid var(--rb-charcoal-700);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
 }
 
-.comanda-card h5 {
-  font-weight: 600;
-  font-size: 1.25rem;
+.kds-item:last-child { margin-bottom: 0; }
+
+.kds-item__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
 }
 
-.items-list {
-  max-height: 400px;
-  overflow-y: auto;
+.kds-item__nombre {
+  margin: 0 0 3px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--rb-cream-100);
 }
 
-.item-card {
-  border-left: 3px solid #007bff;
+.kds-item__cantidad {
+  font-size: 0.76rem;
+  color: var(--rb-cream-500);
 }
 
-.item-card h6 {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+.kds-item__accion { margin-top: 6px; }
+
+.kds-item__nota {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: var(--rb-gold-400);
 }
 
-.item-card .text-warning {
-  font-style: italic;
+.kds-item__nota svg { width: 12px; height: 12px; flex-shrink: 0; margin-top: 1px; }
+
+.kds-item__btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--rb-charcoal-600);
+  background: transparent;
+  color: var(--rb-gold-400);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-/* Estados con colores */
-.bg-danger {
-  background-color: #2563eb !important;
+.kds-item__btn:hover:not(:disabled) { background: rgba(201, 154, 70, 0.1); }
+.kds-item__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.comanda-card__footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--rb-charcoal-700);
+  background: var(--rb-charcoal-900);
 }
 
-.bg-warning {
-  background-color: #3b82f6 !important;
-  color: white !important;
+.comanda-card__footer .rb-btn { width: 100%; justify-content: center; }
+
+.kds-empty-text {
+  color: var(--rb-cream-700);
+  text-align: center;
+  padding: 10px 0;
+  font-size: 0.85rem;
 }
 
-.bg-success {
-  background-color: #28a745 !important;
+/* ---------- Tab Entregadas (lista compacta) ---------- */
+
+.kds-entregada-card {
+  background: var(--rb-charcoal-800);
+  border: 1px solid var(--rb-charcoal-700);
+  border-top: 3px solid var(--rb-green-500);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 14px;
 }
 
-.bg-secondary {
-  background-color: #6c757d !important;
+.kds-entregada-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(155deg, rgba(77, 157, 111, 0.12), transparent 75%);
+  border-bottom: 1px solid var(--rb-charcoal-700);
 }
 
-/* Botones de estado */
-.btn-outline-primary {
-  border-color: #007bff;
-  color: #007bff;
+.kds-entregada-card__body {
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
 }
 
-.btn-outline-primary:hover {
-  background-color: #007bff;
-  border-color: #007bff;
-  color: white;
+@media (max-width: 640px) {
+  .kds-entregada-card__body { grid-template-columns: 1fr; }
 }
 
-.btn-success {
-  background-color: #28a745;
-  border-color: #28a745;
-  font-weight: 600;
+.kds-entregada-card h6 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--rb-cream-300);
+  margin: 0 0 8px;
 }
 
-.btn-success:hover {
-  background-color: #218838;
-  border-color: #1e7e34;
+.kds-entregada-card h6 svg { width: 13px; height: 13px; color: var(--rb-gold-500); }
+
+.kds-entregada-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--rb-cream-500);
 }
 
-/* Badges */
-.badge {
-  font-size: 0.75rem;
-  padding: 0.4rem 0.6rem;
-  font-weight: 600;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .kds-header h2 {
-    font-size: 1.5rem;
-  }
-
-  .comanda-card {
-    margin-bottom: 1rem;
-  }
-
-  .items-list {
-    max-height: 300px;
-  }
-}
-
-/* Animación de actualización */
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-.kds-page.updating {
-  animation: pulse 0.5s ease-in-out;
-}
+.kds-entregada-card li { margin-bottom: 4px; }

@@ -1,16 +1,19 @@
 const db = require('../../config/database');
+const { sedesDelCliente } = require('../../utils/tenantScope');
 
 class InventarioController {
-  // Obtener estado del inventario (dashboard)
+  // Obtener estado del inventario (dashboard) del cliente autenticado
   static async getDashboardInventario(req, res) {
     try {
-      const { sedeId } = req.usuario;
-      const sede = sedeId || 1;
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
 
-      // Insumos en stock
+      // Insumos en stock (propios del cliente, o globales sin sede)
       const insumos = await db('insumos')
         .select('*')
         .where('activo', true)
+        .andWhere((q) => {
+          q.whereNull('sede_id').orWhereIn('sede_id', sedeIds);
+        })
         .orderBy('stock_actual', 'asc');
 
       // Valor total del inventario
@@ -23,7 +26,7 @@ class InventarioController {
 
       // Movimientos recientes
       const movimientosRecientes = await db('kardex_movimientos')
-        .where('kardex_movimientos.sede_id', sede)
+        .whereIn('kardex_movimientos.sede_id', sedeIds)
         .orderBy('kardex_movimientos.created_at', 'desc')
         .limit(10)
         .leftJoin('insumos', 'kardex_movimientos.insumo_id', 'insumos.id')
@@ -51,15 +54,14 @@ class InventarioController {
     }
   }
 
-  // Obtener todos los movimientos (Kardex)
+  // Obtener todos los movimientos (Kardex) del cliente autenticado
   static async getKardex(req, res) {
     try {
-      const { sedeId } = req.usuario;
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
       const { insumo_id, tipo, desde, hasta } = req.query;
-      const sede = sedeId || 1;
 
       let query = db('kardex_movimientos')
-        .where('kardex_movimientos.sede_id', sede)
+        .whereIn('kardex_movimientos.sede_id', sedeIds)
         .leftJoin('insumos', 'kardex_movimientos.insumo_id', 'insumos.id')
         .select(
           'kardex_movimientos.*',
@@ -101,20 +103,25 @@ class InventarioController {
   // Registrar entrada de insumos (compra)
   static async registrarEntrada(req, res) {
     try {
-      const { sedeId } = req.usuario;
-      const { insumo_id, cantidad, unidad_medida_id, costo_unitario, documento_id, referencia } = req.body;
-      const sede = sedeId || 1;
+      const sede = req.usuario?.sedeId || req.usuario?.sede_id;
+      const { insumo_id, cantidad, costo_unitario, documento_id, referencia } = req.body;
 
+      if (!sede) {
+        return res.status(400).json({ error: 'No se puede determinar la sede del usuario' });
+      }
       if (!insumo_id || !cantidad) {
         return res.status(400).json({
           error: 'Insumo y cantidad son requeridos',
         });
       }
 
-      // Obtener insumo
+      // Obtener insumo y verificar que pertenezca a la sede del usuario
       const insumo = await db('insumos').where('id', insumo_id).first();
       if (!insumo) {
         return res.status(404).json({ error: 'Insumo no encontrado' });
+      }
+      if (insumo.sede_id != null && insumo.sede_id !== Number(sede)) {
+        return res.status(403).json({ error: 'No puedes modificar el stock de un insumo de otra empresa' });
       }
 
       // Registrar movimiento
@@ -157,20 +164,25 @@ class InventarioController {
   // Registrar salida manual de insumos
   static async registrarSalida(req, res) {
     try {
-      const { sedeId } = req.usuario;
-      const { insumo_id, cantidad, unidad_medida_id, motivo, referencia } = req.body;
-      const sede = sedeId || 1;
+      const sede = req.usuario?.sedeId || req.usuario?.sede_id;
+      const { insumo_id, cantidad, motivo, referencia } = req.body;
 
+      if (!sede) {
+        return res.status(400).json({ error: 'No se puede determinar la sede del usuario' });
+      }
       if (!insumo_id || !cantidad) {
         return res.status(400).json({
           error: 'Insumo y cantidad son requeridos',
         });
       }
 
-      // Obtener insumo
+      // Obtener insumo y verificar que pertenezca a la sede del usuario
       const insumo = await db('insumos').where('id', insumo_id).first();
       if (!insumo) {
         return res.status(404).json({ error: 'Insumo no encontrado' });
+      }
+      if (insumo.sede_id != null && insumo.sede_id !== Number(sede)) {
+        return res.status(403).json({ error: 'No puedes modificar el stock de un insumo de otra empresa' });
       }
 
       const cantidadNum = parseFloat(cantidad);
@@ -220,10 +232,12 @@ class InventarioController {
   // Registrar ajuste (merma, rotura, etc)
   static async registrarAjuste(req, res) {
     try {
-      const { sedeId } = req.usuario;
+      const sede = req.usuario?.sedeId || req.usuario?.sede_id;
       const { insumo_id, cantidad, tipo_ajuste, motivo } = req.body;
-      const sede = sedeId || 1;
 
+      if (!sede) {
+        return res.status(400).json({ error: 'No se puede determinar la sede del usuario' });
+      }
       if (!insumo_id || !cantidad || !tipo_ajuste) {
         return res.status(400).json({
           error: 'Insumo, cantidad y tipo de ajuste son requeridos',
@@ -238,10 +252,13 @@ class InventarioController {
         });
       }
 
-      // Obtener insumo
+      // Obtener insumo y verificar que pertenezca a la sede del usuario
       const insumo = await db('insumos').where('id', insumo_id).first();
       if (!insumo) {
         return res.status(404).json({ error: 'Insumo no encontrado' });
+      }
+      if (insumo.sede_id != null && insumo.sede_id !== Number(sede)) {
+        return res.status(403).json({ error: 'No puedes modificar el stock de un insumo de otra empresa' });
       }
 
       const cantidadNum = parseFloat(cantidad);
@@ -292,10 +309,12 @@ class InventarioController {
   // Descontar insumos por venta (se llama cuando se crea una orden/venta)
   static async descontarInsumosPorVenta(req, res) {
     try {
-      const { sedeId } = req.usuario;
+      const sede = req.usuario?.sedeId || req.usuario?.sede_id;
       const { orden_id, items } = req.body; // items: [{ producto_id, cantidad }]
-      const sede = sedeId || 1;
 
+      if (!sede) {
+        return res.status(400).json({ error: 'No se puede determinar la sede del usuario' });
+      }
       if (!orden_id || !items || items.length === 0) {
         return res.status(400).json({
           error: 'Orden ID e items son requeridos',
@@ -305,6 +324,13 @@ class InventarioController {
       let totalDescuentos = 0;
 
       for (const item of items) {
+        // El producto debe pertenecer a la misma sede del usuario
+        const producto = await db('productos').where('id', item.producto_id).first();
+        if (!producto || producto.sede_id !== Number(sede)) {
+          console.warn(`⚠️ Producto ${item.producto_id} no pertenece a la sede ${sede}, se omite`);
+          continue;
+        }
+
         // Obtener receta del producto
         const receta = await db('recetas')
           .where('producto_id', item.producto_id)
@@ -326,6 +352,10 @@ class InventarioController {
           const insumo = await db('insumos').where('id', insumoReceta.insumo_id).first();
 
           if (!insumo) continue;
+          if (insumo.sede_id != null && insumo.sede_id !== Number(sede)) {
+            console.warn(`⚠️ Insumo ${insumo.id} no pertenece a la sede ${sede}, se omite`);
+            continue;
+          }
 
           const nuevoStock = insumo.stock_actual - cantidadADescontar;
 
@@ -378,12 +408,19 @@ class InventarioController {
   static async getHistorialInsumo(req, res) {
     try {
       const { insumo_id } = req.params;
-      const { sedeId } = req.usuario;
-      const sede = sedeId || 1;
+      const sedeIds = await sedesDelCliente(req.usuario?.cliente_id);
+
+      const insumo = await db('insumos').where('id', insumo_id).first();
+      if (!insumo) {
+        return res.status(404).json({ error: 'Insumo no encontrado' });
+      }
+      if (insumo.sede_id != null && !sedeIds.includes(insumo.sede_id)) {
+        return res.status(403).json({ error: 'No puedes ver el historial de un insumo de otra empresa' });
+      }
 
       const movimientos = await db('kardex_movimientos')
         .where('insumo_id', insumo_id)
-        .where('sede_id', sede)
+        .whereIn('sede_id', sedeIds)
         .orderBy('timestamp', 'desc')
         .leftJoin('usuarios', 'kardex_movimientos.usuario_id', 'usuarios.id')
         .select(

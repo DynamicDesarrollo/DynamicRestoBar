@@ -1,21 +1,12 @@
 import { toast } from 'react-toastify';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Container,
-  Row,
-  Col,
-  Card,
-  Button,
-  Badge,
-  Spinner,
-  Alert,
-  Tabs,
-  Tab,
-} from 'react-bootstrap';
-// import toast from 'react-hot-toast';
 import { kdsService } from '../services/api';
 import { useAuthStore } from '../stores';
+import {
+  IconChefHat, IconRefresh, IconLogout, IconNote, IconClock,
+  IconBuilding, IconPlus, IconMinus, IconClose, IconCheck, IconInbox,
+} from '../components/Icons';
 import './Kds.css';
 
 export default function Kds() {
@@ -23,7 +14,7 @@ export default function Kds() {
   const usuario = useAuthStore((state) => state.usuario);
   const logout = useAuthStore((state) => state.logout);
   const sedeId = localStorage.getItem('sedeId');
-  
+
   const [estaciones, setEstaciones] = useState([]);
   const [estacionId, setEstacionId] = useState(null);
   const [comandas, setComandas] = useState([]);
@@ -32,7 +23,6 @@ export default function Kds() {
   const [actualizando, setActualizando] = useState(false);
   const [tabActiva, setTabActiva] = useState('pendientes');
 
-  // Verificar autenticación
   useEffect(() => {
     if (!usuario) {
       navigate('/login');
@@ -44,7 +34,6 @@ export default function Kds() {
     }
   }, [usuario, sedeId, navigate]);
 
-  // Cargar estaciones de la sede
   useEffect(() => {
     const cargarEstaciones = async () => {
       try {
@@ -53,52 +42,39 @@ export default function Kds() {
           setLoading(false);
           return;
         }
-        
-        console.log(`🏢 Cargando estaciones para sede: ${sedeId}`);
+
         const res = await kdsService.getEstacionesPorSede(parseInt(sedeId));
-        console.log(`✅ Estaciones cargadas:`, res.data.data);
         setEstaciones(res.data.data || []);
-        
-        // Seleccionar la primera estación por defecto (preferir Cocina)
+
         if (res.data.data && res.data.data.length > 0) {
           const cocina = res.data.data.find(e => e.tipo === 'cocina') || res.data.data[0];
-          console.log(`🏪 Estación seleccionada: ${cocina.nombre} (ID: ${cocina.id})`);
           setEstacionId(cocina.id);
         } else {
           setError('No hay estaciones disponibles');
         }
         setLoading(false);
       } catch (err) {
-        console.error('❌ Error cargando estaciones:', err);
         setError(`Error al cargar estaciones: ${err.message}`);
         setLoading(false);
       }
     };
-    
+
     if (sedeId && usuario) {
       cargarEstaciones();
     }
   }, [sedeId, usuario]);
 
   const cargarComandas = useCallback(async () => {
-    // No cargar si estacionId no está definido
     if (!estacionId) return;
-    
+
     try {
       setLoading(true);
       const res = await kdsService.getComandaByEstacion(estacionId);
       const comandasData = res.data.data || [];
-      console.log(`📊 Comandas recibidas (Estación ${estacionId}):`, comandasData);
-      console.log(`   Total: ${comandasData.length}`);
-      console.log(`   Pendientes: ${comandasData.filter(c => c.estado === 'pendiente').length}`);
-      console.log(`   En preparación: ${comandasData.filter(c => c.estado === 'en_preparacion').length}`);
-      console.log(`   Listas: ${comandasData.filter(c => c.estado === 'lista').length}`);
-      console.log(`   Entregadas: ${comandasData.filter(c => c.estado === 'entregada').length}`);
       setComandas(comandasData);
       setError('');
     } catch (err) {
       const mensaje = err.response?.data?.message || 'Error al cargar comandas';
-      console.error('❌ Error cargando comandas:', err);
       setError(mensaje);
       toast.error(mensaje);
     } finally {
@@ -108,7 +84,6 @@ export default function Kds() {
 
   useEffect(() => {
     cargarComandas();
-    // Recargar cada 15 segundos
     const interval = setInterval(cargarComandas, 15000);
     return () => clearInterval(interval);
   }, [cargarComandas]);
@@ -131,7 +106,6 @@ export default function Kds() {
       setActualizando(true);
       await kdsService.updateEstadoItem(itemId, nuevoEstado);
       toast.success(`Item actualizado a ${nuevoEstado}`);
-      // Pequeño delay para asegurar que la BD procese la actualización
       await new Promise(resolve => setTimeout(resolve, 300));
       await cargarComandas();
     } catch (err) {
@@ -141,21 +115,24 @@ export default function Kds() {
     }
   };
 
-  const getBadgeEstado = (estado) => {
-    const estados = {
-      pendiente: 'danger',
-      en_preparacion: 'warning',
-      lista: 'success',
-      entregada: 'secondary',
-    };
-    return estados[estado] || 'secondary';
-  };
-
-  const getBotonEstado = (estado) => {
+  // El enum de estado de comanda_items es masculino (pendiente, en_preparacion,
+  // listo, entregado) y el de comandas es femenino (..., lista, entregada) —
+  // son dos columnas/tablas distintas en el backend, no intercambiables.
+  const getBotonEstadoItem = (estado) => {
     const transiciones = {
       pendiente: { siguiente: 'en_preparacion', label: 'Empezar a preparar' },
-      en_preparacion: { siguiente: 'lista', label: 'Marcar como listo' },
-      lista: { siguiente: 'entregada', label: 'Entregado' },
+      en_preparacion: { siguiente: 'listo', label: 'Marcar como listo' },
+      listo: { siguiente: 'entregado', label: 'Entregado' },
+      entregado: null,
+    };
+    return transiciones[estado];
+  };
+
+  const getBotonEstadoComanda = (estado) => {
+    const transiciones = {
+      pendiente: { siguiente: 'en_preparacion', label: 'Empezar a preparar' },
+      en_preparacion: { siguiente: 'lista', label: 'Marcar como lista' },
+      lista: { siguiente: 'entregada', label: 'Entregada' },
       entregada: null,
     };
     return transiciones[estado];
@@ -164,12 +141,12 @@ export default function Kds() {
   const getAccionBadge = (accion) => {
     const valor = String(accion || 'agregado').toLowerCase();
     if (valor === 'cancelado') {
-      return { label: 'X CANCELADO', bg: 'danger' };
+      return { label: 'CANCELADO', Icon: IconClose, className: 'kds-badge--pendiente' };
     }
     if (valor === 'reducido') {
-      return { label: '- REDUCIDO', bg: 'warning' };
+      return { label: 'REDUCIDO', Icon: IconMinus, className: 'kds-badge--en_preparacion' };
     }
-    return { label: '+ AGREGADO', bg: 'success' };
+    return { label: 'AGREGADO', Icon: IconPlus, className: 'kds-badge--lista' };
   };
 
   const limpiarNotaAccion = (nota) => String(nota || '')
@@ -182,20 +159,13 @@ export default function Kds() {
     navigate('/login');
   };
 
-  // Filtrar órdenes por estado
-  const ordenesPendientes = comandas.filter(c => 
+  const ordenesPendientes = comandas.filter(c =>
     ['pendiente', 'en_preparacion'].includes(c.estado)
   );
-  
-  const ordenesListas = comandas.filter(c => 
-    c.estado === 'lista'
-  );
-  
-  const ordenesEntregadas = comandas.filter(c => 
-    c.estado === 'entregada'
-  );
 
-  // Formatear fecha y hora
+  const ordenesListas = comandas.filter(c => c.estado === 'lista');
+  const ordenesEntregadas = comandas.filter(c => c.estado === 'entregada');
+
   const formatearFechaHora = (fecha) => {
     if (!fecha) return 'N/A';
     try {
@@ -210,323 +180,221 @@ export default function Kds() {
 
   if (loading) {
     return (
-      <Container className="d-flex align-items-center justify-content-center min-vh-100">
-        <div className="text-center">
-          <Spinner animation="border" variant="danger" className="mb-3" />
-          <p className="text-muted">Cargando estaciones...</p>
-          <small className="text-muted d-block">Sede ID: {sedeId}</small>
-          <small className="text-muted d-block">Usuario: {usuario?.nombre}</small>
-        </div>
-      </Container>
+      <div className="kds-page kds-page--loading">
+        <div className="rb-spinner" aria-label="Cargando estaciones" />
+        <p style={{ color: 'var(--rb-cream-500)', margin: 0 }}>Cargando estaciones...</p>
+        <small>Sede ID: {sedeId}</small>
+        <small>Usuario: {usuario?.nombre}</small>
+      </div>
     );
   }
 
+  const renderItem = (item) => {
+    const accion = getAccionBadge(item.accion);
+    const boton = getBotonEstadoItem(item.estado);
+    return (
+      <div key={item.id} className="kds-item">
+        <div className="kds-item__top">
+          <div>
+            <h6 className="kds-item__nombre">{item.nombre}</h6>
+            <span className="kds-item__cantidad">Cantidad: {item.cantidad}</span>
+            <div className="kds-item__accion">
+              <span className={`kds-badge ${accion.className}`}>
+                <accion.Icon /> {accion.label}
+              </span>
+            </div>
+            {limpiarNotaAccion(item.notas_especiales) && (
+              <div className="kds-item__nota">
+                <IconNote /> {limpiarNotaAccion(item.notas_especiales)}
+              </div>
+            )}
+          </div>
+          <span className={`kds-badge kds-badge--${item.estado}`}>
+            {item.estado.replace('_', ' ')}
+          </span>
+        </div>
+
+        {boton && (
+          <button
+            className="kds-item__btn"
+            onClick={() => handleEstadoItem(item.id, boton.siguiente)}
+            disabled={actualizando}
+          >
+            {boton.label}
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const renderComanda = (comanda) => {
+    const boton = getBotonEstadoComanda(comanda.estado);
+    return (
+      <div key={comanda.id} className={`comanda-card comanda-card--${comanda.estado}`}>
+        <div className="comanda-card__header">
+          <div>
+            <h5 className="comanda-card__numero">#{comanda.numero_comanda}</h5>
+            <span className="comanda-card__mesa">Mesa {comanda.mesa_numero || 'N/A'}</span>
+          </div>
+          <span className={`kds-badge kds-badge--${comanda.estado}`}>
+            {comanda.estado.replace('_', ' ')}
+          </span>
+        </div>
+
+        <div className="comanda-card__body">
+          {comanda.items && comanda.items.length > 0 ? (
+            comanda.items.map(renderItem)
+          ) : (
+            <p className="kds-empty-text">Sin items</p>
+          )}
+        </div>
+
+        {boton && (
+          <div className="comanda-card__footer">
+            <button
+              className="rb-btn rb-btn--primary"
+              onClick={() => handleEstadoComanda(comanda.id, boton.siguiente)}
+              disabled={actualizando}
+            >
+              {boton.label}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const TABS = [
+    { id: 'pendientes', label: `Pendientes (${ordenesPendientes.length})` },
+    { id: 'listas', label: `Listas (${ordenesListas.length})` },
+    { id: 'entregadas', label: `Entregadas (${ordenesEntregadas.length})` },
+  ];
+
   return (
     <div className="kds-page">
-      {/* Header */}
-      <div className="kds-header text-white py-3">
-        <Container>
-          <Row className="align-items-center">
-            <Col>
-              <h2 className="mb-0">🍳 Kitchen Display System</h2>
-              <small className="text-muted">Operario: {usuario?.nombre}</small>
-            </Col>
-            <Col className="text-end">
-              <Button
-                variant="outline-light"
-                size="sm"
-                onClick={cargarComandas}
-                disabled={loading}
-                className="me-2"
-              >
-                🔄 Actualizar
-              </Button>
-              <Button
-                variant="outline-light"
-                size="sm"
-                onClick={handleLogout}
-              >
-                🚪 Cerrar Sesión
-              </Button>
-            </Col>
-          </Row>
-        </Container>
+      <div className="kds-header">
+        <div className="kds-header__inner">
+          <div>
+            <h2 className="kds-header__title"><IconChefHat /> Kitchen Display System</h2>
+            <p className="kds-header__operario">Operario: {usuario?.nombre}</p>
+          </div>
+          <div className="kds-header__actions">
+            <button className="rb-btn rb-btn--ghost" onClick={cargarComandas} disabled={loading}>
+              <IconRefresh /> Actualizar
+            </button>
+            <button className="rb-btn rb-btn--ghost" onClick={handleLogout}>
+              <IconLogout /> Cerrar Sesión
+            </button>
+          </div>
+        </div>
       </div>
 
       {error && (
-        <Container className="mt-3">
-          <Alert variant="danger">{error}</Alert>
-        </Container>
+        <div className="kds-content" style={{ paddingBottom: 0 }}>
+          <div className="rb-alert">{error}</div>
+        </div>
       )}
 
-      <Container fluid className="py-4">
+      <div className="kds-content">
         {/* Selector de Estaciones */}
-        <Row className="mb-4">
-          <Col md={4}>
-            <div className="d-flex gap-2 flex-wrap">
-              {estaciones.length > 0 ? (
-                estaciones.map((estacion) => (
-                  <Button
-                    key={estacion.id}
-                    variant={estacionId === estacion.id ? "danger" : "outline-danger"}
-                    onClick={() => setEstacionId(estacion.id)}
-                    className="mb-2"
-                  >
-                    🏪 {estacion.nombre}
-                  </Button>
-                ))
-              ) : (
-                <p className="text-muted">Cargando estaciones...</p>
-              )}
+        <div className="kds-estaciones">
+          {estaciones.length > 0 ? (
+            estaciones.map((estacion) => (
+              <button
+                key={estacion.id}
+                className={`kds-estacion-btn ${estacionId === estacion.id ? 'is-active' : ''}`}
+                onClick={() => setEstacionId(estacion.id)}
+              >
+                <IconBuilding /> {estacion.nombre}
+              </button>
+            ))
+          ) : (
+            <p style={{ color: 'var(--rb-cream-500)' }}>Cargando estaciones...</p>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <div className="admin-tabs">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setTabActiva(tab.id)}
+              className={`admin-tab-btn ${tabActiva === tab.id ? 'is-active' : ''}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* TAB: Pendientes */}
+        {tabActiva === 'pendientes' && (
+          ordenesPendientes.length === 0 ? (
+            <div className="rb-alert" style={{ textAlign: 'center' }}>
+              <IconCheck style={{ width: 14, height: 14, marginRight: 6 }} />
+              No hay órdenes pendientes
             </div>
-          </Col>
-        </Row>
+          ) : (
+            <div className="kds-grid">{ordenesPendientes.map(renderComanda)}</div>
+          )
+        )}
 
-        <Tabs activeKey={tabActiva} onSelect={(k) => setTabActiva(k)} className="mb-4">
-          {/* TAB: Órdenes Pendientes */}
-          <Tab eventKey="pendientes" title={`📋 Pendientes (${ordenesPendientes.length})`}>
-            {ordenesPendientes.length === 0 ? (
-              <Alert variant="success" className="text-center mt-4">
-                ✅ No hay órdenes pendientes
-              </Alert>
-            ) : (
-              <Row className="g-3">
-                {ordenesPendientes.map((comanda) => (
-                  <Col lg={6} xl={4} key={comanda.id}>
-                    <Card className={`comanda-card h-100 border-${getBadgeEstado(comanda.estado)}`}>
-                      {/* Header de comanda */}
-                      <Card.Header className={`bg-${getBadgeEstado(comanda.estado)} text-white`}>
-                        <div className="d-flex justify-content-between align-items-center">
-                          <div>
-                            <h5 className="mb-0">#{comanda.numero_comanda}</h5>
-                            <small>Mesa {comanda.mesa_numero || 'N/A'}</small>
-                          </div>
-                          <Badge bg={getBadgeEstado(comanda.estado)}>
-                            {comanda.estado.replace('_', ' ').toUpperCase()}
-                          </Badge>
-                        </div>
-                      </Card.Header>
+        {/* TAB: Listas */}
+        {tabActiva === 'listas' && (
+          ordenesListas.length === 0 ? (
+            <div className="rb-alert rb-alert--warning" style={{ textAlign: 'center' }}>
+              No hay órdenes listas
+            </div>
+          ) : (
+            <div className="kds-grid">{ordenesListas.map(renderComanda)}</div>
+          )
+        )}
 
-                      {/* Items */}
-                      <Card.Body>
-                        {comanda.items && comanda.items.length > 0 ? (
-                          <div className="items-list">
-                            {comanda.items.map((item) => (
-                              <div key={item.id} className="item-card mb-2 p-2 bg-light rounded">
-                                <div className="d-flex justify-content-between align-items-start">
-                                  <div>
-                                    <h6 className="mb-1">{item.nombre}</h6>
-                                    <small className="text-muted">
-                                      Cantidad: {item.cantidad}
-                                    </small>
-                                    <div className="mt-1">
-                                      <Badge bg={getAccionBadge(item.accion).bg}>
-                                        {getAccionBadge(item.accion).label}
-                                      </Badge>
-                                    </div>
-                                    {limpiarNotaAccion(item.notas_especiales) && (
-                                      <div className="mt-1">
-                                        <small className="text-warning">
-                                          📝 {limpiarNotaAccion(item.notas_especiales)}
-                                        </small>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <Badge bg={getBadgeEstado(item.estado)}>
-                                    {item.estado.replace('_', ' ')}
-                                  </Badge>
-                                </div>
-
-                                {/* Botones de estado del item */}
-                                {getBotonEstado(item.estado) && (
-                                  <Button
-                                    variant="outline-primary"
-                                    size="sm"
-                                    className="mt-2 w-100"
-                                    onClick={() =>
-                                      handleEstadoItem(
-                                        item.id,
-                                        getBotonEstado(item.estado).siguiente
-                                      )
-                                    }
-                                    disabled={actualizando}
-                                  >
-                                    {getBotonEstado(item.estado).label}
-                                  </Button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-muted">Sin items</p>
-                        )}
-                      </Card.Body>
-
-                      {/* Footer - Botones de comanda */}
-                      <Card.Footer className="bg-light">
-                        {getBotonEstado(comanda.estado) && (
-                          <Button
-                            variant="success"
-                            size="sm"
-                            className="w-100"
-                            onClick={() =>
-                              handleEstadoComanda(
-                                comanda.id,
-                                getBotonEstado(comanda.estado).siguiente
-                              )
-                            }
-                            disabled={actualizando}
-                          >
-                            {getBotonEstado(comanda.estado).label}
-                          </Button>
-                        )}
-                      </Card.Footer>
-                    </Card>
-                  </Col>
-                ))}
-              </Row>
-            )}
-          </Tab>
-
-          {/* TAB: Órdenes Listas para Entregar */}
-          <Tab eventKey="listas" title={`⏳ Listas (${ordenesListas.length})`}>
-            {ordenesListas.length === 0 ? (
-              <Alert variant="info" className="text-center mt-4">
-                ℹ️ No hay órdenes listas
-              </Alert>
-            ) : (
-              <Row className="g-3">
-                {ordenesListas.map((comanda) => (
-                  <Col lg={6} xl={4} key={comanda.id}>
-                    <Card className={`comanda-card h-100 border-${getBadgeEstado(comanda.estado)}`}>
-                      {/* Header de comanda */}
-                      <Card.Header className={`bg-${getBadgeEstado(comanda.estado)} text-white`}>
-                        <div className="d-flex justify-content-between align-items-center">
-                          <div>
-                            <h5 className="mb-0">#{comanda.numero_comanda}</h5>
-                            <small>Mesa {comanda.mesa_numero || 'N/A'}</small>
-                          </div>
-                          <Badge bg={getBadgeEstado(comanda.estado)}>
-                            {comanda.estado.replace('_', ' ').toUpperCase()}
-                          </Badge>
-                        </div>
-                      </Card.Header>
-
-                      {/* Items */}
-                      <Card.Body>
-                        {comanda.items && comanda.items.length > 0 ? (
-                          <div className="items-list">
-                            {comanda.items.map((item) => (
-                              <div key={item.id} className="item-card mb-2 p-2 bg-light rounded">
-                                <div className="d-flex justify-content-between align-items-start">
-                                  <div>
-                                    <h6 className="mb-1">{item.nombre}</h6>
-                                    <small className="text-muted">
-                                      Cantidad: {item.cantidad}
-                                    </small>
-                                    <div className="mt-1">
-                                      <Badge bg={getAccionBadge(item.accion).bg}>
-                                        {getAccionBadge(item.accion).label}
-                                      </Badge>
-                                    </div>
-                                    {limpiarNotaAccion(item.notas_especiales) && (
-                                      <div className="mt-1">
-                                        <small className="text-warning">
-                                          📝 {limpiarNotaAccion(item.notas_especiales)}
-                                        </small>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <Badge bg={getBadgeEstado(item.estado)}>
-                                    {item.estado.replace('_', ' ')}
-                                  </Badge>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-muted text-center">Sin items</p>
-                        )}
-                      </Card.Body>
-
-                      {/* Footer - Botones de comanda */}
-                      <Card.Footer className="bg-light">
-                        {getBotonEstado(comanda.estado) && (
-                          <Button
-                            variant="success"
-                            size="sm"
-                            className="w-100"
-                            onClick={() =>
-                              handleEstadoComanda(
-                                comanda.id,
-                                getBotonEstado(comanda.estado).siguiente
-                              )
-                            }
-                            disabled={actualizando}
-                          >
-                            {getBotonEstado(comanda.estado).label}
-                          </Button>
-                        )}
-                      </Card.Footer>
-                    </Card>
-                  </Col>
-                ))}
-              </Row>
-            )}
-          </Tab>
-
-          {/* TAB: Órdenes Entregadas */}
-          <Tab eventKey="entregadas" title={`✅ Entregadas (${ordenesEntregadas.length})`}>
-            {ordenesEntregadas.length === 0 ? (
-              <Alert variant="info" className="text-center mt-4">
-                📭 Sin órdenes entregadas hoy
-              </Alert>
-            ) : (
-              <div className="mt-3">
-                {ordenesEntregadas.map((comanda) => (
-                  <Card key={comanda.id} className="mb-3 border-success">
-                    <Card.Header className="bg-success text-white">
-                      <Row className="align-items-center">
-                        <Col>
-                          <h6 className="mb-0">Orden #{comanda.numero_comanda}</h6>
-                          <small>Mesa {comanda.mesa_numero || 'N/A'}</small>
-                        </Col>
-                        <Col className="text-end">
-                          <Badge bg="success">ENTREGADA</Badge>
-                        </Col>
-                      </Row>
-                    </Card.Header>
-                    <Card.Body>
-                      <Row className="mb-3">
-                        <Col md={6}>
-                          <h6>📝 Detalles</h6>
-                          {comanda.items && comanda.items.length > 0 ? (
-                            <ul className="list-unstyled small">
-                              {comanda.items.map((item) => (
-                                <li key={item.id}>
-                                  • {item.nombre} x{item.cantidad} ({getAccionBadge(item.accion).label})
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-muted small">Sin items</p>
-                          )}
-                        </Col>
-                        <Col md={6}>
-                          <h6>🕐 Fecha y Hora de Entrega</h6>
-                          <p className="mb-0">
-                            <strong>{formatearFechaHora(comanda.updated_at)}</strong>
-                          </p>
-                        </Col>
-                      </Row>
-                    </Card.Body>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </Tab>
-        </Tabs>
-      </Container>
+        {/* TAB: Entregadas */}
+        {tabActiva === 'entregadas' && (
+          ordenesEntregadas.length === 0 ? (
+            <div className="admin-empty-state">
+              <IconInbox />
+              <p>Sin órdenes entregadas hoy</p>
+            </div>
+          ) : (
+            <div>
+              {ordenesEntregadas.map((comanda) => (
+                <div key={comanda.id} className="kds-entregada-card">
+                  <div className="kds-entregada-card__header">
+                    <div>
+                      <h5 className="comanda-card__numero" style={{ fontSize: '1rem' }}>Orden #{comanda.numero_comanda}</h5>
+                      <span className="comanda-card__mesa">Mesa {comanda.mesa_numero || 'N/A'}</span>
+                    </div>
+                    <span className="kds-badge kds-badge--lista">ENTREGADA</span>
+                  </div>
+                  <div className="kds-entregada-card__body">
+                    <div>
+                      <h6><IconNote /> Detalles</h6>
+                      {comanda.items && comanda.items.length > 0 ? (
+                        <ul>
+                          {comanda.items.map((item) => (
+                            <li key={item.id}>
+                              • {item.nombre} x{item.cantidad} ({getAccionBadge(item.accion).label})
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="kds-empty-text" style={{ textAlign: 'left' }}>Sin items</p>
+                      )}
+                    </div>
+                    <div>
+                      <h6><IconClock /> Fecha y Hora de Entrega</h6>
+                      <p style={{ margin: 0, color: 'var(--rb-cream-100)', fontWeight: 700 }}>
+                        {formatearFechaHora(comanda.updated_at)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+      </div>
     </div>
   );
 }

@@ -6,6 +6,33 @@
  */
 
 const db = require('../config/database');
+const { validarSedeDeReq, sedesDeReq, sedePerteneceACliente } = require('../utils/tenantScope');
+
+/** Carga una estación solo si es de una sede del cliente autenticado. */
+const estacionPropia = async (req, estacionId) => {
+  const estacion = await db('estaciones').where('id', estacionId).first();
+  if (!estacion) return { ok: false, status: 404, error: 'Estación no encontrada' };
+  const sedeIds = await sedesDeReq(req);
+  if (!sedePerteneceACliente(estacion.sede_id, sedeIds)) {
+    return { ok: false, status: 403, error: 'Esa estación no pertenece a tu empresa' };
+  }
+  return { ok: true, estacion, sedeIds };
+};
+
+/** Comprueba que una comanda pertenezca al cliente autenticado (vía su estación). */
+const comandaPropia = async (req, comandaId) => {
+  const comanda = await db('comandas')
+    .leftJoin('estaciones', 'comandas.estacion_id', 'estaciones.id')
+    .select('comandas.id', 'estaciones.sede_id as sede_id')
+    .where('comandas.id', comandaId)
+    .first();
+  if (!comanda) return { ok: false, status: 404, error: 'Comanda no encontrada' };
+  const sedeIds = await sedesDeReq(req);
+  if (!sedePerteneceACliente(comanda.sede_id, sedeIds)) {
+    return { ok: false, status: 403, error: 'Esa comanda no pertenece a tu empresa' };
+  }
+  return { ok: true };
+};
 
 class KdsController {
   /**
@@ -14,10 +41,11 @@ class KdsController {
    */
   static async getEstacionesPorSede(req, res) {
     try {
-      const { sedeId } = req.params;
+      const permiso = await validarSedeDeReq(req, req.params.sedeId);
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
 
       const estaciones = await db('estaciones')
-        .where('sede_id', sedeId)
+        .where('sede_id', permiso.sedeId)
         .where('activa', true)
         .orderBy('nombre', 'asc');
 
@@ -42,6 +70,9 @@ class KdsController {
   static async getComandaByEstacion(req, res) {
     try {
       const { estacionId } = req.params;
+
+      const permiso = await estacionPropia(req, estacionId);
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
 
       // Obtener todas las comandas de la estación (incluyendo entregadas)
       const comandas = await db('comandas')
@@ -103,8 +134,12 @@ class KdsController {
    */
   static async getResumenEstaciones(req, res) {
     try {
+      // Sin este filtro el resumen devolvía las estaciones de TODOS los
+      // restaurantes del sistema, no solo las del cliente autenticado.
+      const sedeIds = await sedesDeReq(req);
       const estaciones = await db('estaciones')
         .select('estaciones.*')
+        .whereIn('estaciones.sede_id', sedeIds)
         .where('estaciones.activa', true);
 
       const resumen = await Promise.all(
@@ -178,13 +213,8 @@ class KdsController {
         });
       }
 
-      const comanda = await db('comandas')
-        .where('id', comandaId)
-        .first();
-
-      if (!comanda) {
-        return res.status(404).json({ error: 'Comanda no encontrada' });
-      }
+      const permiso = await comandaPropia(req, comandaId);
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
 
       // Actualizar comanda - solamente el estado
       try {
@@ -235,6 +265,9 @@ class KdsController {
         return res.status(404).json({ error: 'Item no encontrado' });
       }
 
+      const permiso = await comandaPropia(req, item.comanda_id);
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
+
       // Actualizar item
       await db('comanda_items').where('id', itemId).update({
         estado,
@@ -251,7 +284,8 @@ class KdsController {
         .first();
 
       // Si no hay items pendientes, actualizar comanda a "lista"
-      if (itemsPendientes.count === 0) {
+      // (knex/pg devuelven count() como string, nunca como number)
+      if (Number(itemsPendientes.count) === 0) {
         await db('comandas').where('id', item.comanda_id).update({
           estado: 'lista',
           updated_at: new Date(),

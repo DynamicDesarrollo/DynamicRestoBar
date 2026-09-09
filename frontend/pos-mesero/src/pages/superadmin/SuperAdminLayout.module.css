@@ -1,56 +1,77 @@
 .superAdminLayout {
   display: flex;
   min-height: 100vh;
-  background: #f4f6fc;
+  background: var(--rb-charcoal-950);
+  color: var(--rb-cream-100);
+  font-family: var(--rb-font-body);
 }
 
 .sidebar {
   width: 230px;
-  background: #22336b;
-  color: #fff;
-  padding: 32px 0 0 0;
+  flex-shrink: 0;
+  background: var(--rb-charcoal-900);
+  border-right: 1px solid var(--rb-charcoal-700);
+  padding: 28px 0 0 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: 2px 0 8px 0 rgba(34,51,107,0.08);
 }
 
 .sidebar h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-family: var(--rb-font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
   margin-bottom: 2rem;
-  letter-spacing: 1px;
+  letter-spacing: 0.02em;
+  color: var(--rb-cream-100);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
+.sidebar h2 svg { width: 20px; height: 20px; color: var(--rb-gold-500); }
 
 .sidebar ul {
   list-style: none;
-  padding: 0;
+  padding: 0 12px;
   width: 100%;
 }
 
 .sidebar li {
-  margin-bottom: 1.2rem;
+  margin-bottom: 6px;
 }
 
 .sidebar a {
-  color: #fff;
+  color: var(--rb-cream-500);
   text-decoration: none;
-  font-size: 1.08rem;
-  font-weight: 500;
-  padding: 10px 32px;
-  display: block;
-  border-radius: 6px;
-  transition: background 0.2s;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 11px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 10px;
+  border-left: 3px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.sidebar a.active, .sidebar a:hover {
-  background: #30488b;
+.sidebar a svg { width: 17px; height: 17px; flex-shrink: 0; }
+
+.sidebar a:hover {
+  background: var(--rb-charcoal-800);
+  color: var(--rb-cream-100);
+}
+
+.sidebar a.active {
+  background: linear-gradient(155deg, rgba(201, 154, 70, 0.16), transparent 75%);
+  color: var(--rb-gold-400);
+  border-left-color: var(--rb-gold-500);
 }
 
 .main {
   flex: 1;
-  padding: 40px 48px 32px 48px;
-  background: #f4f6fc;
+  padding: 32px 32px 24px;
+  background: var(--rb-charcoal-950);
   min-height: 100vh;
 }
 
@@ -62,22 +83,21 @@
 }
 
 .headerTitle {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #22336b;
-  letter-spacing: 1px;
+  font-family: var(--rb-font-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--rb-cream-100);
 }
 
 @media (max-width: 900px) {
   .main {
-    padding: 24px 8px;
+    padding: 20px 12px;
   }
   .sidebar {
-    width: 100px;
+    width: 76px;
     padding: 16px 0 0 0;
   }
-  .sidebar h2 {
-    font-size: 1.1rem;
-    margin-bottom: 1rem;
-  }
+  .sidebar h2 { display: none; }
+  .sidebar a span { display: none; }
+  .sidebar a { justify-content: center; padding: 12px; }
 }
