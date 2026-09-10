@@ -25,6 +25,10 @@ const ClientesController = {
   async crearCliente(req, res) {
     const { nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan } = req.body;
     const estilo_catalogo = normalizarEstiloCatalogo(req.body.estilo_catalogo);
+    // Factura electrónica: servicio que solo el super-admin activa por
+    // empresa, nunca el propio restaurante — igual que estilo_catalogo.
+    const factura_electronica_habilitada = req.body.factura_electronica_habilitada === true
+      || req.body.factura_electronica_habilitada === 'true';
     let foto_url = null;
     if (req.file) {
       // Construir la URL pública para la foto
@@ -33,7 +37,7 @@ const ClientesController = {
     }
     // Crear cliente
     const [cliente] = await db('clientes')
-      .insert({ nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan, foto_url, estilo_catalogo })
+      .insert({ nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan, foto_url, estilo_catalogo, factura_electronica_habilitada })
       .returning('*');
 
     // Crear sede principal asociada al cliente
@@ -103,7 +107,9 @@ const ClientesController = {
     const { id } = req.params;
     const { nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan } = req.body;
     const estilo_catalogo = normalizarEstiloCatalogo(req.body.estilo_catalogo);
-    let updateData = { nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan, estilo_catalogo };
+    const factura_electronica_habilitada = req.body.factura_electronica_habilitada === true
+      || req.body.factura_electronica_habilitada === 'true';
+    let updateData = { nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan, estilo_catalogo, factura_electronica_habilitada };
     if (req.file) {
       const baseUrl = `${req.protocol}://${req.get('host')}`;
       updateData.foto_url = `${baseUrl}/uploads/clientes/${req.file.filename}`;

@@ -18,7 +18,8 @@ const ClientesAdmin = () => {
       ciudad: '',
       foto: null,
       valor_plan: '',
-      estilo_catalogo: 'clasico'
+      estilo_catalogo: 'clasico',
+      factura_electronica_habilitada: false
     });
 
     const [departamentos, setDepartamentos] = useState([]);
@@ -42,9 +43,11 @@ const ClientesAdmin = () => {
         }, [formData.departamento, departamentos]);
     const [editId, setEditId] = useState(null);
     const handleInputChange = (e) => {
-      const { name, value, files } = e.target;
+      const { name, value, files, type, checked } = e.target;
       if (name === 'foto') {
         setFormData((prev) => ({ ...prev, foto: files[0] }));
+      } else if (type === 'checkbox') {
+        setFormData((prev) => ({ ...prev, [name]: checked }));
       } else {
         setFormData((prev) => ({ ...prev, [name]: value }));
       }
@@ -62,7 +65,8 @@ const ClientesAdmin = () => {
         ciudad: '',
         foto: null,
         valor_plan: '',
-        estilo_catalogo: 'clasico'
+        estilo_catalogo: 'clasico',
+        factura_electronica_habilitada: false
       });
       setEditId(null);
       setShowForm(true);
@@ -80,7 +84,8 @@ const ClientesAdmin = () => {
         ciudad: cliente.ciudad || '',
         foto: null,
         valor_plan: cliente.valor_plan || '',
-        estilo_catalogo: cliente.estilo_catalogo || 'clasico'
+        estilo_catalogo: cliente.estilo_catalogo || 'clasico',
+        factura_electronica_habilitada: !!cliente.factura_electronica_habilitada
       });
       setEditId(cliente.id);
       setShowForm(true);
@@ -254,6 +259,19 @@ const ClientesAdmin = () => {
                   </select>
                 </div>
                 <div className={styles.formGroup}>
+                  <label>Facturación electrónica</label>
+                  <div className={styles.checkboxField}>
+                    <input
+                      id="factura_electronica_habilitada"
+                      name="factura_electronica_habilitada"
+                      type="checkbox"
+                      checked={formData.factura_electronica_habilitada}
+                      onChange={handleInputChange}
+                    />
+                    <label htmlFor="factura_electronica_habilitada">Este cliente tiene el servicio habilitado</label>
+                  </div>
+                </div>
+                <div className={styles.formGroup}>
                   <label>Estado</label>
                   <select name="estado" value={formData.estado} onChange={handleInputChange} className={styles.input}>
                     <option value="activo">activo</option>
@@ -288,6 +306,7 @@ const ClientesAdmin = () => {
             <th>Nombre</th>
             <th>Plan</th>
             <th>Catálogo</th>
+            <th>Fact. Electrónica</th>
             <th>Valor del Plan</th>
             <th>Estado</th>
             <th>Fecha Corte</th>
@@ -331,6 +350,11 @@ const ClientesAdmin = () => {
                 <td>
                   <span className={`${styles.badge} ${c.estilo_catalogo === 'aurum' ? styles['badge-premium'] : styles['badge-basico']}`}>
                     {c.estilo_catalogo === 'aurum' ? 'Aurum' : 'Clásico'}
+                  </span>
+                </td>
+                <td>
+                  <span className={`${styles.badge} ${c.factura_electronica_habilitada ? styles['badge-activo'] : styles['badge-inactivo']}`}>
+                    {c.factura_electronica_habilitada ? 'Habilitada' : 'No habilitada'}
                   </span>
                 </td>
                 <td>{c.valor_plan ? `$${Number(c.valor_plan).toLocaleString()}` : '-'}</td>

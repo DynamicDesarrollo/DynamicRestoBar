@@ -196,6 +196,14 @@
 .badge-basico { background: rgba(74, 151, 163, 0.18); color: var(--rb-cyan-400); }
 .badge-premium { background: rgba(201, 154, 70, 0.18); color: var(--rb-gold-400); }
 
+.checkboxField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.checkboxField input { width: 16px; height: 16px; }
+.checkboxField label { margin: 0; }
+
 .accionesBtn, .eliminarBtn, .metricasBtn {
   background: var(--rb-charcoal-900);
   border: 1px solid var(--rb-charcoal-700);
