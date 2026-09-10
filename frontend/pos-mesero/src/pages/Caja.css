@@ -203,3 +203,23 @@
   padding-top: 10px;
   border-top: 1px dashed rgba(74, 151, 163, 0.35);
 }
+
+.caja-comprador-fe {
+  margin-top: 12px;
+  padding: 14px 16px 0;
+  border-left: 2px solid var(--rb-gold-500, #c99a46);
+  background: rgba(201, 154, 70, 0.06);
+  border-radius: 0 8px 8px 0;
+}
+
+.caja-comprador-fe__fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 576px) {
+  .caja-comprador-fe__fila {
+    grid-template-columns: 1fr;
+  }
+}

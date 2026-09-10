@@ -145,13 +145,35 @@ class CajaController {
   static async registrarPago(req, res) {
     try {
       const { userId: usuario_id, sedeId: sede_id, cliente_id = null } = req.usuario;
-      const { orden_id, monto, metodo_pago_id, referencia, es_abono = false } = req.body;
+      const { orden_id, monto, metodo_pago_id, referencia, es_abono = false, comprador } = req.body;
       const now = new Date();
 
       if (!orden_id || !monto || !metodo_pago_id) {
         return res.status(400).json({
           error: 'Datos incompletos. Se requiere: orden_id, monto, metodo_pago_id',
         });
+      }
+
+      // Factura electrónica: es un servicio que solo el super-admin activa
+      // por empresa (clientes.factura_electronica_habilitada). Se valida
+      // aquí también — no solo se oculta el checkbox en el frontend — para
+      // que nadie pueda forzarlo llamando la API directamente si su
+      // empresa no tiene el servicio contratado.
+      if (comprador) {
+        const { tipo_documento, numero_documento, nombre_razon_social } = comprador;
+        if (!tipo_documento || !numero_documento || !nombre_razon_social) {
+          return res.status(400).json({
+            error: 'Para factura electrónica se requiere tipo y número de documento, y nombre/razón social',
+          });
+        }
+        const clienteEmpresaAuth = cliente_id
+          ? await db('clientes').where('id', cliente_id).first()
+          : null;
+        if (!clienteEmpresaAuth?.factura_electronica_habilitada) {
+          return res.status(403).json({
+            error: 'Tu empresa no tiene habilitado el servicio de factura electrónica',
+          });
+        }
       }
 
       // Obtener apertura actual
@@ -207,6 +229,34 @@ class CajaController {
           updated_at: now,
         }).returning('*');
         factura = Array.isArray(resultFactura) ? resultFactura[0] : resultFactura;
+      }
+
+      // Si el comensal pidió factura electrónica en este pago, se guarda el
+      // comprador (upsert: si ya se había capturado en un abono anterior de
+      // esta misma factura, se actualiza en vez de duplicar) y se marca la
+      // factura como pendiente de envío.
+      if (comprador) {
+        await db('factura_compradores')
+          .insert({
+            factura_id: factura.id,
+            tipo_documento: comprador.tipo_documento,
+            numero_documento: comprador.numero_documento,
+            nombre_razon_social: comprador.nombre_razon_social,
+            email: comprador.email || null,
+            telefono: comprador.telefono || null,
+            direccion: comprador.direccion || null,
+            updated_at: now,
+          })
+          .onConflict('factura_id')
+          .merge();
+
+        await db('facturas').where('id', factura.id).update({
+          requiere_electronica: true,
+          estado_envio_dian: 'pendiente',
+          updated_at: now,
+        });
+        factura.requiere_electronica = true;
+        factura.estado_envio_dian = 'pendiente';
       }
 
       // Registrar pago

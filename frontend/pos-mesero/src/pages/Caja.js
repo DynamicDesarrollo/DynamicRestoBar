@@ -12,6 +12,27 @@ import {
 } from '../components/Icons';
 import './Caja.css';
 
+// DIAN permite identificar a quien no quiere dar sus datos como
+// "consumidor final" con este documento genérico — así el cajero no
+// tiene que negarle la factura a nadie por no traer cédula.
+const NIT_CONSUMIDOR_FINAL = '222222222222';
+
+const TIPOS_DOCUMENTO_COMPRADOR = [
+  { value: 'consumidor_final', label: 'Consumidor final (sin documento)' },
+  { value: 'CC', label: 'Cédula de ciudadanía' },
+  { value: 'NIT', label: 'NIT' },
+  { value: 'CE', label: 'Cédula de extranjería' },
+  { value: 'PAS', label: 'Pasaporte' },
+];
+
+const initialComprador = {
+  tipo_documento: 'CC',
+  numero_documento: '',
+  nombre_razon_social: '',
+  email: '',
+  telefono: '',
+};
+
 export default function Caja() {
   const navigate = useNavigate();
   const usuario = useAuthStore((state) => state.usuario);
@@ -48,6 +69,8 @@ export default function Caja() {
   const [metodoPagoId, setMetodoPagoId] = useState('');
   const [referencia, setReferencia] = useState('');
   const [esAbono, setEsAbono] = useState(false);
+  const [necesitaFacturaElectronica, setNecesitaFacturaElectronica] = useState(false);
+  const [comprador, setComprador] = useState(initialComprador);
   const [motivoDevolucion, setMotivoDevolucion] = useState('');
   const [montoDevolucion, setMontoDevolucion] = useState(0);
   const [saldoFinal, setSaldoFinal] = useState(0);
@@ -185,6 +208,13 @@ export default function Caja() {
       return;
     }
 
+    if (necesitaFacturaElectronica) {
+      if (!comprador.numero_documento || !comprador.nombre_razon_social) {
+        toast.error('Para la factura electrónica falta el documento o el nombre del comprador');
+        return;
+      }
+    }
+
     try {
       setProcesando(true);
       const res = await cajaService.registrarPago({
@@ -193,6 +223,7 @@ export default function Caja() {
         metodo_pago_id: parseInt(metodoPagoId),
         referencia: referencia || null,
         es_abono: esAbono,
+        comprador: necesitaFacturaElectronica ? comprador : undefined,
       });
 
       toast.success(res.data.message);
@@ -224,6 +255,8 @@ export default function Caja() {
       setMontoPago(0);
       setReferencia('');
       setEsAbono(false);
+      setNecesitaFacturaElectronica(false);
+      setComprador(initialComprador);
       setOrdenSeleccionada(null);
       await cargarOrdenes();
       await cargarApertura();
@@ -263,11 +296,26 @@ export default function Caja() {
     }
   };
 
+  const handleCompradorChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'tipo_documento') {
+      setComprador((prev) => ({
+        ...prev,
+        tipo_documento: value,
+        numero_documento: value === 'consumidor_final' ? NIT_CONSUMIDOR_FINAL : '',
+      }));
+      return;
+    }
+    setComprador((prev) => ({ ...prev, [name]: value }));
+  };
+
   const abrirModalPago = (orden) => {
     setOrdenSeleccionada(orden);
     const montoPendiente = orden.total - (orden.monto_pagado || 0);
     setMontoPago(montoPendiente);
     setEsAbono(false);
+    setNecesitaFacturaElectronica(false);
+    setComprador(initialComprador);
     setShowPago(true);
   };
 
@@ -524,6 +572,80 @@ export default function Caja() {
                 Marque esta opción si el cliente pagará en múltiples cuotas
               </Form.Text>
             </Form.Group>
+
+            {usuario?.facturaElectronicaHabilitada && (
+              <Form.Group className="mb-3">
+                <Form.Check
+                  type="checkbox"
+                  label="¿Necesita factura electrónica?"
+                  checked={necesitaFacturaElectronica}
+                  onChange={(e) => setNecesitaFacturaElectronica(e.target.checked)}
+                />
+
+                {necesitaFacturaElectronica && (
+                  <div className="caja-comprador-fe">
+                    <div className="caja-comprador-fe__fila">
+                      <Form.Group className="mb-3">
+                        <Form.Label>Tipo de documento</Form.Label>
+                        <Form.Select
+                          name="tipo_documento"
+                          value={comprador.tipo_documento}
+                          onChange={handleCompradorChange}
+                        >
+                          {TIPOS_DOCUMENTO_COMPRADOR.map((t) => (
+                            <option key={t.value} value={t.value}>{t.label}</option>
+                          ))}
+                        </Form.Select>
+                      </Form.Group>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Número de documento</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="numero_documento"
+                          value={comprador.numero_documento}
+                          onChange={handleCompradorChange}
+                          readOnly={comprador.tipo_documento === 'consumidor_final'}
+                          placeholder="Ej: 1234567890"
+                        />
+                      </Form.Group>
+                    </div>
+
+                    <Form.Group className="mb-3">
+                      <Form.Label>Nombre o razón social</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="nombre_razon_social"
+                        value={comprador.nombre_razon_social}
+                        onChange={handleCompradorChange}
+                        placeholder="Nombre completo o razón social"
+                      />
+                    </Form.Group>
+
+                    <div className="caja-comprador-fe__fila">
+                      <Form.Group className="mb-3">
+                        <Form.Label>Email (opcional)</Form.Label>
+                        <Form.Control
+                          type="email"
+                          name="email"
+                          value={comprador.email}
+                          onChange={handleCompradorChange}
+                          placeholder="Para enviar la factura"
+                        />
+                      </Form.Group>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Teléfono (opcional)</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="telefono"
+                          value={comprador.telefono}
+                          onChange={handleCompradorChange}
+                        />
+                      </Form.Group>
+                    </div>
+                  </div>
+                )}
+              </Form.Group>
+            )}
           </Form>
         </Modal.Body>
         <Modal.Footer>

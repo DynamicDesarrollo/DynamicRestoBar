@@ -42,10 +42,12 @@ class AuthController {
           'usuarios.estado',
           'usuarios.cliente_id',
           'roles.nombre as rol_nombre',
-          'sedes.estilo_catalogo as estilo_catalogo'
+          'sedes.estilo_catalogo as estilo_catalogo',
+          'clientes.factura_electronica_habilitada'
         )
         .join('roles', 'usuarios.rol_id', 'roles.id')
         .leftJoin('sedes', 'usuarios.sede_id', 'sedes.id')
+        .leftJoin('clientes', 'usuarios.cliente_id', 'clientes.id')
         .where('usuarios.email', email)
         .andWhere('usuarios.deleted_at', null)
         .first();
@@ -81,6 +83,7 @@ class AuthController {
           sedeId: usuario.sede_id,
           cliente_id: usuario.cliente_id,
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
+          facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
         },
         process.env.JWT_SECRET || 'secret-key-change-in-prod',
         { expiresIn: '8h' }
@@ -115,6 +118,7 @@ class AuthController {
           sedeId: usuario.sede_id,
           cliente_id: usuario.cliente_id,
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
+          facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
         },
       });
     } catch (error) {
@@ -165,7 +169,8 @@ class AuthController {
           'roles.nombre as rol_nombre',
           'sedes.nombre as sede_nombre',
           'sedes.estilo_catalogo as estilo_catalogo',
-          'clientes.nombre as cliente_nombre'
+          'clientes.nombre as cliente_nombre',
+          'clientes.factura_electronica_habilitada'
         )
         .join('roles', 'usuarios.rol_id', 'roles.id')
         .leftJoin('sedes', 'usuarios.sede_id', 'sedes.id')
@@ -213,6 +218,7 @@ class AuthController {
           sedeId: usuario.sede_id,
           cliente_id: usuario.cliente_id,
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
+          facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
         },
         process.env.JWT_SECRET || 'secret-key-change-in-prod',
         { expiresIn: '8h' }
@@ -236,6 +242,7 @@ class AuthController {
           sedeId: usuario.sede_id,
           cliente_id: usuario.cliente_id,
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
+          facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
         },
       });
     } catch (error) {
@@ -275,6 +282,7 @@ class AuthController {
       const usuario = await db('usuarios')
         .join('roles', 'usuarios.rol_id', 'roles.id')
         .leftJoin('sedes', 'usuarios.sede_id', 'sedes.id')
+        .leftJoin('clientes', 'usuarios.cliente_id', 'clientes.id')
         .select(
           'usuarios.id',
           'usuarios.email',
@@ -283,7 +291,8 @@ class AuthController {
           'usuarios.estado',
           'usuarios.cliente_id',
           'roles.nombre as rol_nombre',
-          'sedes.estilo_catalogo as estilo_catalogo'
+          'sedes.estilo_catalogo as estilo_catalogo',
+          'clientes.factura_electronica_habilitada'
         )
         .where('usuarios.id', decoded.userId)
         .andWhere('usuarios.deleted_at', null)
@@ -305,6 +314,7 @@ class AuthController {
           sedeId: usuario.sede_id,
           cliente_id: usuario.cliente_id,
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
+          facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
         },
         process.env.JWT_SECRET || 'secret-key-change-in-prod',
         { expiresIn: '8h' }
