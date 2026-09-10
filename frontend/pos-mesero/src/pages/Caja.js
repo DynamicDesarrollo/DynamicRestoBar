@@ -102,6 +102,11 @@ export default function Caja() {
     cargarMetodosPago();
     cargarOrdenes();
 
+    // Refresca la lista de órdenes pendientes periódicamente para que una
+    // orden nueva del mesero aparezca sola, sin que el cajero tenga que
+    // recargar la página (mismo patrón de polling que ya usa el KDS).
+    const interval = setInterval(cargarOrdenes, 15000);
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         cargarApertura();
@@ -111,6 +116,7 @@ export default function Caja() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
+      clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
