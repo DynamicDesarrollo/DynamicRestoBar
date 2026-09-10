@@ -11,6 +11,7 @@
 
 const db = require('../config/database');
 const PrintDispatchService = require('../services/PrintDispatchService');
+const FacturaElectronicaService = require('../services/FacturaElectronicaService');
 const { validarSedeDeReq } = require('../utils/tenantScope');
 
 class CajaController {
@@ -285,6 +286,18 @@ class CajaController {
         await db('facturas').where('id', factura.id).update({
           estado: 'cancelada',
           updated_at: new Date(),
+        });
+      }
+
+      // Si la venta ya quedó completamente pagada y alguien pidió factura
+      // electrónica (en este pago o en un abono anterior de la misma
+      // factura), se intenta enviar a la app puente. Fire-and-forget a
+      // propósito: nunca se espera esta llamada ni se deja que su falla
+      // afecte la respuesta al cajero — la app puente todavía no existe,
+      // así que hoy esto siempre queda "pendiente", y eso es correcto.
+      if (facturaPagada && factura.requiere_electronica) {
+        FacturaElectronicaService.enviarFactura(factura.id).catch((err) => {
+          console.error(`❌ Envío de factura electrónica #${factura.id} falló inesperadamente:`, err.message);
         });
       }
 

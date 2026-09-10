@@ -167,4 +167,11 @@ router.post('/comprobantes', uploadComprobanteAdjunto.single('adjunto'), Comprob
 router.put('/comprobantes/:id', uploadComprobanteAdjunto.single('adjunto'), ComprobantesController.actualizarComprobante);
 router.delete('/comprobantes/:id', ComprobantesController.eliminarComprobante);
 
+// ========================================
+// RUTAS DE FACTURA ELECTRÓNICA (envío a la app puente con Aliaddo)
+// ========================================
+const FacturasElectronicasController = require('../../controllers/admin/FacturasElectronicasController');
+router.get('/facturas-electronicas', FacturasElectronicasController.listar);
+router.post('/facturas-electronicas/:id/reenviar', FacturasElectronicasController.reenviar);
+
 module.exports = router;
