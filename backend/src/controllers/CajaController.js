@@ -626,8 +626,15 @@ class CajaController {
    */
   static async getMetodosPago(req, res) {
     try {
+      // Globales (cliente_id NULL, los "de fábrica") + los propios de la
+      // empresa del usuario, si algún día se crean métodos personalizados.
+      const clienteId = req.usuario?.cliente_id ?? null;
       const metodos = await db('metodos_pago')
         .where('activo', true)
+        .andWhere((q) => {
+          q.whereNull('cliente_id');
+          if (clienteId != null) q.orWhere('cliente_id', clienteId);
+        })
         .orderBy('id', 'asc');
 
       return res.json({
