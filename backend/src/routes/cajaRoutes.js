@@ -16,8 +16,12 @@ router.get('/apertura-actual', CajaController.getAperturaActual);
 // POST - Registrar pago/abono
 router.post('/pago', CajaController.registrarPago);
 
-// POST - Procesar devolución
+// POST - Procesar devolución (cancela la orden completa)
 router.post('/devolucion', CajaController.procesarDevolucion);
+
+// POST - Devolución parcial (egreso ligado a una orden que sigue abierta,
+// para cuando se devuelve o cambia un producto puntual)
+router.post('/devolucion-parcial', CajaController.devolucionParcial);
 
 // POST - Cerrar caja
 router.post('/cerrar', CajaController.cerrarCaja);
@@ -34,10 +38,5 @@ router.get('/resumen/:sedeId', CajaController.getResumenCaja);
 
 // GET - Resumen de caja del día
 router.get('/resumen-hoy/:sedeId', CajaController.getResumenHoy);
-
-// POST - Cerrar orden (DEPRECATED)
-
-// POST - Registrar devolución (DEPRECATED)
-router.post('/devoluciones', CajaController.crearDevolucion);
 
 module.exports = router;

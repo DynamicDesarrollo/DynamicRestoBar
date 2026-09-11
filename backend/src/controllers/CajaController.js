@@ -12,7 +12,7 @@
 const db = require('../config/database');
 const PrintDispatchService = require('../services/PrintDispatchService');
 const FacturaElectronicaService = require('../services/FacturaElectronicaService');
-const { validarSedeDeReq } = require('../utils/tenantScope');
+const { validarSedeDeReq, validarRecursoDeReq } = require('../utils/tenantScope');
 
 class CajaController {
   /**
@@ -190,8 +190,9 @@ class CajaController {
 
       // Obtener orden
       const orden = await db('ordenes').where('id', orden_id).first();
-      if (!orden) {
-        return res.status(404).json({ error: 'Orden no encontrada' });
+      const permisoOrden = await validarRecursoDeReq(req, orden, 'orden');
+      if (!permisoOrden.ok) {
+        return res.status(permisoOrden.status).json({ error: permisoOrden.error });
       }
 
       const mesaInfo = orden.mesa_id
@@ -525,14 +526,29 @@ class CajaController {
 
       // Obtener orden
       const orden = await db('ordenes').where('id', orden_id).first();
-      if (!orden) {
-        return res.status(404).json({ error: 'Orden no encontrada' });
+      const permisoOrden = await validarRecursoDeReq(req, orden, 'orden');
+      if (!permisoOrden.ok) {
+        return res.status(permisoOrden.status).json({ error: permisoOrden.error });
       }
-
-      const montoDevolucion = parseFloat(monto_devuelto || orden.total);
 
       // Obtener factura
       const factura = await db('facturas').where('orden_id', orden_id).first();
+
+      // El default es lo REALMENTE pagado, no el total del menú — la
+      // mayoría de estas órdenes tienen $0 pagado (nadie ha cobrado nada
+      // todavía), y registrar un egreso por el total completo asentaría
+      // en caja una salida de dinero que nunca entró.
+      let montoPagadoReal = 0;
+      if (factura) {
+        const pagosPrevios = await db('pago_facturas')
+          .where('factura_id', factura.id)
+          .sum('monto as total')
+          .first();
+        montoPagadoReal = Number(pagosPrevios?.total) || 0;
+      }
+      const montoDevolucion = monto_devuelto !== undefined && monto_devuelto !== null
+        ? parseFloat(monto_devuelto)
+        : montoPagadoReal;
 
       // Actualizar orden
       await db('ordenes').where('id', orden_id).update({
@@ -556,17 +572,22 @@ class CajaController {
         });
       }
 
-      // Registrar en movimientos de caja (egreso)
-      await db('caja_movimientos').insert({
-        apertura_caja_id: apertura.id,
-        tipo: 'egreso',
-        monto: montoDevolucion,
-        concepto: `Devolución Orden #${orden.numero_orden} - Motivo: ${motivo}`,
-        orden_id,
-        usuario_id,
-        created_at: new Date(),
-        updated_at: new Date(),
-      });
+      // Registrar en movimientos de caja (egreso) SOLO si de verdad hay
+      // algo que devolver — la mayoría de estas órdenes tienen $0 pagado,
+      // y un movimiento de caja en $0 no representa ningún dinero real,
+      // solo ensucia el libro de caja.
+      if (montoDevolucion > 0) {
+        await db('caja_movimientos').insert({
+          apertura_caja_id: apertura.id,
+          tipo: 'egreso',
+          monto: montoDevolucion,
+          concepto: `Devolución Orden #${orden.numero_orden} - Motivo: ${motivo}`,
+          orden_id,
+          usuario_id,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+      }
 
       console.log(`🔄 DEVOLUCIÓN PROCESADA - Orden: ${orden.numero_orden}, Monto: $${montoDevolucion}, Motivo: ${motivo}`);
 
@@ -586,6 +607,73 @@ class CajaController {
       console.error('❌ Error en procesarDevolucion:', err.message);
       return res.status(500).json({
         error: 'Error al procesar devolución',
+        message: err.message,
+      });
+    }
+  }
+
+  /**
+   * POST /caja/devolucion-parcial
+   * Registra un egreso de caja ligado a una orden SIN anularla — para
+   * cuando se devuelve o cambia un producto puntual (ver
+   * OrdenesController.crear, que ya reenvía el carrito ajustado y
+   * recalcula el total) y el cliente había pagado de más respecto al
+   * nuevo total. La orden sigue abierta con lo que quede pendiente.
+   * Body: { orden_id, motivo, monto }
+   */
+  static async devolucionParcial(req, res) {
+    try {
+      const { userId: usuario_id } = req.usuario;
+      const { orden_id, motivo, monto } = req.body;
+
+      if (!orden_id || !motivo || !monto) {
+        return res.status(400).json({
+          error: 'Datos incompletos. Se requiere: orden_id, motivo, monto',
+        });
+      }
+      if (parseFloat(monto) <= 0) {
+        return res.status(400).json({ error: 'El monto a devolver debe ser mayor a 0' });
+      }
+
+      const apertura = await db('aperturas_caja')
+        .where('usuario_id', usuario_id)
+        .where('estado', 'abierta')
+        .where('activa', true)
+        .first();
+      if (!apertura) {
+        return res.status(400).json({ error: 'No hay caja abierta' });
+      }
+
+      const orden = await db('ordenes').where('id', orden_id).first();
+      const permisoOrden = await validarRecursoDeReq(req, orden, 'orden');
+      if (!permisoOrden.ok) {
+        return res.status(permisoOrden.status).json({ error: permisoOrden.error });
+      }
+
+      const montoDevolucion = parseFloat(monto);
+
+      await db('caja_movimientos').insert({
+        apertura_caja_id: apertura.id,
+        tipo: 'egreso',
+        monto: montoDevolucion,
+        concepto: `Devolución parcial Orden #${orden.numero_orden} - Motivo: ${motivo}`,
+        orden_id,
+        usuario_id,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+
+      console.log(`🔄 DEVOLUCIÓN PARCIAL - Orden: ${orden.numero_orden}, Monto: $${montoDevolucion}, Motivo: ${motivo}`);
+
+      return res.json({
+        success: true,
+        message: 'Devolución parcial registrada',
+        data: { orden_id, monto_devuelto: montoDevolucion, motivo },
+      });
+    } catch (err) {
+      console.error('❌ Error en devolucionParcial:', err.message);
+      return res.status(500).json({
+        error: 'Error al registrar devolución parcial',
         message: err.message,
       });
     }
@@ -873,68 +961,6 @@ class CajaController {
     }
   }
 
-  /**
-   * POST /caja/devoluciones
-   * Registrar devolución/anulación de pago
-   * Cuerpo: { factura_id, motivo }
-   */
-  static async crearDevolucion(req, res) {
-    try {
-      const { factura_id, motivo } = req.body;
-
-      const factura = await db('facturas').where('id', factura_id).first();
-      if (!factura) {
-        return res.status(404).json({ error: 'Factura no encontrada' });
-      }
-
-      // Crear registro de devolución
-      const [devolucionId] = await db('devoluciones').insert({
-        factura_id,
-        orden_id: factura.orden_id,
-        monto: factura.total,
-        motivo,
-        estado: 'completada',
-        created_at: new Date(),
-      }).returning('id');
-
-      // Actualizar factura
-      await db('facturas').where('id', factura_id).update({
-        estado: 'anulada',
-        updated_at: new Date(),
-      });
-
-      // Actualizar orden
-      await db('ordenes').where('id', factura.orden_id).update({
-        estado: 'anulada',
-        updated_at: new Date(),
-      });
-
-      // Liberar mesa si existe
-      const orden = await db('ordenes').where('id', factura.orden_id).first();
-      if (orden && orden.mesa_id) {
-        await db('mesas').where('id', orden.mesa_id).update({
-          estado: 'disponible',
-          updated_at: new Date(),
-        });
-      }
-
-      return res.json({
-        success: true,
-        message: 'Devolución registrada',
-        data: {
-          devolucion_id: devolucionId,
-          factura_id,
-          monto: factura.total,
-        },
-      });
-    } catch (err) {
-      console.error('❌ Error al crear devolución:', err.message);
-      return res.status(500).json({
-        error: 'Error al crear devolución',
-        message: err.message,
-      });
-    }
-  }
 }
 
 module.exports = CajaController;

@@ -127,6 +127,8 @@ export const cajaService = {
     apiClient.post('/caja/pago', data),
   procesarDevolucion: (data) =>
     apiClient.post('/caja/devolucion', data),
+  devolucionParcial: (data) =>
+    apiClient.post('/caja/devolucion-parcial', data),
 
   getFacturas: (sedeId, params) =>
     apiClient.get(`/caja/facturas/${sedeId}`, { params }),
@@ -134,8 +136,6 @@ export const cajaService = {
     apiClient.get(`/caja/resumen/${sedeId}`),
   getResumenHoy: (sedeId) =>
     apiClient.get(`/caja/resumen-hoy/${sedeId}`),
-  crearDevolucion: (data) =>
-    apiClient.post('/caja/devoluciones', data),
 };
 
 export const canalesService = {

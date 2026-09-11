@@ -749,7 +749,11 @@ class OrdenesController {
 
   /**
    * GET /ordenes/:id
-   * Obtener orden completa con detalles
+   * Obtener orden completa con sus items (producto, cantidad, precio,
+   * modificadores). Antes esto consultaba "orden_detalles", una tabla que
+   * no existe — el endpoint nunca funcionó. Se arma igual que getByMesa,
+   * más el nombre del producto (falta ahí también) para poder mostrar la
+   * orden sin depender del catálogo cargado en el cliente.
    */
   static async getById(req, res) {
     try {
@@ -763,16 +767,40 @@ class OrdenesController {
       const permiso = await validarRecursoDeReq(req, orden, 'orden');
       if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
 
-      // Obtener detalles
-      const detalles = await db('orden_detalles')
-        .select('*')
-        .where('orden_id', id);
+      const items = await db('orden_items as oi')
+        .select('oi.*', 'p.nombre as producto_nombre')
+        .leftJoin('productos as p', 'oi.producto_id', 'p.id')
+        .where('oi.orden_id', id)
+        .where('oi.cantidad', '>', 0)
+        .orderBy('oi.id', 'asc');
+
+      const itemsConModificadores = await Promise.all(
+        items.map(async (item) => {
+          const modificadores = await db('orden_item_modificador')
+            .select('orden_item_modificador.*', 'modificador_opciones.nombre')
+            .join(
+              'modificador_opciones',
+              'orden_item_modificador.modificador_opcion_id',
+              '=',
+              'modificador_opciones.id'
+            )
+            .where('orden_item_modificador.orden_item_id', item.id);
+          return { ...item, modificadores };
+        })
+      );
+
+      const pagosTotal = await db('pago_facturas as pf')
+        .join('facturas as f', 'pf.factura_id', 'f.id')
+        .where('f.orden_id', id)
+        .sum('pf.monto as total')
+        .first();
 
       return res.json({
         success: true,
         data: {
           ...orden,
-          detalles,
+          monto_pagado: Number(pagosTotal?.total) || 0,
+          items: itemsConModificadores,
         },
       });
     } catch (err) {

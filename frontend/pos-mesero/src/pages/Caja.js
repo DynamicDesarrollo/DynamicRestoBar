@@ -2,15 +2,21 @@ import { toast } from 'react-toastify';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal, Form } from 'react-bootstrap';
-import { cajaService, ordenesService } from '../services/api';
+import { cajaService, ordenesService, productosService } from '../services/api';
 import { useAuthStore } from '../stores';
 import FacturaTirilla from '../components/FacturaTirilla';
 import { formatMoney } from '../utils/formatters';
 import {
   IconWallet, IconCash, IconLogout,
-  IconCheck, IconClose, IconNote, IconArrowSwap,
+  IconCheck, IconClose, IconNote, IconArrowSwap, IconTrash, IconPlus, IconMinus,
 } from '../components/Icons';
 import './Caja.css';
+
+const MODOS_DEVOLUCION = {
+  COMPLETA: 'completa',
+  ITEM: 'item',
+  CAMBIO: 'cambio',
+};
 
 // DIAN permite identificar a quien no quiere dar sus datos como
 // "consumidor final" con este documento genérico — así el cajero no
@@ -73,6 +79,13 @@ export default function Caja() {
   const [comprador, setComprador] = useState(initialComprador);
   const [motivoDevolucion, setMotivoDevolucion] = useState('');
   const [montoDevolucion, setMontoDevolucion] = useState(0);
+  const [modoDevolucion, setModoDevolucion] = useState(MODOS_DEVOLUCION.COMPLETA);
+  const [itemsOrdenDevolucion, setItemsOrdenDevolucion] = useState([]);
+  const [cargandoItemsDevolucion, setCargandoItemsDevolucion] = useState(false);
+  const [itemsARetornar, setItemsARetornar] = useState({}); // { [orden_item_id]: cantidadADevolver }
+  const [productosDisponibles, setProductosDisponibles] = useState([]);
+  const [productoReemplazoId, setProductoReemplazoId] = useState('');
+  const [cantidadReemplazo, setCantidadReemplazo] = useState(1);
   const [saldoFinal, setSaldoFinal] = useState(0);
   const [observacionesCierre, setObservacionesCierre] = useState('');
 
@@ -268,29 +281,162 @@ export default function Caja() {
   };
 
   // ==================== DEVOLUCIONES ====================
+  const cerrarModalDevolucion = () => {
+    setShowDevolucion(false);
+    setMotivoDevolucion('');
+    setMontoDevolucion(0);
+    setModoDevolucion(MODOS_DEVOLUCION.COMPLETA);
+    setItemsOrdenDevolucion([]);
+    setItemsARetornar({});
+    setProductoReemplazoId('');
+    setCantidadReemplazo(1);
+    setOrdenSeleccionada(null);
+  };
+
+  const toggleItemARetornar = (item) => {
+    setItemsARetornar((prev) => {
+      const next = { ...prev };
+      if (next[item.id]) {
+        delete next[item.id];
+      } else {
+        // Por defecto se marca la línea completa; el cajero puede bajar
+        // la cantidad si solo se devuelve parte (ej. 2 de 4 cervezas).
+        next[item.id] = item.cantidad;
+      }
+      return next;
+    });
+  };
+
+  const cambiarCantidadARetornar = (item, cantidad) => {
+    const cantidadNum = Math.max(1, Math.min(item.cantidad, parseInt(cantidad, 10) || 1));
+    setItemsARetornar((prev) => ({ ...prev, [item.id]: cantidadNum }));
+  };
+
+  const handleSeleccionarModoDevolucion = async (modo) => {
+    setModoDevolucion(modo);
+    setItemsARetornar({});
+    if (modo === MODOS_DEVOLUCION.CAMBIO && productosDisponibles.length === 0) {
+      try {
+        const res = await productosService.getAll(usuario?.sedeId);
+        setProductosDisponibles(res.data?.data || []);
+      } catch (err) {
+        toast.error('No se pudo cargar el catálogo de productos');
+      }
+    }
+  };
+
   const handleProcesarDevolucion = async () => {
-    if (!ordenSeleccionada || !motivoDevolucion) {
-      toast.error('Complete todos los campos');
+    if (!ordenSeleccionada) return;
+
+    // ---- Cancelar la orden completa: comportamiento de siempre ----
+    if (modoDevolucion === MODOS_DEVOLUCION.COMPLETA) {
+      if (!motivoDevolucion) {
+        toast.error('Indique el motivo de la devolución');
+        return;
+      }
+      try {
+        setProcesando(true);
+        await cajaService.procesarDevolucion({
+          orden_id: ordenSeleccionada.id,
+          motivo: motivoDevolucion,
+          monto_devuelto: parseFloat(montoDevolucion) || 0,
+        });
+        toast.success('Orden cancelada');
+        cerrarModalDevolucion();
+        await cargarOrdenes();
+        await cargarApertura();
+      } catch (err) {
+        toast.error(err.response?.data?.error || 'Error al procesar devolución');
+      } finally {
+        setProcesando(false);
+      }
+      return;
+    }
+
+    // ---- Devolver un producto / Cambiarlo: se reenvía el carrito
+    // ajustado por la misma ruta que usa el mesero para editar una orden
+    // abierta (POST /ordenes) — así cocina/bar reciben el ticket correcto
+    // de "cancelado" o "agregado" sin duplicar esa lógica acá. ----
+    if (!motivoDevolucion) {
+      toast.error('Indique el motivo');
+      return;
+    }
+
+    const hayItemsSeleccionados = Object.values(itemsARetornar).some((c) => Number(c) > 0);
+    if (!hayItemsSeleccionados) {
+      toast.error('Seleccione al menos un producto a devolver');
+      return;
+    }
+
+    const itemsPayload = itemsOrdenDevolucion
+      .map((item) => {
+        const cantidadADevolver = Number(itemsARetornar[item.id] || 0);
+        const cantidadFinal = item.cantidad - cantidadADevolver;
+        if (cantidadFinal <= 0) return null; // se omite -> queda cancelado
+        return {
+          producto_id: item.producto_id,
+          cantidad: cantidadFinal,
+          precio_unitario: Number(item.precio_unitario),
+          modificadores: (item.modificadores || []).map((m) => ({
+            id: m.modificador_opcion_id,
+            nombre: m.nombre,
+            precio_adicional: m.precio_adicional,
+          })),
+        };
+      })
+      .filter(Boolean);
+
+    if (modoDevolucion === MODOS_DEVOLUCION.CAMBIO) {
+      if (!productoReemplazoId) {
+        toast.error('Seleccione el producto de reemplazo');
+        return;
+      }
+      const productoReemplazo = productosDisponibles.find((p) => p.id === Number(productoReemplazoId));
+      if (!productoReemplazo) {
+        toast.error('El producto de reemplazo ya no está disponible');
+        return;
+      }
+      itemsPayload.push({
+        producto_id: productoReemplazo.id,
+        cantidad: Number(cantidadReemplazo) || 1,
+        precio_unitario: Number(productoReemplazo.precio_venta),
+        modificadores: [],
+      });
+    }
+
+    if (itemsPayload.length === 0) {
+      toast.error('Está devolviendo todos los productos — use "Cancelar orden completa" en su lugar');
       return;
     }
 
     try {
       setProcesando(true);
-      await cajaService.procesarDevolucion({
-        orden_id: ordenSeleccionada.id,
-        motivo: motivoDevolucion,
-        monto_devuelto: parseFloat(montoDevolucion) || ordenSeleccionada.total,
+      const nuevoTotal = itemsPayload.reduce((sum, it) => sum + it.cantidad * it.precio_unitario, 0);
+
+      await ordenesService.crear({
+        mesa_id: ordenSeleccionada.mesa_id,
+        items: itemsPayload,
+        total: nuevoTotal,
       });
 
-      toast.success('Devolución registrada');
-      setShowDevolucion(false);
-      setMotivoDevolucion('');
-      setMontoDevolucion(0);
-      setOrdenSeleccionada(null);
+      const montoPagado = Number(ordenSeleccionada.monto_pagado) || 0;
+      const excedente = montoPagado - nuevoTotal;
+      if (excedente > 0) {
+        await cajaService.devolucionParcial({
+          orden_id: ordenSeleccionada.id,
+          motivo: motivoDevolucion,
+          monto: excedente,
+        });
+        toast.success(`Listo. Se devuelven ${formatMoney(excedente)} en efectivo`);
+      } else {
+        toast.success(modoDevolucion === MODOS_DEVOLUCION.CAMBIO ? 'Producto cambiado' : 'Producto devuelto');
+      }
+
+      cerrarModalDevolucion();
       await cargarOrdenes();
       await cargarApertura();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Error al procesar devolución');
+      toast.error(err.response?.data?.error || 'Error al procesar la devolución');
     } finally {
       setProcesando(false);
     }
@@ -319,11 +465,46 @@ export default function Caja() {
     setShowPago(true);
   };
 
-  const abrirModalDevolucion = (orden) => {
+  const abrirModalDevolucion = async (orden) => {
     setOrdenSeleccionada(orden);
-    setMontoDevolucion(orden.total);
+    // El monto por defecto es lo REALMENTE pagado, no el total del menú —
+    // la mayoría de estas órdenes tienen $0 pagado todavía.
+    setMontoDevolucion(orden.monto_pagado || 0);
+    setModoDevolucion(MODOS_DEVOLUCION.COMPLETA);
+    setItemsARetornar({});
+    setProductoReemplazoId('');
+    setCantidadReemplazo(1);
     setShowDevolucion(true);
+    setCargandoItemsDevolucion(true);
+    try {
+      const res = await ordenesService.getById(orden.id);
+      setItemsOrdenDevolucion(res.data.data?.items || []);
+    } catch (err) {
+      toast.error('No se pudieron cargar los productos de la orden');
+      setItemsOrdenDevolucion([]);
+    } finally {
+      setCargandoItemsDevolucion(false);
+    }
   };
+
+  // ---- Valores derivados del modal de devolución (para mostrarle al
+  // cajero, en vivo, cuánto queda y cuánto se le devuelve antes de
+  // confirmar) ----
+  const productoReemplazoSel = productosDisponibles.find((p) => p.id === Number(productoReemplazoId));
+  const montoItemsARetornar = itemsOrdenDevolucion.reduce((sum, item) => {
+    const cantidad = Number(itemsARetornar[item.id] || 0);
+    return sum + cantidad * Number(item.precio_unitario || 0);
+  }, 0);
+  const montoReemplazo = modoDevolucion === MODOS_DEVOLUCION.CAMBIO && productoReemplazoSel
+    ? Number(cantidadReemplazo || 0) * Number(productoReemplazoSel.precio_venta || 0)
+    : 0;
+  const nuevoTotalOrdenPreview = Math.max(
+    0,
+    Number(ordenSeleccionada?.total || 0) - montoItemsARetornar + montoReemplazo
+  );
+  const montoPagadoOrdenSel = Number(ordenSeleccionada?.monto_pagado || 0);
+  const excedenteAPreview = Math.max(0, montoPagadoOrdenSel - nuevoTotalOrdenPreview);
+  const saldoPendientePreview = Math.max(0, nuevoTotalOrdenPreview - montoPagadoOrdenSel);
 
   if (loading) {
     return (
@@ -659,16 +840,40 @@ export default function Caja() {
       </Modal>
 
       {/* MODAL: DEVOLUCIÓN */}
-      <Modal show={showDevolucion} onHide={() => setShowDevolucion(false)} className="rb-modal">
+      <Modal show={showDevolucion} onHide={cerrarModalDevolucion} size="lg" className="rb-modal">
         <Modal.Header closeButton>
           <Modal.Title>
-            Procesar Devolución - Orden #{ordenSeleccionada?.numero_orden}
+            Devolución - Orden #{ordenSeleccionada?.numero_orden}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          <div className="caja-devolucion-modos">
+            <button
+              type="button"
+              className={`caja-devolucion-modo ${modoDevolucion === MODOS_DEVOLUCION.COMPLETA ? 'is-active' : ''}`}
+              onClick={() => handleSeleccionarModoDevolucion(MODOS_DEVOLUCION.COMPLETA)}
+            >
+              <IconClose /> Cancelar orden completa
+            </button>
+            <button
+              type="button"
+              className={`caja-devolucion-modo ${modoDevolucion === MODOS_DEVOLUCION.ITEM ? 'is-active' : ''}`}
+              onClick={() => handleSeleccionarModoDevolucion(MODOS_DEVOLUCION.ITEM)}
+            >
+              <IconTrash /> Devolver un producto
+            </button>
+            <button
+              type="button"
+              className={`caja-devolucion-modo ${modoDevolucion === MODOS_DEVOLUCION.CAMBIO ? 'is-active' : ''}`}
+              onClick={() => handleSeleccionarModoDevolucion(MODOS_DEVOLUCION.CAMBIO)}
+            >
+              <IconArrowSwap /> Cambiar un producto
+            </button>
+          </div>
+
           <Form>
             <Form.Group className="mb-3">
-              <Form.Label>Motivo de la Devolución</Form.Label>
+              <Form.Label>Motivo</Form.Label>
               <Form.Control
                 type="text"
                 value={motivoDevolucion}
@@ -677,25 +882,143 @@ export default function Caja() {
               />
             </Form.Group>
 
-            <Form.Group className="mb-3">
-              <Form.Label>
-                Monto a Devolver (Total: {formatMoney(ordenSeleccionada?.total)})
-              </Form.Label>
-              <Form.Control
-                type="number"
-                value={montoDevolucion}
-                onChange={(e) => setMontoDevolucion(e.target.value)}
-                step="100"
-              />
-            </Form.Group>
+            {modoDevolucion === MODOS_DEVOLUCION.COMPLETA && (
+              <Form.Group className="mb-3">
+                <Form.Label>
+                  Monto a devolver (pagado hasta ahora: {formatMoney(ordenSeleccionada?.monto_pagado || 0)})
+                </Form.Label>
+                <Form.Control
+                  type="number"
+                  value={montoDevolucion}
+                  onChange={(e) => setMontoDevolucion(e.target.value)}
+                  step="100"
+                />
+              </Form.Group>
+            )}
+
+            {(modoDevolucion === MODOS_DEVOLUCION.ITEM || modoDevolucion === MODOS_DEVOLUCION.CAMBIO) && (
+              <>
+                <Form.Label>
+                  {modoDevolucion === MODOS_DEVOLUCION.CAMBIO
+                    ? 'Producto(s) que se retiran'
+                    : 'Seleccione qué se devuelve'}
+                </Form.Label>
+                <div className="caja-devolucion-items">
+                  {cargandoItemsDevolucion ? (
+                    <p className="text-muted mb-0">Cargando productos de la orden...</p>
+                  ) : itemsOrdenDevolucion.length === 0 ? (
+                    <p className="text-muted mb-0">Esta orden no tiene productos.</p>
+                  ) : (
+                    itemsOrdenDevolucion.map((item) => {
+                      const seleccionado = !!itemsARetornar[item.id];
+                      const cantidadSel = itemsARetornar[item.id] || 1;
+                      return (
+                        <div key={item.id} className={`caja-devolucion-item ${seleccionado ? 'is-selected' : ''}`}>
+                          <label className="caja-devolucion-item__check">
+                            <input
+                              type="checkbox"
+                              checked={seleccionado}
+                              onChange={() => toggleItemARetornar(item)}
+                            />
+                            <span>
+                              <strong>{item.producto_nombre || `Producto #${item.producto_id}`}</strong>
+                              <small>{formatMoney(item.precio_unitario)} c/u · {item.cantidad} en la orden</small>
+                            </span>
+                          </label>
+                          {seleccionado && (
+                            <div className="caja-devolucion-item__cantidad">
+                              <button type="button" onClick={() => cambiarCantidadARetornar(item, cantidadSel - 1)}>
+                                <IconMinus />
+                              </button>
+                              <input
+                                type="number"
+                                min="1"
+                                max={item.cantidad}
+                                value={cantidadSel}
+                                onChange={(e) => cambiarCantidadARetornar(item, e.target.value)}
+                              />
+                              <button type="button" onClick={() => cambiarCantidadARetornar(item, cantidadSel + 1)}>
+                                <IconPlus />
+                              </button>
+                              <span className="caja-devolucion-item__subtotal">
+                                -{formatMoney(cantidadSel * item.precio_unitario)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
+
+            {modoDevolucion === MODOS_DEVOLUCION.CAMBIO && (
+              <div className="caja-devolucion-reemplazo">
+                <Form.Label>Producto de reemplazo</Form.Label>
+                <div className="caja-comprador-fe__fila">
+                  <Form.Select
+                    value={productoReemplazoId}
+                    onChange={(e) => setProductoReemplazoId(e.target.value)}
+                  >
+                    <option value="">Seleccionar...</option>
+                    {productosDisponibles.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre} — {formatMoney(p.precio_venta)}
+                      </option>
+                    ))}
+                  </Form.Select>
+                  <Form.Control
+                    type="number"
+                    min="1"
+                    value={cantidadReemplazo}
+                    onChange={(e) => setCantidadReemplazo(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {(modoDevolucion === MODOS_DEVOLUCION.ITEM || modoDevolucion === MODOS_DEVOLUCION.CAMBIO) && (
+              <div className="caja-devolucion-resumen">
+                <div className="caja-modal-linea">
+                  <span>Total original:</span>
+                  <strong>{formatMoney(ordenSeleccionada?.total)}</strong>
+                </div>
+                <div className="caja-modal-linea">
+                  <span>Nuevo total:</span>
+                  <strong>{formatMoney(nuevoTotalOrdenPreview)}</strong>
+                </div>
+                {excedenteAPreview > 0 ? (
+                  <div className="caja-modal-linea caja-modal-linea--total">
+                    <span>Se devuelve en efectivo:</span>
+                    <strong style={{ color: '#f0958c' }}>{formatMoney(excedenteAPreview)}</strong>
+                  </div>
+                ) : saldoPendientePreview > 0 ? (
+                  <div className="caja-modal-linea caja-modal-linea--total">
+                    <span>Queda pendiente por cobrar:</span>
+                    <strong style={{ color: 'var(--rb-gold-400)' }}>{formatMoney(saldoPendientePreview)}</strong>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <button className="rb-btn rb-btn--ghost" onClick={() => setShowDevolucion(false)}>
+          <button className="rb-btn rb-btn--ghost" onClick={cerrarModalDevolucion}>
             Cancelar
           </button>
-          <button className="rb-btn rb-btn--primary" onClick={handleProcesarDevolucion} disabled={procesando}>
-            <IconArrowSwap /> {procesando ? 'Procesando...' : 'Procesar Devolución'}
+          <button
+            className="rb-btn rb-btn--primary"
+            onClick={handleProcesarDevolucion}
+            disabled={procesando || cargandoItemsDevolucion}
+          >
+            <IconArrowSwap /> {procesando
+              ? 'Procesando...'
+              : modoDevolucion === MODOS_DEVOLUCION.COMPLETA
+                ? 'Cancelar Orden'
+                : modoDevolucion === MODOS_DEVOLUCION.CAMBIO
+                  ? 'Confirmar Cambio'
+                  : 'Confirmar Devolución'}
           </button>
         </Modal.Footer>
       </Modal>

@@ -223,3 +223,147 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Modal de devolución: selector de modo ---------- */
+
+.caja-devolucion-modos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 576px) {
+  .caja-devolucion-modos {
+    grid-template-columns: 1fr;
+  }
+}
+
+.caja-devolucion-modo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--rb-charcoal-700, #2c241a);
+  background: var(--rb-charcoal-900, #1a130e);
+  color: var(--rb-cream-400, #d8c9ac);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.caja-devolucion-modo svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+.caja-devolucion-modo:hover {
+  border-color: var(--rb-gold-500, #c99a46);
+  color: var(--rb-cream-100, #f7f1e6);
+}
+
+.caja-devolucion-modo.is-active {
+  border-color: var(--rb-gold-500, #c99a46);
+  background: rgba(201, 154, 70, 0.12);
+  color: var(--rb-gold-400, #e3b565);
+}
+
+/* ---------- Lista de productos seleccionables ---------- */
+
+.caja-devolucion-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  padding-right: 4px;
+}
+
+.caja-devolucion-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--rb-charcoal-700, #2c241a);
+  background: var(--rb-charcoal-900, #1a130e);
+}
+
+.caja-devolucion-item.is-selected {
+  border-color: #e2564b;
+  background: rgba(226, 86, 75, 0.08);
+}
+
+.caja-devolucion-item__check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.caja-devolucion-item__check input { width: 17px; height: 17px; flex-shrink: 0; }
+
+.caja-devolucion-item__check span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.caja-devolucion-item__check strong { font-size: 0.9rem; color: var(--rb-cream-100, #f7f1e6); }
+.caja-devolucion-item__check small { font-size: 0.76rem; color: var(--rb-cream-500, #a99a83); }
+
+.caja-devolucion-item__cantidad {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 27px;
+}
+
+.caja-devolucion-item__cantidad button {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--rb-charcoal-700, #2c241a);
+  background: transparent;
+  color: var(--rb-cream-300, #e3d8c2);
+  cursor: pointer;
+}
+
+.caja-devolucion-item__cantidad button svg { width: 13px; height: 13px; }
+.caja-devolucion-item__cantidad button:hover { border-color: #e2564b; color: #f0958c; }
+
+.caja-devolucion-item__cantidad input {
+  width: 52px;
+  text-align: center;
+  background: var(--rb-charcoal-950, #14100c);
+  border: 1px solid var(--rb-charcoal-700, #2c241a);
+  border-radius: 6px;
+  color: var(--rb-cream-100, #f7f1e6);
+  padding: 4px;
+}
+
+.caja-devolucion-item__subtotal {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f0958c;
+}
+
+/* ---------- Reemplazo (modo "cambiar") y resumen ---------- */
+
+.caja-devolucion-reemplazo {
+  margin-bottom: 16px;
+}
+
+.caja-devolucion-resumen {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--rb-charcoal-700, #2c241a);
+  background: var(--rb-charcoal-900, #1a130e);
+  font-size: 0.88rem;
+}
