@@ -388,20 +388,37 @@ class CajaController {
         item.modificadores = modificadores;
       }
 
-      const impresoraCaja = await db('impresoras')
-        .where('sede_id', sede_id)
-        .whereNull('deleted_at')
-        .where('estado', 'activa')
-        .where(function() {
-          this.whereRaw('LOWER(nombre) LIKE ?', ['%bar%'])
-            .orWhereRaw('LOWER(modelo) LIKE ?', ['%bar%'])
-            .orWhereRaw('LOWER(nombre) LIKE ?', ['%caja%'])
-            .orWhereRaw('LOWER(modelo) LIKE ?', ['%caja%'])
-            .orWhereRaw('LOWER(nombre) LIKE ?', ['%bebida%'])
-            .orWhereRaw('LOWER(modelo) LIKE ?', ['%bebida%']);
-        })
-        .orderBy('id', 'asc')
-        .first();
+      // La impresora para la factura final es configurable por sede
+      // (sedes.impresora_factura_id, elegida en Configuración > Impresoras).
+      // Si nadie la ha configurado todavía, se cae al comportamiento de
+      // siempre: adivinar por nombre/modelo ("bar", "caja", "bebida") —
+      // así no se rompe nada para las sedes que ya funcionan sin tocar
+      // este ajuste nuevo.
+      let impresoraCaja = null;
+      if (sede?.impresora_factura_id) {
+        impresoraCaja = await db('impresoras')
+          .where('id', sede.impresora_factura_id)
+          .where('sede_id', sede_id)
+          .whereNull('deleted_at')
+          .where('estado', 'activa')
+          .first();
+      }
+      if (!impresoraCaja) {
+        impresoraCaja = await db('impresoras')
+          .where('sede_id', sede_id)
+          .whereNull('deleted_at')
+          .where('estado', 'activa')
+          .where(function() {
+            this.whereRaw('LOWER(nombre) LIKE ?', ['%bar%'])
+              .orWhereRaw('LOWER(modelo) LIKE ?', ['%bar%'])
+              .orWhereRaw('LOWER(nombre) LIKE ?', ['%caja%'])
+              .orWhereRaw('LOWER(modelo) LIKE ?', ['%caja%'])
+              .orWhereRaw('LOWER(nombre) LIKE ?', ['%bebida%'])
+              .orWhereRaw('LOWER(modelo) LIKE ?', ['%bebida%']);
+          })
+          .orderBy('id', 'asc')
+          .first();
+      }
 
       if (impresoraCaja?.ip_address) {
         try {

@@ -92,6 +92,53 @@ const SedesController = {
     }
   },
 
+  /**
+   * PUT /admin/sedes/:id/impresora-factura
+   * Elige qué impresora de la sede recibe la factura/recibo final al
+   * cobrar (antes era fijo: adivinado por nombre "bar"/"caja"/"bebida").
+   * Body: { impresora_id } — null o vacío para volver al comportamiento
+   * automático de siempre.
+   */
+  async actualizarImpresoraFactura(req, res) {
+    try {
+      const { id } = req.params;
+      const { impresora_id } = req.body;
+      const clienteId = req.usuario?.cliente_id;
+      const soportaClienteId = await getClienteIdColumnSupported();
+
+      const sede = await db('sedes').where({ id }).whereNull('deleted_at').first();
+      if (!sede) return res.status(404).json({ error: 'Sede no encontrada' });
+      if (soportaClienteId && sede.cliente_id != null && sede.cliente_id !== clienteId) {
+        return res.status(403).json({ error: 'No puedes editar una sede de otra empresa' });
+      }
+
+      let impresoraIdFinal = null;
+      if (impresora_id) {
+        // La impresora elegida tiene que ser de ESTA misma sede — si no,
+        // se podría apuntar la factura a una impresora de otra sucursal
+        // (o, peor, de otro cliente si alguien manda un id adivinado).
+        const impresora = await db('impresoras')
+          .where({ id: impresora_id, sede_id: id })
+          .whereNull('deleted_at')
+          .first();
+        if (!impresora) {
+          return res.status(400).json({ error: 'Esa impresora no pertenece a esta sede' });
+        }
+        impresoraIdFinal = impresora.id;
+      }
+
+      await db('sedes').where({ id }).update({
+        impresora_factura_id: impresoraIdFinal,
+        updated_at: db.fn.now(),
+      });
+
+      const sedeActualizada = await db('sedes').where({ id }).first();
+      res.json({ success: true, data: sedeActualizada });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+
   async eliminarSede(req, res) {
     try {
       const { id } = req.params;

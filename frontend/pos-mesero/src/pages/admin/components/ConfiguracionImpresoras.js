@@ -27,6 +27,8 @@ const ConfiguracionImpresoras = () => {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [testando, setTestando] = useState(null);
+  const [seleccionFactura, setSeleccionFactura] = useState({}); // { [sede_id]: impresora_id }
+  const [guardandoFactura, setGuardandoFactura] = useState(null);
 
   useEffect(() => {
     Promise.all([cargarImpresoras(), cargarSedes()]);
@@ -51,6 +53,9 @@ const ConfiguracionImpresoras = () => {
       // Pre-seleccionar la sede del usuario
       const sedeDefault = usuario?.sedeId || usuario?.sede_id || (lista[0]?.id ?? '');
       setFormData(prev => ({ ...prev, sede_id: sedeDefault }));
+      setSeleccionFactura(
+        lista.reduce((acc, s) => ({ ...acc, [s.id]: s.impresora_factura_id || '' }), {})
+      );
     } catch {
       setSedes([]);
     }
@@ -107,6 +112,20 @@ const ConfiguracionImpresoras = () => {
       cargarImpresoras();
     } catch {
       toast.error('Error al eliminar');
+    }
+  };
+
+  const handleGuardarImpresoraFactura = async (sedeId) => {
+    setGuardandoFactura(sedeId);
+    try {
+      const impresoraId = seleccionFactura[sedeId] || null;
+      await axios.put(`/admin/sedes/${sedeId}/impresora-factura`, { impresora_id: impresoraId });
+      toast.success('Impresora de factura actualizada');
+      cargarSedes();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error al guardar');
+    } finally {
+      setGuardandoFactura(null);
     }
   };
 
@@ -220,6 +239,71 @@ const ConfiguracionImpresoras = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Impresora para la factura final, por sede */}
+        {sedes.length > 0 && (
+          <div className="admin-section" style={{ marginTop: 28, padding: 0, boxShadow: 'none', background: 'none' }}>
+            <div className="section-header">
+              <h3 className="admin-subtitle"><IconPrinter /> Impresora para la factura final</h3>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--rb-cream-500)', marginTop: -8, marginBottom: 16 }}>
+              Elige a cuál impresora de cada sede se manda la factura/recibo al cobrar en Caja —
+              la de cocina o la del bar. Si la dejas en automático, se usa la primera impresora
+              activa cuyo nombre sugiera "bar" o "caja".
+            </p>
+            <div className="table-responsive">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Sede</th>
+                    <th>Impresora para la factura</th>
+                    <th style={{ textAlign: 'right' }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sedes.map((s) => {
+                    const impresorasDeLaSede = impresoras.filter(
+                      (imp) => imp.sede_id === s.id && imp.estado === 'activa'
+                    );
+                    return (
+                      <tr key={s.id}>
+                        <td><strong>{s.nombre}</strong></td>
+                        <td>
+                          {impresorasDeLaSede.length === 0 ? (
+                            <span style={{ color: 'var(--rb-cream-700)' }}>
+                              Sin impresoras activas en esta sede
+                            </span>
+                          ) : (
+                            <select
+                              value={seleccionFactura[s.id] || ''}
+                              onChange={(e) =>
+                                setSeleccionFactura((prev) => ({ ...prev, [s.id]: e.target.value }))
+                              }
+                            >
+                              <option value="">Automático (bar/caja por nombre)</option>
+                              {impresorasDeLaSede.map((imp) => (
+                                <option key={imp.id} value={imp.id}>{imp.nombre}</option>
+                              ))}
+                            </select>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button
+                            className="btn btn-sm btn-primary"
+                            disabled={impresorasDeLaSede.length === 0 || guardandoFactura === s.id}
+                            onClick={() => handleGuardarImpresoraFactura(s.id)}
+                          >
+                            {guardandoFactura === s.id ? 'Guardando...' : 'Guardar'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

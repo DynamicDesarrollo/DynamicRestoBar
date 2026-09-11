@@ -138,6 +138,7 @@ router.get('/sedes', SedesController.getSedes);
 router.get('/sedes/:id', SedesController.getSedeById);
 router.post('/sedes', SedesController.crearSede);
 router.put('/sedes/:id', SedesController.actualizarSede);
+router.put('/sedes/:id/impresora-factura', SedesController.actualizarImpresoraFactura);
 router.delete('/sedes/:id', SedesController.eliminarSede);
 
 // ========================================
