@@ -42,8 +42,8 @@ export default function Login() {
 
   // Login por Email
   const [formEmail, setFormEmail] = useState({
-    email: 'juan@dynamicrestobar.com',
-    contraseña: '1234',
+    email: '',
+    contraseña: '',
   });
 
   // Login por PIN
@@ -308,14 +308,6 @@ export default function Login() {
               </button>
             </form>
           )}
-
-          <div className="login-devnote">
-            <p className="login-devnote__label">Credenciales de prueba</p>
-            <p className="login-devnote__body">
-              Email: juan@dynamicrestobar.com · Contraseña: 1234<br />
-              PIN: 5678
-            </p>
-          </div>
         </div>
       </div>
     </div>
