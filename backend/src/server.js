@@ -85,7 +85,17 @@ const corsOptions = {
   credentials: true,
 };
 
-app.use(cors(corsOptions));
+// El menú digital lo abre el comensal sin login desde un dominio propio,
+// separado del resto de la app (hoy aurum-menu-resto-bar.vercel.app, mañana
+// posiblemente un dominio por restaurante) — no tiene sentido mantenerlo en
+// el allowlist fijo de allowedOrigins, así que se salta ese CORS estricto y
+// usa uno propio abierto a cualquier origen. Es seguro porque el endpoint no
+// usa cookies/sesión (sin credentials) y valida tenant/sede/mesa él mismo.
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/v1/menu-digital')) return next();
+  return cors(corsOptions)(req, res, next);
+});
+app.use('/api/v1/menu-digital', cors({ origin: true }));
 
 // Parsers
 app.use(express.json({ limit: '10mb' }));
