@@ -19,7 +19,8 @@ const ClientesAdmin = () => {
       foto: null,
       valor_plan: '',
       estilo_catalogo: 'clasico',
-      factura_electronica_habilitada: false
+      factura_electronica_habilitada: false,
+      menu_digital_habilitado: false
     });
 
     const [departamentos, setDepartamentos] = useState([]);
@@ -66,7 +67,8 @@ const ClientesAdmin = () => {
         foto: null,
         valor_plan: '',
         estilo_catalogo: 'clasico',
-        factura_electronica_habilitada: false
+        factura_electronica_habilitada: false,
+        menu_digital_habilitado: false
       });
       setEditId(null);
       setShowForm(true);
@@ -85,7 +87,8 @@ const ClientesAdmin = () => {
         foto: null,
         valor_plan: cliente.valor_plan || '',
         estilo_catalogo: cliente.estilo_catalogo || 'clasico',
-        factura_electronica_habilitada: !!cliente.factura_electronica_habilitada
+        factura_electronica_habilitada: !!cliente.factura_electronica_habilitada,
+        menu_digital_habilitado: !!cliente.menu_digital_habilitado
       });
       setEditId(cliente.id);
       setShowForm(true);
@@ -272,6 +275,19 @@ const ClientesAdmin = () => {
                   </div>
                 </div>
                 <div className={styles.formGroup}>
+                  <label>Menú digital</label>
+                  <div className={styles.checkboxField}>
+                    <input
+                      id="menu_digital_habilitado"
+                      name="menu_digital_habilitado"
+                      type="checkbox"
+                      checked={formData.menu_digital_habilitado}
+                      onChange={handleInputChange}
+                    />
+                    <label htmlFor="menu_digital_habilitado">Este cliente tiene el menú digital habilitado</label>
+                  </div>
+                </div>
+                <div className={styles.formGroup}>
                   <label>Estado</label>
                   <select name="estado" value={formData.estado} onChange={handleInputChange} className={styles.input}>
                     <option value="activo">activo</option>
@@ -307,6 +323,7 @@ const ClientesAdmin = () => {
             <th>Plan</th>
             <th>Catálogo</th>
             <th>Fact. Electrónica</th>
+            <th>Menú Digital</th>
             <th>Valor del Plan</th>
             <th>Estado</th>
             <th>Fecha Corte</th>
@@ -355,6 +372,11 @@ const ClientesAdmin = () => {
                 <td>
                   <span className={`${styles.badge} ${c.factura_electronica_habilitada ? styles['badge-activo'] : styles['badge-inactivo']}`}>
                     {c.factura_electronica_habilitada ? 'Habilitada' : 'No habilitada'}
+                  </span>
+                </td>
+                <td>
+                  <span className={`${styles.badge} ${c.menu_digital_habilitado ? styles['badge-activo'] : styles['badge-inactivo']}`}>
+                    {c.menu_digital_habilitado ? 'Habilitado' : 'No habilitado'}
                   </span>
                 </td>
                 <td>{c.valor_plan ? `$${Number(c.valor_plan).toLocaleString()}` : '-'}</td>

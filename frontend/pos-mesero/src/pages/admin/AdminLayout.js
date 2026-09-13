@@ -6,7 +6,7 @@ import logo from '../../image/LogoRestoBar.png';
 import {
   IconGrid, IconBuilding, IconTable, IconPlate, IconBox, IconChefHat,
   IconBarChart, IconTrendingUp, IconPrinter, IconUser, IconMenu,
-  IconLogout, IconWallet, IconReceipt,
+  IconLogout, IconWallet, IconReceipt, IconQrCode,
 } from '../../components/Icons';
 import './AdminLayout.css';
 
@@ -89,6 +89,7 @@ const AdminLayout = ({ children }) => {
       title: 'Sistema',
       items: [
         { path: '/admin/impresoras', label: 'Impresoras', Icon: IconPrinter },
+        { path: '/admin/menu-digital', label: 'Menú Digital', Icon: IconQrCode },
         { path: '/admin/usuarios', label: 'Usuarios', Icon: IconUser },
       ],
     },

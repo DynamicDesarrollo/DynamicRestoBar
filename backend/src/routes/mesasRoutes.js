@@ -19,6 +19,9 @@ router.use(verificarToken);
 // Rutas
 router.get('/', MesasController.getAll);
 router.patch('/trasladar', MesasController.trasladar);
+// Antes de '/:id' — si no, Express las confunde con una mesa de id "llamados".
+router.get('/llamados', MesasController.getLlamados);
+router.post('/llamados/:id/atender', MesasController.atenderLlamado);
 router.get('/:id', MesasController.getById);
 router.patch('/:id/estado', MesasController.updateEstado);
 router.get('/:id/comanda', MesasController.getComanda);

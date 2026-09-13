@@ -25,6 +25,7 @@ import ActivarCuenta from './pages/ActivarCuenta';
 import ConfiguracionUsuarios from './pages/admin/components/ConfiguracionUsuarios';
 import ConfiguracionImpresoras from './pages/admin/components/ConfiguracionImpresoras';
 import ConfiguracionComprobantes from './pages/admin/components/ConfiguracionComprobantes';
+import ConfiguracionMenuDigital from './pages/admin/components/ConfiguracionMenuDigital';
 import './App.css';
 
 function App() {
@@ -176,6 +177,14 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['Administrador', 'Gerente']}>
               <ConfiguracionComprobantes />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/menu-digital"
+          element={
+            <ProtectedRoute requiredRoles={['Administrador', 'Gerente']}>
+              <ConfiguracionMenuDigital />
             </ProtectedRoute>
           }
         />

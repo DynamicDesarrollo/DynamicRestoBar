@@ -186,6 +186,71 @@ class MesasController {
   }
 
   /**
+   * GET /mesas/llamados
+   * Avisos "llamar mesero" pendientes, generados desde el menú digital
+   * público. Query params: sedeId (opcional, igual que getAll)
+   */
+  static async getLlamados(req, res) {
+    try {
+      const permiso = await validarSedeDeReq(req, req.query.sedeId);
+      if (!permiso.ok) return res.status(permiso.status).json({ error: permiso.error });
+
+      const llamados = await db('llamados_mesero')
+        .where('sede_id', permiso.sedeId)
+        .andWhere('estado', 'pendiente')
+        .orderBy('created_at', 'asc');
+
+      return res.json({
+        success: true,
+        data: llamados,
+        total: llamados.length,
+      });
+    } catch (err) {
+      console.error('❌ Error en getLlamados:', err.message);
+      return res.status(500).json({
+        error: 'Error al obtener llamados de mesero',
+        message: err.message,
+      });
+    }
+  }
+
+  /**
+   * POST /mesas/llamados/:id/atender
+   * Marca un llamado de mesero como atendido.
+   */
+  static async atenderLlamado(req, res) {
+    try {
+      const { id } = req.params;
+
+      const llamado = await db('llamados_mesero').where('id', id).first();
+      if (!llamado) return res.status(404).json({ error: 'Llamado no encontrado' });
+
+      const sedeIdsCliente = await sedesDeReq(req);
+      if (!sedePerteneceACliente(llamado.sede_id, sedeIdsCliente)) {
+        return res.status(403).json({ error: 'Ese llamado no pertenece a tu empresa' });
+      }
+
+      const [actualizado] = await db('llamados_mesero')
+        .where('id', id)
+        .update({
+          estado: 'atendido',
+          atendido_por: req.usuario?.userId || null,
+          atendido_at: new Date(),
+          updated_at: new Date(),
+        })
+        .returning('*');
+
+      return res.json({ success: true, data: actualizado });
+    } catch (err) {
+      console.error('❌ Error en atenderLlamado:', err.message);
+      return res.status(500).json({
+        error: 'Error al atender el llamado',
+        message: err.message,
+      });
+    }
+  }
+
+  /**
    * PATCH /mesas/trasladar
    * Trasladar una orden activa de una mesa origen a una mesa destino
    * Cuerpo: { orden_id, mesa_origen_id, mesa_destino_id, motivo? }

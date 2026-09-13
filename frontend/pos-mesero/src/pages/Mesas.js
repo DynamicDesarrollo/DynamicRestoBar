@@ -1,12 +1,12 @@
 import { toast } from 'react-toastify';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal, Form } from 'react-bootstrap';
 import { mesasService } from '../services/api';
 import { useMesasStore, useAuthStore } from '../stores';
 import {
   IconGear, IconCash, IconRefresh, IconLogout,
-  IconUsers, IconUser, IconMapPin, IconPlate, IconArrowSwap,
+  IconUsers, IconUser, IconMapPin, IconPlate, IconArrowSwap, IconAlert,
 } from '../components/Icons';
 import './Mesas.css';
 
@@ -29,6 +29,41 @@ export default function Mesas() {
   const [mesaDestinoId, setMesaDestinoId] = useState('');
   const [trasladando, setTrasladando] = useState(false);
   const [reasignarMesero, setReasignarMesero] = useState(true);
+  const [llamados, setLlamados] = useState([]);
+  const idsAvisados = useRef(new Set());
+
+  const cargarLlamados = useCallback(async () => {
+    try {
+      const sedeId = localStorage.getItem('sedeId') || usuario?.sede_id || 1;
+      const response = await mesasService.getLlamados(sedeId);
+      const pendientes = response.data.data || [];
+      pendientes.forEach((llamado) => {
+        if (!idsAvisados.current.has(llamado.id)) {
+          idsAvisados.current.add(llamado.id);
+          toast.info(`Mesa ${llamado.mesa_numero} pidió su mesero${llamado.mensaje ? `: ${llamado.mensaje}` : ''}`);
+        }
+      });
+      setLlamados(pendientes);
+    } catch (err) {
+      // Silencioso: no interrumpir al mesero por un fallo de polling.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuario]);
+
+  const handleAtenderLlamado = async (id) => {
+    try {
+      await mesasService.atenderLlamado(id);
+      setLlamados((prev) => prev.filter((l) => l.id !== id));
+    } catch (err) {
+      toast.error('No se pudo marcar como atendido');
+    }
+  };
+
+  useEffect(() => {
+    cargarLlamados();
+    const interval = setInterval(cargarLlamados, 15000);
+    return () => clearInterval(interval);
+  }, [cargarLlamados]);
 
   const cargarMesas = useCallback(async () => {
     try {
@@ -158,6 +193,27 @@ export default function Mesas() {
       {/* Contenido */}
       <div className="mesas-content">
         {error && <div className="mesas-alert">{error}</div>}
+
+        {llamados.length > 0 && (
+          <div className="mesas-llamados">
+            {llamados.map((llamado) => (
+              <div key={llamado.id} className="mesas-llamados__item">
+                <IconAlert />
+                <span className="mesas-llamados__texto">
+                  Mesa <strong>{llamado.mesa_numero}</strong> pidió su mesero
+                  {llamado.mensaje && <> — {llamado.mensaje}</>}
+                </span>
+                <button
+                  type="button"
+                  className="mesas-llamados__btn"
+                  onClick={() => handleAtenderLlamado(llamado.id)}
+                >
+                  Atender
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Estadísticas */}
         <div className="mesas-stats">

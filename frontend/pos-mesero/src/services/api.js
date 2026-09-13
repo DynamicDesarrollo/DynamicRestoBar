@@ -96,6 +96,10 @@ export const mesasService = {
     apiClient.get(`/mesas/${id}`),
   trasladarOrden: (data) =>
     apiClient.patch('/mesas/trasladar', data),
+  getLlamados: (sedeId) =>
+    apiClient.get('/mesas/llamados', { params: { sedeId } }),
+  atenderLlamado: (id) =>
+    apiClient.post(`/mesas/llamados/${id}/atender`),
 };
 
 export const kdsService = {

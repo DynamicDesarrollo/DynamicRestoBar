@@ -157,6 +157,42 @@
   grid-column: 1 / -1;
 }
 
+/* ---------- Llamados de mesero (menú digital) ---------- */
+
+.mesas-llamados {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.mesas-llamados__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(201, 154, 70, 0.12);
+  border: 1px solid rgba(201, 154, 70, 0.4);
+  color: var(--rb-gold-300);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.mesas-llamados__texto {
+  flex: 1;
+}
+
+.mesas-llamados__btn {
+  background: var(--rb-gold-500, #c99a46);
+  color: #1a1310;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 /* ---------- Estadísticas ---------- */
 
 .mesas-stats {

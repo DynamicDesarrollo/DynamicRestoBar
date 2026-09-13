@@ -29,6 +29,10 @@ const ClientesController = {
     // empresa, nunca el propio restaurante — igual que estilo_catalogo.
     const factura_electronica_habilitada = req.body.factura_electronica_habilitada === true
       || req.body.factura_electronica_habilitada === 'true';
+    // Menú digital: mismo mecanismo que factura electrónica — valor agregado
+    // que solo el super-admin activa por empresa.
+    const menu_digital_habilitado = req.body.menu_digital_habilitado === true
+      || req.body.menu_digital_habilitado === 'true';
     let foto_url = null;
     if (req.file) {
       // Construir la URL pública para la foto
@@ -37,7 +41,7 @@ const ClientesController = {
     }
     // Crear cliente
     const [cliente] = await db('clientes')
-      .insert({ nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan, foto_url, estilo_catalogo, factura_electronica_habilitada })
+      .insert({ nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan, foto_url, estilo_catalogo, factura_electronica_habilitada, menu_digital_habilitado })
       .returning('*');
 
     // Crear sede principal asociada al cliente
@@ -109,7 +113,9 @@ const ClientesController = {
     const estilo_catalogo = normalizarEstiloCatalogo(req.body.estilo_catalogo);
     const factura_electronica_habilitada = req.body.factura_electronica_habilitada === true
       || req.body.factura_electronica_habilitada === 'true';
-    let updateData = { nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan, estilo_catalogo, factura_electronica_habilitada };
+    const menu_digital_habilitado = req.body.menu_digital_habilitado === true
+      || req.body.menu_digital_habilitado === 'true';
+    let updateData = { nombre, plan, estado, fecha_corte, email, telefono, departamento, ciudad, valor_plan, estilo_catalogo, factura_electronica_habilitada, menu_digital_habilitado };
     if (req.file) {
       const baseUrl = `${req.protocol}://${req.get('host')}`;
       updateData.foto_url = `${baseUrl}/uploads/clientes/${req.file.filename}`;

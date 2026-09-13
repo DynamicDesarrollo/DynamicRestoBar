@@ -311,3 +311,12 @@ export const IconReceipt = (props) => (
     <path d="M8.5 8h7M8.5 11.5h7M8.5 15h4" />
   </svg>
 );
+
+export const IconQrCode = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="3.5" y="3.5" width="6" height="6" rx="1" />
+    <rect x="14.5" y="3.5" width="6" height="6" rx="1" />
+    <rect x="3.5" y="14.5" width="6" height="6" rx="1" />
+    <path d="M14.5 14.5h3v3h3v3h-6v-6Z" />
+  </svg>
+);

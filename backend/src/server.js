@@ -19,6 +19,7 @@ const clientesRoutes = require('./routes/clientesRoutes');
 const canalesRoutes = require('./routes/canalesRoutes');
 const activacionRoutes = require('./routes/activacionRoutes');
 const bridgeRoutes = require('./routes/bridgeRoutes');
+const menuDigitalPublicoRoutes = require('./routes/menuDigitalPublicoRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -187,6 +188,8 @@ app.use('/api/v1/clientes', clientesRoutes);
 app.use('/api/v1/canales', canalesRoutes);
 app.use('/api/v1/activar-cuenta', activacionRoutes);
 app.use('/api/v1/bridge', bridgeRoutes);
+// Menú digital público (comensal, sin login) — ver comentario en el router.
+app.use('/api/v1/menu-digital', menuDigitalPublicoRoutes);
 const sedesRoutes = require('./routes/sedesRoutes');
 app.use('/api/v1/sedes', sedesRoutes);
 // Pagos de clientes (facturación del SaaS: solo super-admin)

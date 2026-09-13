@@ -43,7 +43,8 @@ class AuthController {
           'usuarios.cliente_id',
           'roles.nombre as rol_nombre',
           'sedes.estilo_catalogo as estilo_catalogo',
-          'clientes.factura_electronica_habilitada'
+          'clientes.factura_electronica_habilitada',
+          'clientes.menu_digital_habilitado'
         )
         .join('roles', 'usuarios.rol_id', 'roles.id')
         .leftJoin('sedes', 'usuarios.sede_id', 'sedes.id')
@@ -84,6 +85,7 @@ class AuthController {
           cliente_id: usuario.cliente_id,
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
           facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
+          menuDigitalHabilitado: !!usuario.menu_digital_habilitado,
         },
         process.env.JWT_SECRET || 'secret-key-change-in-prod',
         { expiresIn: '8h' }
@@ -119,6 +121,7 @@ class AuthController {
           cliente_id: usuario.cliente_id,
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
           facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
+          menuDigitalHabilitado: !!usuario.menu_digital_habilitado,
         },
       });
     } catch (error) {
@@ -170,7 +173,8 @@ class AuthController {
           'sedes.nombre as sede_nombre',
           'sedes.estilo_catalogo as estilo_catalogo',
           'clientes.nombre as cliente_nombre',
-          'clientes.factura_electronica_habilitada'
+          'clientes.factura_electronica_habilitada',
+          'clientes.menu_digital_habilitado'
         )
         .join('roles', 'usuarios.rol_id', 'roles.id')
         .leftJoin('sedes', 'usuarios.sede_id', 'sedes.id')
@@ -219,6 +223,7 @@ class AuthController {
           cliente_id: usuario.cliente_id,
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
           facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
+          menuDigitalHabilitado: !!usuario.menu_digital_habilitado,
         },
         process.env.JWT_SECRET || 'secret-key-change-in-prod',
         { expiresIn: '8h' }
@@ -243,6 +248,7 @@ class AuthController {
           cliente_id: usuario.cliente_id,
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
           facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
+          menuDigitalHabilitado: !!usuario.menu_digital_habilitado,
         },
       });
     } catch (error) {
@@ -292,7 +298,8 @@ class AuthController {
           'usuarios.cliente_id',
           'roles.nombre as rol_nombre',
           'sedes.estilo_catalogo as estilo_catalogo',
-          'clientes.factura_electronica_habilitada'
+          'clientes.factura_electronica_habilitada',
+          'clientes.menu_digital_habilitado'
         )
         .where('usuarios.id', decoded.userId)
         .andWhere('usuarios.deleted_at', null)
@@ -315,6 +322,7 @@ class AuthController {
           cliente_id: usuario.cliente_id,
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
           facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
+          menuDigitalHabilitado: !!usuario.menu_digital_habilitado,
         },
         process.env.JWT_SECRET || 'secret-key-change-in-prod',
         { expiresIn: '8h' }
