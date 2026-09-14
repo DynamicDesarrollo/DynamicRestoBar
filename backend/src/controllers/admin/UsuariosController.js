@@ -54,6 +54,19 @@ const validarRolAsignable = async (rolId, rolSolicitante) => {
   return { ok: true };
 };
 
+// Un usuario con rol Repartidor se vincula a una fila de `repartidores`
+// (los datos logísticos: vehículo, placa, teléfono) vía usuarios.repartidor_id
+// — se valida que ese repartidor sea de una sede del mismo cliente, igual
+// que se valida sede_id.
+const repartidorPerteneceASedes = async (repartidorId, sedeIds) => {
+  if (!repartidorId) return true;
+  const repartidor = await db('repartidores')
+    .where({ id: repartidorId })
+    .whereNull('deleted_at')
+    .first();
+  return !!repartidor && sedeIds.includes(repartidor.sede_id);
+};
+
 // Verifica que el usuario objetivo pertenezca al mismo cliente que el
 // que hace la petición (por cliente_id directo, o por sede_id como
 // fallback para filas legacy sin cliente_id asignado).
@@ -77,7 +90,7 @@ const UsuariosController = {
       const clienteId = await resolverClienteId(req);
 
       let query = db('usuarios')
-        .select('id', 'nombre', 'email', 'rol_id', 'sede_id', 'cliente_id')
+        .select('id', 'nombre', 'email', 'rol_id', 'sede_id', 'cliente_id', 'repartidor_id')
         .whereNull('deleted_at')
         .whereNot('rol_id', 8);
 
@@ -106,7 +119,7 @@ const UsuariosController = {
       if (!permitido) return res.status(403).json({ error: 'No puedes ver un usuario de otra empresa' });
 
       const usuario = await db('usuarios')
-        .select('id', 'nombre', 'email', 'rol_id', 'sede_id')
+        .select('id', 'nombre', 'email', 'rol_id', 'sede_id', 'repartidor_id')
         .where({ id: req.params.id })
         .whereNull('deleted_at')
         .first();
@@ -118,7 +131,9 @@ const UsuariosController = {
 
   async crearUsuario(req, res) {
     try {
-      const { nombre, email, pin, rol_id } = req.body;
+      const {
+        nombre, email, pin, rol_id, repartidor_id,
+      } = req.body;
       const cliente_id = req.usuario?.cliente_id;
       if (!cliente_id) {
         return res.status(400).json({ error: 'No se puede determinar el cliente para el usuario.' });
@@ -142,11 +157,17 @@ const UsuariosController = {
         return res.status(409).json({ error: 'Ya existe otro usuario de tu empresa con ese PIN. Elige uno distinto.' });
       }
 
+      if (!(await repartidorPerteneceASedes(repartidor_id, sedeIds))) {
+        return res.status(403).json({ error: 'El repartidor indicado no pertenece a tu empresa' });
+      }
+
       // Usamos una contraseña temporal segura para cumplir la columna NOT NULL.
       // El usuario puede cambiarla después si es necesario.
       const contraseña = await bcrypt.hash(pin || '1234', 10);
       const [id] = await db('usuarios')
-        .insert({ nombre, email, pin, rol_id, sede_id, cliente_id, contraseña })
+        .insert({
+          nombre, email, pin, rol_id, sede_id, cliente_id, contraseña, repartidor_id: repartidor_id || null,
+        })
         .returning('id');
       res.json({ success: true, id });
     } catch (err) {
@@ -161,7 +182,9 @@ const UsuariosController = {
 
   async actualizarUsuario(req, res) {
     try {
-      const { nombre, email, pin, rol_id, sede_id } = req.body;
+      const {
+        nombre, email, pin, rol_id, sede_id, repartidor_id,
+      } = req.body;
       const clienteId = await resolverClienteId(req);
       const sedeIds = await sedesDelCliente(clienteId);
       const { objetivo, permitido } = await usuarioPerteneceACliente(req.params.id, clienteId, sedeIds);
@@ -177,10 +200,15 @@ const UsuariosController = {
       if (pin && await pinDuplicadoEnCliente(pin, clienteId, sedeIds, req.params.id)) {
         return res.status(409).json({ error: 'Ya existe otro usuario de tu empresa con ese PIN. Elige uno distinto.' });
       }
+      if (!(await repartidorPerteneceASedes(repartidor_id, sedeIds))) {
+        return res.status(403).json({ error: 'El repartidor indicado no pertenece a tu empresa' });
+      }
 
       // El PIN ya no viaja al frontend, así que el formulario lo manda vacío
       // cuando no se quiere cambiar: solo se actualiza si trae valor.
-      const cambios = { nombre, email, rol_id, sede_id };
+      const cambios = {
+        nombre, email, rol_id, sede_id, repartidor_id: repartidor_id || null,
+      };
       if (pin) {
         cambios.pin = String(pin).trim();
       }

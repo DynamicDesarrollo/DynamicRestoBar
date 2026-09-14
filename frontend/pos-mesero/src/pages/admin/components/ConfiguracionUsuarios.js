@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import axios from '../../../services/api';
+import axios, { repartidoresService } from '../../../services/api';
 import AdminLayout from '../AdminLayout';
 import { IconUser, IconPlus, IconEdit, IconTrash, IconClose, IconCheck } from '../../../components/Icons';
 import '../admin.css';
@@ -11,12 +11,14 @@ const initialForm = {
   pin: '',
   rol_id: '',
   sede_id: '',
+  repartidor_id: '',
 };
 
 const ConfiguracionUsuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [roles, setRoles] = useState([]);
   const [sedes, setSedes] = useState([]);
+  const [repartidores, setRepartidores] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
@@ -25,6 +27,7 @@ const ConfiguracionUsuarios = () => {
     cargarUsuarios();
     cargarRoles();
     cargarSedes();
+    cargarRepartidores();
   }, []);
 
   const cargarUsuarios = async () => {
@@ -57,6 +60,15 @@ const ConfiguracionUsuarios = () => {
       }
     } catch (err) {
       setSedes([]);
+    }
+  };
+
+  const cargarRepartidores = async () => {
+    try {
+      const res = await repartidoresService.listar();
+      setRepartidores(res.data.data || []);
+    } catch (err) {
+      setRepartidores([]);
     }
   };
 
@@ -94,6 +106,7 @@ const ConfiguracionUsuarios = () => {
       pin: '',
       rol_id: usuario.rol_id,
       sede_id: usuario.sede_id,
+      repartidor_id: usuario.repartidor_id || '',
     });
     setEditingId(usuario.id);
     setShowModal(true);
@@ -202,6 +215,21 @@ const ConfiguracionUsuarios = () => {
                     ))}
                   </select>
                 </div>
+                {roles.find(r => String(r.id) === String(form.rol_id))?.nombre === 'Repartidor' && (
+                  <div className="form-group">
+                    <label>Repartidor</label>
+                    <select name="repartidor_id" value={form.repartidor_id} onChange={handleInputChange}>
+                      <option value="">Sin vincular</option>
+                      {repartidores.map(r => (
+                        <option key={r.id} value={r.id}>{r.nombre}{r.placa ? ` — ${r.placa}` : ''}</option>
+                      ))}
+                    </select>
+                    <small style={{ color: 'var(--rb-cream-500)' }}>
+                      Vincula este login con un repartidor ya creado en Domicilios → Repartidores.
+                      Sin esto, el repartidor puede entrar pero no verá sus entregas.
+                    </small>
+                  </div>
+                )}
                 <div className="form-actions">
                   <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
                   <button type="submit" className="btn btn-primary"><IconCheck /> Guardar</button>
