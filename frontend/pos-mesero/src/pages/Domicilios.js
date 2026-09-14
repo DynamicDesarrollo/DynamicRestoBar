@@ -356,8 +356,9 @@ export default function Domicilios() {
         <Modal.Header closeButton>
           <Modal.Title>Nuevo domicilio</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
-          <div className="domicilios-nuevo">
+        <Modal.Body className="domicilios-nuevo">
+          <section className="domicilios-nuevo__section">
+            <h3 className="domicilios-nuevo__heading">Productos</h3>
             <div className="domicilios-nuevo__catalogo">
               {estiloCatalogo === 'aurum' ? (
                 <AurumCatalog
@@ -377,50 +378,56 @@ export default function Domicilios() {
                 />
               )}
             </div>
+          </section>
 
-            <div className="domicilios-nuevo__panel">
-              <p className="domicilios-nuevo__subtitulo">Pedido ({items.length})</p>
-              <div className="domicilios-nuevo__items">
-                {items.length === 0 ? (
-                  <p className="domicilios-empty">Toca un producto para agregarlo.</p>
-                ) : (
-                  items.map((item, i) => (
-                    <div key={i} className="domicilios-nuevo__item">
-                      <span>{item.cantidad}x {item.producto.nombre}</span>
-                      <span>{formatMoney(item.cantidad * item.producto.precio_venta)}</span>
-                    </div>
-                  ))
-                )}
+          {items.length > 0 && (
+            <section className="domicilios-nuevo__section">
+              <h3 className="domicilios-nuevo__heading">Pedido ({items.length})</h3>
+              <div className="domicilios-nuevo__carrito">
+                {items.map((item, i) => (
+                  <div key={i} className="domicilios-nuevo__item">
+                    <span>{item.cantidad}x {item.producto.nombre}</span>
+                    <span>{formatMoney(item.cantidad * item.producto.precio_venta)}</span>
+                  </div>
+                ))}
               </div>
+            </section>
+          )}
 
-              <Form.Group className="mb-2">
+          <section className="domicilios-nuevo__section">
+            <h3 className="domicilios-nuevo__heading">Datos de entrega</h3>
+            <div className="domicilios-nuevo__campos">
+              <Form.Group className="domicilios-nuevo__campo domicilios-nuevo__campo--full">
                 <Form.Label className="rb-modal__label">Dirección de entrega *</Form.Label>
                 <Form.Control name="direccion_entrega" value={formEntrega.direccion_entrega} onChange={handleFormChange} />
               </Form.Group>
-              <Form.Group className="mb-2">
+              <Form.Group className="domicilios-nuevo__campo">
                 <Form.Label className="rb-modal__label">Referencia</Form.Label>
                 <Form.Control name="referencia" value={formEntrega.referencia} onChange={handleFormChange} />
               </Form.Group>
-              <Form.Group className="mb-2">
-                <Form.Label className="rb-modal__label">Nombre destinatario</Form.Label>
-                <Form.Control name="nombre_destinatario" value={formEntrega.nombre_destinatario} onChange={handleFormChange} />
-              </Form.Group>
-              <Form.Group className="mb-2">
-                <Form.Label className="rb-modal__label">Teléfono destinatario</Form.Label>
-                <Form.Control name="telefono_destinatario" value={formEntrega.telefono_destinatario} onChange={handleFormChange} />
-              </Form.Group>
-              <Form.Group className="mb-3">
+              <Form.Group className="domicilios-nuevo__campo">
                 <Form.Label className="rb-modal__label">Costo de envío</Form.Label>
                 <Form.Control type="number" min="0" name="costo_entrega" value={formEntrega.costo_entrega} onChange={handleFormChange} />
               </Form.Group>
-
-              <p className="domicilios-nuevo__total">Total: {formatMoney(getTotal() + (Number(formEntrega.costo_entrega) || 0))}</p>
-              <button type="button" className="rb-btn rb-btn--primary" style={{ width: '100%' }} disabled={guardando} onClick={handleCrearDomicilio}>
-                <IconCheck /> {guardando ? 'Enviando...' : 'Enviar a cocina'}
-              </button>
+              <Form.Group className="domicilios-nuevo__campo">
+                <Form.Label className="rb-modal__label">Nombre destinatario</Form.Label>
+                <Form.Control name="nombre_destinatario" value={formEntrega.nombre_destinatario} onChange={handleFormChange} />
+              </Form.Group>
+              <Form.Group className="domicilios-nuevo__campo">
+                <Form.Label className="rb-modal__label">Teléfono destinatario</Form.Label>
+                <Form.Control name="telefono_destinatario" value={formEntrega.telefono_destinatario} onChange={handleFormChange} />
+              </Form.Group>
             </div>
-          </div>
+          </section>
         </Modal.Body>
+        <Modal.Footer className="domicilios-nuevo__footer">
+          <span className="domicilios-nuevo__total">
+            Total: {formatMoney(getTotal() + (Number(formEntrega.costo_entrega) || 0))}
+          </span>
+          <button type="button" className="rb-btn rb-btn--primary" disabled={guardando} onClick={handleCrearDomicilio}>
+            <IconCheck /> {guardando ? 'Enviando...' : 'Enviar a cocina'}
+          </button>
+        </Modal.Footer>
       </Modal>
 
       <ProductoModal

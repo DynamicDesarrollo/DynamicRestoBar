@@ -159,82 +159,67 @@
 /* ---------- Modal: nuevo domicilio ---------- */
 
 /* Bootstrap solo amplía .modal-lg/.modal-xl a partir de un viewport de
-   992px — por debajo de eso CUALQUIER modal, sin importar el "size",
-   queda fijo en ~500px. Una ventana de navegador entre 576px y 991px
-   (muy común: una ventana anclada a la mitad de una pantalla de
-   1920px) deja este modal aplastado en ~500px con el catálogo y el
-   formulario apretados uno encima del otro. Se fuerza un ancho
-   proporcional al viewport en todo el rango, evitando ese salto. */
+   992px, así que el ancho real disponible para este modal es
+   impredecible (puede quedar tan angosto como ~500px). En vez de
+   intentar mantener catálogo y formulario lado a lado y perseguir cada
+   punto de quiebre, el flujo completo va en una sola columna vertical
+   — catálogo arriba, pedido y datos de entrega abajo — con el total y
+   el botón de enviar fijos en el pie del modal. Se ve bien en
+   cualquier ancho, angosto o amplio, sin necesitar ningún media query
+   para decidir cuándo "apilar". */
 .domicilios-modal-dialog {
   width: 95vw;
-  max-width: 1100px;
+  max-width: 900px;
 }
 
 .domicilios-nuevo {
-  display: flex;
-  gap: 16px;
-  min-height: 60vh;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.domicilios-nuevo__section + .domicilios-nuevo__section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rb-charcoal-700);
+}
+
+.domicilios-nuevo__heading {
+  font-family: var(--rb-font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--rb-cream-100);
+  margin: 0 0 12px;
 }
 
 .domicilios-nuevo__catalogo {
-  flex: 1;
-  min-width: 0;
+  max-height: 360px;
   overflow-y: auto;
-  max-height: 70vh;
-  container-type: inline-size;
-  container-name: domicilios-catalogo;
+  padding-right: 4px;
 }
 
-/* El sidebar de categorías de AurumCatalog solo se apila con
-   @media (max-width: 767.98px) — pensado para el ancho de toda la
-   pantalla, no para esta columna angosta dentro del modal. Aquí el
-   ancho real es el de esta columna, no el del viewport, así que se
-   apila según el ancho del propio contenedor (container query), no
-   el de la ventana. */
-@container domicilios-catalogo (max-width: 520px) {
-  .domicilios-nuevo__catalogo .aurum-catalog {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .domicilios-nuevo__catalogo .aurum-sidebar {
-    flex-direction: row;
-    width: 100%;
-    min-width: 0;
-  }
+/* El catálogo Aurum trae su propio sidebar vertical de categorías,
+   pensado para ocupar el ancho completo de la pantalla de Orden.js.
+   Dentro de este modal siempre va como fila de chips horizontales
+   arriba del grid de productos — más compacto y predecible que
+   depender de cuánto ancho le tocó al modal. */
+.domicilios-nuevo__catalogo .aurum-catalog {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
 }
 
-.domicilios-nuevo__panel {
-  width: 320px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
+.domicilios-nuevo__catalogo .aurum-sidebar {
+  flex-direction: row;
+  width: 100%;
+  min-width: 0;
 }
 
-@media (max-width: 900px) {
-  .domicilios-nuevo {
-    flex-direction: column;
-  }
-
-  .domicilios-nuevo__panel {
-    width: 100%;
-  }
-
-  .domicilios-nuevo__catalogo {
-    max-height: 40vh;
-  }
-}
-
-.domicilios-nuevo__subtitulo {
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.domicilios-nuevo__items {
+.domicilios-nuevo__carrito {
+  background: var(--rb-charcoal-900);
+  border: 1px solid var(--rb-charcoal-700);
+  border-radius: 12px;
+  padding: 12px 16px;
   max-height: 160px;
   overflow-y: auto;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--rb-charcoal-700);
-  padding-bottom: 10px;
 }
 
 .domicilios-nuevo__item {
@@ -245,9 +230,29 @@
   color: var(--rb-cream-300);
 }
 
+.domicilios-nuevo__campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px 16px;
+}
+
+.domicilios-nuevo__campo {
+  margin: 0;
+}
+
+.domicilios-nuevo__campo--full {
+  grid-column: 1 / -1;
+}
+
+.domicilios-nuevo__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .domicilios-nuevo__total {
   font-weight: 700;
   font-size: 1.05rem;
-  margin: 10px 0;
-  text-align: right;
+  color: var(--rb-cream-100);
 }
