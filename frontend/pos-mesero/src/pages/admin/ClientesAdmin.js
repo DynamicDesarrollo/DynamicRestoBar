@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { clientesService } from '../../services/api';
 import styles from '../superadmin/ClientesAdmin.module.css';
 import { IconPlus, IconClose, IconCheck } from '../../components/Icons';
@@ -153,6 +154,7 @@ const ClientesAdmin = () => {
   const [tokenActivacion, setTokenActivacion] = useState({});
   const [tokenLoading, setTokenLoading] = useState({});
   const [tokenError, setTokenError] = useState({});
+  const [tokenPos, setTokenPos] = useState({});
 
   useEffect(() => {
     cargarClientes();
@@ -191,7 +193,9 @@ const ClientesAdmin = () => {
     }
   };
 
-  const obtenerTokenActivacion = async (usuarioId) => {
+  const obtenerTokenActivacion = async (usuarioId, boton) => {
+    const rect = boton.getBoundingClientRect();
+    setTokenPos((prev) => ({ ...prev, [usuarioId]: { top: rect.bottom + 6, right: window.innerWidth - rect.right } }));
     setTokenLoading((prev) => ({ ...prev, [usuarioId]: true }));
     setTokenError((prev) => ({ ...prev, [usuarioId]: null }));
     try {
@@ -430,16 +434,34 @@ const ClientesAdmin = () => {
                         <rect x="15" y="6" width="4" height="14" rx="1" fill="#4a97a3"/>
                       </svg>
                     </button>
-                    <button className={styles.accionesBtn} title="Token Activación Admin" onClick={() => obtenerTokenActivacion(c.admin_usuario_id)}>
+                    <button className={styles.accionesBtn} title="Token Activación Admin" onClick={(e) => obtenerTokenActivacion(c.admin_usuario_id, e.currentTarget)}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a97a3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></svg>
                     </button>
                     {tokenLoading[c.admin_usuario_id] && <span style={{color:'var(--rb-cyan-400)'}}>Cargando...</span>}
                     {tokenError[c.admin_usuario_id] && <span style={{color:'#f0958c'}}>{tokenError[c.admin_usuario_id]}</span>}
-                    {tokenActivacion[c.admin_usuario_id] && (
-                      <span style={{background:'rgba(74, 151, 163, 0.14)',color:'var(--rb-cyan-400)',padding:'3px 10px',borderRadius:'999px',marginLeft:'4px',fontSize:'13px',border:'1px solid rgba(74, 151, 163, 0.35)'}}>
-                        Token: {tokenActivacion[c.admin_usuario_id]}
-                        <button style={{marginLeft:'6px',fontSize:'12px',background:'none',border:'none',color:'var(--rb-cyan-400)',textDecoration:'underline',cursor:'pointer'}} onClick={() => navigator.clipboard.writeText(tokenActivacion[c.admin_usuario_id])}>Copiar</button>
-                      </span>
+                    {tokenActivacion[c.admin_usuario_id] && tokenPos[c.admin_usuario_id] && createPortal(
+                      <div style={{
+                        position: 'fixed', top: tokenPos[c.admin_usuario_id].top, right: tokenPos[c.admin_usuario_id].right,
+                        zIndex: 1000, width: '280px', background: 'var(--rb-charcoal-900)', color: 'var(--rb-cream-100)',
+                        padding: '12px', borderRadius: '10px', border: '1px solid rgba(74, 151, 163, 0.35)',
+                        boxShadow: '0 12px 26px rgba(0, 0, 0, 0.45)', fontSize: '13px',
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <strong style={{ color: 'var(--rb-cyan-400)' }}>Enlace de activación</strong>
+                          <button
+                            style={{ background: 'none', border: 'none', color: 'var(--rb-cream-500)', cursor: 'pointer', fontSize: '16px', lineHeight: 1 }}
+                            onClick={() => setTokenActivacion((prev) => ({ ...prev, [c.admin_usuario_id]: null }))}
+                          >×</button>
+                        </div>
+                        <p style={{ margin: '0 0 8px', wordBreak: 'break-all', color: 'var(--rb-cream-300)' }}>
+                          {`${window.location.origin}/activar-cuenta?token=${tokenActivacion[c.admin_usuario_id]}`}
+                        </p>
+                        <button
+                          style={{ width: '100%', background: 'rgba(74, 151, 163, 0.14)', border: '1px solid rgba(74, 151, 163, 0.35)', color: 'var(--rb-cyan-400)', borderRadius: '8px', padding: '6px', cursor: 'pointer', fontWeight: 600 }}
+                          onClick={() => navigator.clipboard.writeText(`${window.location.origin}/activar-cuenta?token=${tokenActivacion[c.admin_usuario_id]}`)}
+                        >Copiar enlace</button>
+                      </div>,
+                      document.body
                     )}
                   </div>
                   {metricas[c.id] && (
