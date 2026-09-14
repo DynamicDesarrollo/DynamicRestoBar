@@ -154,11 +154,13 @@ class InsumosController {
         sede_id = req.usuario?.sede_id || null;
       }
 
-      // Verificar si el SKU ya existe (si se proporciona)
+      // Verificar si el SKU ya existe (si se proporciona) — solo dentro de
+      // las sedes del propio cliente, nunca contra otras empresas.
       if (codigo_sku) {
         const existe = await db('insumos')
           .where('codigo_sku', codigo_sku)
           .where('activo', true)
+          .whereIn('sede_id', sedeIds)
           .first();
 
         if (existe) {
@@ -225,12 +227,14 @@ class InsumosController {
         return res.status(403).json({ error: 'No puedes editar un insumo de otra empresa' });
       }
 
-      // Verificar SKU duplicado si cambió
+      // Verificar SKU duplicado si cambió — solo dentro de las sedes del
+      // propio cliente, nunca contra otras empresas.
       if (codigo_sku && codigo_sku !== insumo.codigo_sku) {
         const existe = await db('insumos')
           .where('codigo_sku', codigo_sku)
           .where('id', '!=', id)
           .where('activo', true)
+          .whereIn('sede_id', sedeIds)
           .first();
 
         if (existe) {
