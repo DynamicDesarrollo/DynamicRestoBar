@@ -32,8 +32,13 @@ export default function ProtectedRoute({ children, requiredRoles = [], superAdmi
   if (requiredRoles.length > 0) {
     const tieneRol = requiredRoles.includes(usuario?.rol?.nombre);
     if (!tieneRol) {
-      console.warn('[ProtectedRoute] Usuario sin rol requerido, redirigiendo a /inicio', usuario?.rol?.nombre);
-      return <Navigate to="/inicio" replace />;
+      // "/inicio" no existe como ruta — Login.js ya hace de despachador:
+      // si el usuario autenticado aterriza ahí, su propio useEffect lo
+      // manda a la ruta correcta según su rol (obtenerRutaPorRol). Antes
+      // esto apuntaba a "/inicio", una ruta muerta que solo agregaba un
+      // salto extra a través del catch-all antes de llegar acá.
+      console.warn('[ProtectedRoute] Usuario sin rol requerido, redirigiendo a /login', usuario?.rol?.nombre);
+      return <Navigate to="/login" replace />;
     }
   }
 
@@ -46,8 +51,8 @@ export default function ProtectedRoute({ children, requiredRoles = [], superAdmi
       usuario?.rol?.nombre === 'SUPER_ADMIN' ||
       (usuario?.rol?.nombre === 'Administrador' && usuario?.cliente_id == null);
     if (!esSuperAdmin) {
-      console.warn('[ProtectedRoute] Usuario no es super-admin, redirigiendo a /inicio');
-      return <Navigate to="/inicio" replace />;
+      console.warn('[ProtectedRoute] Usuario no es super-admin, redirigiendo a /login');
+      return <Navigate to="/login" replace />;
     }
   }
 
