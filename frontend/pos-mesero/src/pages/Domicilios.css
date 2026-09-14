@@ -49,6 +49,26 @@
   flex-wrap: wrap;
 }
 
+.domicilios-config {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 12px 24px 0;
+}
+
+.domicilios-config__switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--rb-cream-500);
+  cursor: pointer;
+}
+
+.domicilios-config__switch input {
+  width: 16px;
+  height: 16px;
+}
+
 .domicilios-content {
   max-width: 1280px;
   margin: 0 auto;

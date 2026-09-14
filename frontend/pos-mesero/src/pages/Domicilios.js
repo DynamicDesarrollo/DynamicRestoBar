@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal, Form } from 'react-bootstrap';
 import {
-  domiciliosService, repartidoresService, productosService, cajaService,
+  domiciliosService, repartidoresService, productosService, cajaService, sedesService,
 } from '../services/api';
 import { useOrdenStore, useAuthStore } from '../stores';
 import ProductoModal from '../components/ProductoModal';
@@ -50,9 +50,13 @@ export default function Domicilios() {
   const [metodosPago, setMetodosPago] = useState([]);
   const [metodoPagoId, setMetodoPagoId] = useState('');
 
+  const [sedeInfo, setSedeInfo] = useState(null);
+  const [guardandoConfig, setGuardandoConfig] = useState(false);
+
   const sedeId = usuario?.sedeId || usuario?.sede_id;
   const estiloCatalogo = usuario?.estiloCatalogo || 'clasico';
   const esRepartidor = usuario?.rol?.nombre === 'Repartidor';
+  const puedeConfigurar = ['Administrador', 'Gerente'].includes(usuario?.rol?.nombre);
 
   const cargarEntregas = useCallback(async () => {
     try {
@@ -77,6 +81,30 @@ export default function Domicilios() {
       .then((res) => setRepartidores(res.data.data || []))
       .catch(() => setRepartidores([]));
   }, [esRepartidor]);
+
+  useEffect(() => {
+    if (!puedeConfigurar || !sedeId) return;
+    sedesService.obtener(sedeId).then((res) => setSedeInfo(res.data)).catch(() => setSedeInfo(null));
+  }, [puedeConfigurar, sedeId]);
+
+  const handleToggleRequiereCaja = async () => {
+    if (!sedeInfo) return;
+    const nuevoValor = !sedeInfo.domicilios_requiere_caja;
+    try {
+      setGuardandoConfig(true);
+      await sedesService.actualizar(sedeId, {
+        nombre: sedeInfo.nombre,
+        direccion: sedeInfo.direccion,
+        domicilios_requiere_caja: nuevoValor,
+      });
+      setSedeInfo((prev) => ({ ...prev, domicilios_requiere_caja: nuevoValor }));
+      toast.success(nuevoValor ? 'Ahora domicilios exige caja abierta' : 'Ahora domicilios se puede cobrar sin caja abierta');
+    } catch {
+      toast.error('No se pudo guardar el cambio');
+    } finally {
+      setGuardandoConfig(false);
+    }
+  };
 
   const abrirNuevo = async () => {
     limpiarOrden();
@@ -230,6 +258,24 @@ export default function Domicilios() {
           </div>
         </div>
       </div>
+
+      {puedeConfigurar && sedeInfo && (
+        <div className="domicilios-config">
+          <label className="domicilios-config__switch">
+            <input
+              type="checkbox"
+              checked={!!sedeInfo.domicilios_requiere_caja}
+              disabled={guardandoConfig}
+              onChange={handleToggleRequiereCaja}
+            />
+            <span>
+              {sedeInfo.domicilios_requiere_caja
+                ? 'Cobrar domicilios exige caja abierta (entra al corte de caja)'
+                : 'Cobrar domicilios NO exige caja abierta (no entra al corte de caja)'}
+            </span>
+          </label>
+        </div>
+      )}
 
       <div className="domicilios-content">
         {loading ? (
