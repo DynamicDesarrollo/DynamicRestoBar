@@ -17,6 +17,7 @@ router.use(verificarToken);
 router.use(allowRoles('Administrador', 'Gerente', 'Caja', 'Repartidor'));
 
 router.get('/', DomiciliosController.listarDomicilios);
+router.get('/geocodificar', DomiciliosController.geocodificarPreview);
 router.post('/', DomiciliosController.crearDomicilio);
 router.patch('/:id/asignar', DomiciliosController.asignarRepartidor);
 router.patch('/:id/estado', DomiciliosController.actualizarEstado);

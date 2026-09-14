@@ -51,6 +51,32 @@ const construirScope = async (req) => {
 };
 
 const DomiciliosController = {
+  /**
+   * GET /domicilios/geocodificar?direccion=...
+   * Mismo GeocodingService que usa crearDomicilio, expuesto para que el
+   * formulario le muestre al usuario un preview del pin ANTES de enviar el
+   * pedido — así el resultado que ve acá es garantizado el mismo que se
+   * guardará. No crea nada, solo consulta.
+   */
+  async geocodificarPreview(req, res) {
+    try {
+      const sede_id = req.usuario?.sedeId || req.usuario?.sede_id;
+      const direccion = (req.query.direccion || '').trim();
+
+      if (!direccion) {
+        return res.json({ success: true, data: null });
+      }
+
+      const sede = sede_id ? await db('sedes').where('id', sede_id).first() : null;
+      const coordenadas = await GeocodingService.geocodificar(direccion, sede?.ciudad);
+
+      return res.json({ success: true, data: coordenadas });
+    } catch (err) {
+      console.error('❌ Error en geocodificarPreview:', err.message);
+      return res.status(500).json({ error: 'Error al buscar la dirección' });
+    }
+  },
+
   async crearDomicilio(req, res) {
     try {
       const sede_id = req.usuario?.sedeId || req.usuario?.sede_id;

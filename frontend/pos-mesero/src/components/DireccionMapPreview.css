@@ -1,0 +1,20 @@
+.direccion-map-preview {
+  margin: -6px 0 12px;
+}
+
+.direccion-map-preview__estado {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--rb-cream-500);
+}
+
+.direccion-map-preview__estado--aviso {
+  color: #f0958c;
+}
+
+.direccion-map-preview__mapa {
+  height: 140px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--rb-charcoal-700);
+}

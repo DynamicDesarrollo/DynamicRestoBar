@@ -7,6 +7,7 @@ import {
 } from '../services/api';
 import { useOrdenStore, useAuthStore } from '../stores';
 import ProductoModal from '../components/ProductoModal';
+import DireccionMapPreview from '../components/DireccionMapPreview';
 import { ClassicCatalog, AurumCatalog } from '../components/catalog';
 import { formatMoney } from '../utils/formatters';
 import {
@@ -413,6 +414,7 @@ export default function Domicilios() {
               <Form.Group className="domicilios-nuevo__campo domicilios-nuevo__campo--full">
                 <Form.Label className="rb-modal__label">Dirección de entrega *</Form.Label>
                 <Form.Control name="direccion_entrega" value={formEntrega.direccion_entrega} onChange={handleFormChange} />
+                <DireccionMapPreview direccion={formEntrega.direccion_entrega} />
               </Form.Group>
               <Form.Group className="domicilios-nuevo__campo">
                 <Form.Label className="rb-modal__label">Referencia</Form.Label>

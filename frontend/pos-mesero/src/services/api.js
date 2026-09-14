@@ -152,6 +152,7 @@ export const domiciliosService = {
   asignarRepartidor: (id, repartidor_id) => apiClient.patch(`/domicilios/${id}/asignar`, { repartidor_id }),
   actualizarEstado: (id, estado) => apiClient.patch(`/domicilios/${id}/estado`, { estado }),
   registrarPago: (id, data) => apiClient.post(`/domicilios/${id}/pagar`, data),
+  geocodificar: (direccion) => apiClient.get('/domicilios/geocodificar', { params: { direccion } }),
 };
 
 export const repartidoresService = {
