@@ -40,6 +40,23 @@
   color: var(--rb-cream-100);
 }
 
+.rb-modal .form-control,
+.rb-modal .form-select {
+  background-color: var(--rb-charcoal-900) !important;
+  border: 1px solid var(--rb-charcoal-700) !important;
+  color: var(--rb-cream-100) !important;
+}
+
+.rb-modal .form-control::placeholder {
+  color: var(--rb-cream-500);
+}
+
+.rb-modal .form-control:focus,
+.rb-modal .form-select:focus {
+  border-color: var(--rb-gold-500) !important;
+  box-shadow: 0 0 0 3px rgba(201, 154, 70, 0.18) !important;
+}
+
 /* ---------- Botones ---------- */
 
 .rb-btn {

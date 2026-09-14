@@ -10,6 +10,7 @@ import ProductoModal from '../components/ProductoModal';
 import { ClassicCatalog, AurumCatalog } from '../components/catalog';
 import { formatMoney } from '../utils/formatters';
 import { IconArrowLeft, IconPlus, IconRefresh, IconCheck } from '../components/Icons';
+import './Orden.css';
 import './Domicilios.css';
 
 const ESTADO_LABEL = {
