@@ -158,6 +158,18 @@
 
 /* ---------- Modal: nuevo domicilio ---------- */
 
+/* Bootstrap solo amplía .modal-lg/.modal-xl a partir de un viewport de
+   992px — por debajo de eso CUALQUIER modal, sin importar el "size",
+   queda fijo en ~500px. Una ventana de navegador entre 576px y 991px
+   (muy común: una ventana anclada a la mitad de una pantalla de
+   1920px) deja este modal aplastado en ~500px con el catálogo y el
+   formulario apretados uno encima del otro. Se fuerza un ancho
+   proporcional al viewport en todo el rango, evitando ese salto. */
+.domicilios-modal-dialog {
+  width: 95vw;
+  max-width: 1100px;
+}
+
 .domicilios-nuevo {
   display: flex;
   gap: 16px;

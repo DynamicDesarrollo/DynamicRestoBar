@@ -352,7 +352,7 @@ export default function Domicilios() {
       </div>
 
       {/* Modal: Nuevo domicilio */}
-      <Modal show={showNuevo} onHide={() => setShowNuevo(false)} size="xl" centered className="rb-modal">
+      <Modal show={showNuevo} onHide={() => setShowNuevo(false)} size="xl" centered className="rb-modal" dialogClassName="domicilios-modal-dialog">
         <Modal.Header closeButton>
           <Modal.Title>Nuevo domicilio</Modal.Title>
         </Modal.Header>
