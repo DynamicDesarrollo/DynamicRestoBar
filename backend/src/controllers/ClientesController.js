@@ -4,16 +4,27 @@ const ESTILOS_CATALOGO_VALIDOS = ['clasico', 'aurum'];
 const normalizarEstiloCatalogo = (valor) =>
   ESTILOS_CATALOGO_VALIDOS.includes(valor) ? valor : 'clasico';
 
+// El id del rol "Administrador" varía entre entornos (en producción, por
+// ejemplo, el id 8 corresponde a "SUPER_ADMIN") — se busca por nombre en
+// vez de hardcodearlo, tanto acá como al crear el admin de un cliente nuevo.
+const obtenerRolAdministradorId = async () => {
+  const rol = await db('roles').where('nombre', 'Administrador').first();
+  return rol?.id ?? null;
+};
+
 const ClientesController = {
   async listarClientes(req, res) {
     // Traer todos los clientes
     const clientes = await db('clientes').select('*');
-    // Para cada cliente, buscar el usuario admin asociado (rol: 'ADMIN_EMPRESA')
+    const rolAdministradorId = await obtenerRolAdministradorId();
+    // Para cada cliente, buscar el usuario admin asociado
     const clientesConAdmin = await Promise.all(clientes.map(async (cliente) => {
-      const admin = await db('usuarios')
-        .select('id')
-        .where({ cliente_id: cliente.id, rol_id: 8 })
-        .first();
+      const admin = rolAdministradorId
+        ? await db('usuarios')
+          .select('id')
+          .where({ cliente_id: cliente.id, rol_id: rolAdministradorId })
+          .first()
+        : null;
       return {
         ...cliente,
         admin_usuario_id: admin ? admin.id : null,
@@ -65,14 +76,18 @@ const ClientesController = {
       })
       .returning('*');
 
-    // Crear usuario admin asociado y asignar sede principal
+    // Crear usuario admin asociado y asignar sede principal.
+    const rolAdministradorId = await obtenerRolAdministradorId();
+    if (!rolAdministradorId) {
+      return res.status(500).json({ error: 'No existe el rol "Administrador" en el sistema' });
+    }
     const bcrypt = require('bcryptjs');
     const contraseña = await bcrypt.hash('admin123', 10);
     const [admin] = await db('usuarios')
       .insert({
         nombre,
         email,
-        rol_id: 8, // Administrador
+        rol_id: rolAdministradorId,
         cliente_id: cliente.id,
         sede_id: sede.id,
         estado: 'activo',
