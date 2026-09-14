@@ -11,6 +11,7 @@
 const crypto = require('crypto');
 const db = require('../config/database');
 const OrdenesController = require('./OrdenesController');
+const GeocodingService = require('../services/GeocodingService');
 const {
   sedesDelCliente,
   sedePerteneceACliente,
@@ -75,6 +76,11 @@ const DomiciliosController = {
           return res.status(400).json({ error: 'Esa zona de entrega no pertenece a tu sede' });
         }
       }
+
+      const sede = await db('sedes').where('id', sede_id).first();
+      // No bloquea la creación si falla — el domicilio se crea igual, solo
+      // sin pin de destino/ruta hasta que alguien corrija la dirección.
+      const coordenadasDestino = await GeocodingService.geocodificar(direccion_entrega, sede?.ciudad);
 
       const canalId = await obtenerCanalDomicilioId();
       const numeroOrden = `ORD-${Date.now()}-${Math.floor(Math.random() * 100)}`;
@@ -164,6 +170,8 @@ const DomiciliosController = {
         estado: 'pendiente',
         costo_entrega: costoEntregaFinal,
         tracking_token: trackingToken,
+        latitud_destino: coordenadasDestino?.latitud ?? null,
+        longitud_destino: coordenadasDestino?.longitud ?? null,
         created_at: new Date(),
         updated_at: new Date(),
       }).returning('*');

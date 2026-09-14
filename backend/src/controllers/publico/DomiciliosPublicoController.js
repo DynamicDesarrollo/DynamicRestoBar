@@ -18,6 +18,7 @@ const DomiciliosPublicoController = {
         .leftJoin('repartidores as r', 'de.repartidor_id', 'r.id')
         .select(
           'de.id', 'de.estado', 'de.direccion_entrega', 'de.referencia',
+          'de.latitud_destino', 'de.longitud_destino',
           'de.hora_asignacion', 'de.hora_salida', 'de.hora_entrega',
           'o.numero_orden', 'o.total',
           's.nombre as sede_nombre',
