@@ -192,8 +192,6 @@
 }
 
 .domicilios-nuevo__catalogo {
-  max-height: 360px;
-  overflow-y: auto;
   padding-right: 4px;
 }
 
@@ -209,8 +207,17 @@
 
 .domicilios-nuevo__catalogo .aurum-sidebar {
   flex-direction: row;
+  flex-wrap: wrap;
   width: 100%;
   min-width: 0;
+  overflow-x: visible;
+}
+
+/* Mismo criterio para el catálogo clásico: categorías en varias líneas
+   en vez de una fila con scroll propio. */
+.domicilios-nuevo__catalogo .orden-categoria-filter {
+  flex-wrap: wrap;
+  overflow-x: visible;
 }
 
 .domicilios-nuevo__carrito {
