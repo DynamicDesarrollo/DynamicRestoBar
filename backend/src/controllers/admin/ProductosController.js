@@ -1,6 +1,8 @@
 const db = require('../../config/database');
 const { sedesDelCliente } = require('../../utils/tenantScope');
 
+const TIPOS_ESTACION_VALIDOS = ['cocina', 'bar', 'pasteleria', 'otro'];
+
 class ProductosController {
   // Obtener todas las categorías del cliente autenticado
   static async getCategorias(req, res) {
@@ -398,6 +400,90 @@ class ProductosController {
         error: 'Error al obtener estaciones',
         message: err.message,
       });
+    }
+  }
+
+  static async crearEstacion(req, res) {
+    try {
+      const clienteId = req.usuario?.cliente_id;
+      const sedeIds = await sedesDelCliente(clienteId);
+      const sedeId = req.usuario?.sedeId || req.usuario?.sede_id;
+      const { nombre, tipo, descripcion } = req.body;
+
+      if (!sedeId || !sedeIds.includes(Number(sedeId))) {
+        return res.status(400).json({ error: 'No se puede determinar la sede del usuario' });
+      }
+      if (!nombre) {
+        return res.status(400).json({ error: 'El nombre es requerido' });
+      }
+      if (tipo && !TIPOS_ESTACION_VALIDOS.includes(tipo)) {
+        return res.status(400).json({ error: 'Tipo de estación inválido' });
+      }
+
+      const [estacion] = await db('estaciones').insert({
+        sede_id: sedeId,
+        nombre,
+        tipo: tipo || 'cocina',
+        descripcion: descripcion || null,
+        activa: true,
+      }).returning('*');
+
+      return res.status(201).json({ success: true, data: estacion });
+    } catch (err) {
+      console.error('❌ Error en crearEstacion:', err.message);
+      return res.status(500).json({ error: 'Error al crear estación', message: err.message });
+    }
+  }
+
+  static async actualizarEstacion(req, res) {
+    try {
+      const { id } = req.params;
+      const clienteId = req.usuario?.cliente_id;
+      const sedeIds = await sedesDelCliente(clienteId);
+
+      const existente = await db('estaciones').where('id', id).whereNull('deleted_at').first();
+      if (!existente) return res.status(404).json({ error: 'Estación no encontrada' });
+      if (!sedeIds.includes(existente.sede_id)) {
+        return res.status(403).json({ error: 'No puedes editar una estación de otra empresa' });
+      }
+
+      const { nombre, tipo, descripcion, activa } = req.body;
+      const updateData = { updated_at: new Date() };
+      if (nombre !== undefined) updateData.nombre = nombre;
+      if (descripcion !== undefined) updateData.descripcion = descripcion || null;
+      if (activa !== undefined) updateData.activa = activa;
+      if (tipo !== undefined) {
+        if (!TIPOS_ESTACION_VALIDOS.includes(tipo)) {
+          return res.status(400).json({ error: 'Tipo de estación inválido' });
+        }
+        updateData.tipo = tipo;
+      }
+
+      const [estacion] = await db('estaciones').where('id', id).update(updateData).returning('*');
+      return res.json({ success: true, data: estacion });
+    } catch (err) {
+      console.error('❌ Error en actualizarEstacion:', err.message);
+      return res.status(500).json({ error: 'Error al actualizar estación', message: err.message });
+    }
+  }
+
+  static async eliminarEstacion(req, res) {
+    try {
+      const { id } = req.params;
+      const clienteId = req.usuario?.cliente_id;
+      const sedeIds = await sedesDelCliente(clienteId);
+
+      const existente = await db('estaciones').where('id', id).whereNull('deleted_at').first();
+      if (!existente) return res.status(404).json({ error: 'Estación no encontrada' });
+      if (!sedeIds.includes(existente.sede_id)) {
+        return res.status(403).json({ error: 'No puedes eliminar una estación de otra empresa' });
+      }
+
+      await db('estaciones').where('id', id).update({ deleted_at: new Date() });
+      return res.json({ success: true });
+    } catch (err) {
+      console.error('❌ Error en eliminarEstacion:', err.message);
+      return res.status(500).json({ error: 'Error al eliminar estación', message: err.message });
     }
   }
 }

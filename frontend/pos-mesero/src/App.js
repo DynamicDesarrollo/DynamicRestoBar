@@ -28,6 +28,7 @@ import ConfiguracionImpresoras from './pages/admin/components/ConfiguracionImpre
 import ConfiguracionComprobantes from './pages/admin/components/ConfiguracionComprobantes';
 import ConfiguracionMenuDigital from './pages/admin/components/ConfiguracionMenuDigital';
 import ConfiguracionRepartidores from './pages/admin/components/ConfiguracionRepartidores';
+import ConfiguracionEstaciones from './pages/admin/components/ConfiguracionEstaciones';
 import './App.css';
 
 function App() {
@@ -205,6 +206,14 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['Administrador', 'Gerente']}>
               <ConfiguracionRepartidores />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/estaciones"
+          element={
+            <ProtectedRoute requiredRoles={['Administrador', 'Gerente']}>
+              <ConfiguracionEstaciones />
             </ProtectedRoute>
           }
         />

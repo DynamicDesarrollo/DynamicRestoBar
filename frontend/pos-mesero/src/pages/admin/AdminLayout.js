@@ -68,6 +68,7 @@ const AdminLayout = ({ children }) => {
         { path: '/admin/productos', label: 'Productos', Icon: IconPlate },
         { path: '/admin/insumos', label: 'Insumos', Icon: IconBox },
         { path: '/admin/recetas', label: 'Recetas', Icon: IconChefHat },
+        { path: '/admin/estaciones', label: 'Estaciones', Icon: IconChefHat },
       ],
     },
     {

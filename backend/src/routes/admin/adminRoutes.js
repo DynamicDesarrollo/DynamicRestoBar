@@ -61,6 +61,9 @@ router.post('/categorias', ProductosController.crearCategoria);
 router.put('/categorias/:id', ProductosController.actualizarCategoria);
 router.delete('/categorias/:id', ProductosController.eliminarCategoria);
 router.get('/estaciones', ProductosController.getEstaciones);
+router.post('/estaciones', ProductosController.crearEstacion);
+router.put('/estaciones/:id', ProductosController.actualizarEstacion);
+router.delete('/estaciones/:id', ProductosController.eliminarEstacion);
 
 router.get('/productos', ProductosController.getProductos);
 router.post('/productos', uploadProductoFoto.single('foto'), ProductosController.crearProducto);
