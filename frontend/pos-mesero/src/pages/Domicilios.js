@@ -9,7 +9,9 @@ import { useOrdenStore, useAuthStore } from '../stores';
 import ProductoModal from '../components/ProductoModal';
 import { ClassicCatalog, AurumCatalog } from '../components/catalog';
 import { formatMoney } from '../utils/formatters';
-import { IconArrowLeft, IconPlus, IconRefresh, IconCheck } from '../components/Icons';
+import {
+  IconArrowLeft, IconPlus, IconRefresh, IconCheck, IconTrash,
+} from '../components/Icons';
 import './Orden.css';
 import './Domicilios.css';
 
@@ -27,6 +29,7 @@ export default function Domicilios() {
   const usuario = useAuthStore((state) => state.usuario);
   const items = useOrdenStore((state) => state.items);
   const agregarItem = useOrdenStore((state) => state.agregarItem);
+  const eliminarItem = useOrdenStore((state) => state.eliminarItem);
   const limpiarOrden = useOrdenStore((state) => state.limpiarOrden);
   const getTotal = useOrdenStore((state) => state.getTotal);
 
@@ -384,10 +387,20 @@ export default function Domicilios() {
             <section className="domicilios-nuevo__section">
               <h3 className="domicilios-nuevo__heading">Pedido ({items.length})</h3>
               <div className="domicilios-nuevo__carrito">
-                {items.map((item, i) => (
-                  <div key={i} className="domicilios-nuevo__item">
+                {items.map((item) => (
+                  <div key={item.id} className="domicilios-nuevo__item">
                     <span>{item.cantidad}x {item.producto.nombre}</span>
-                    <span>{formatMoney(item.cantidad * item.producto.precio_venta)}</span>
+                    <span className="domicilios-nuevo__item-derecha">
+                      {formatMoney(item.cantidad * item.producto.precio_venta)}
+                      <button
+                        type="button"
+                        className="domicilios-nuevo__item-quitar"
+                        onClick={() => eliminarItem(item.id)}
+                        title="Quitar del pedido"
+                      >
+                        <IconTrash />
+                      </button>
+                    </span>
                   </div>
                 ))}
               </div>
