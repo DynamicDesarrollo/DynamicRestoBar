@@ -83,8 +83,15 @@ const SedesController = {
 
       // No agregar estilo_catalogo aquí: solo el super-admin del SaaS puede fijarlo
       // (vía ClientesController), nunca el admin del restaurante.
+      // domicilios_requiere_caja SÍ la edita el propio restaurante — es una
+      // preferencia operativa suya, no un valor agregado del SaaS.
       const { nombre, direccion } = req.body;
-      await db('sedes').where({ id }).whereNull('deleted_at').update({ nombre, direccion, updated_at: db.fn.now() });
+      const updateData = { nombre, direccion, updated_at: db.fn.now() };
+      if (req.body.domicilios_requiere_caja !== undefined) {
+        updateData.domicilios_requiere_caja = req.body.domicilios_requiere_caja === true
+          || req.body.domicilios_requiere_caja === 'true';
+      }
+      await db('sedes').where({ id }).whereNull('deleted_at').update(updateData);
       const sede = await db('sedes').where({ id }).whereNull('deleted_at').first();
       res.json(sede);
     } catch (err) {

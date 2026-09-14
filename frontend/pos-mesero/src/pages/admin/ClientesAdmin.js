@@ -20,7 +20,8 @@ const ClientesAdmin = () => {
       valor_plan: '',
       estilo_catalogo: 'clasico',
       factura_electronica_habilitada: false,
-      menu_digital_habilitado: false
+      menu_digital_habilitado: false,
+      domicilio_habilitado: false
     });
 
     const [departamentos, setDepartamentos] = useState([]);
@@ -68,7 +69,8 @@ const ClientesAdmin = () => {
         valor_plan: '',
         estilo_catalogo: 'clasico',
         factura_electronica_habilitada: false,
-        menu_digital_habilitado: false
+        menu_digital_habilitado: false,
+        domicilio_habilitado: false
       });
       setEditId(null);
       setShowForm(true);
@@ -88,7 +90,8 @@ const ClientesAdmin = () => {
         valor_plan: cliente.valor_plan || '',
         estilo_catalogo: cliente.estilo_catalogo || 'clasico',
         factura_electronica_habilitada: !!cliente.factura_electronica_habilitada,
-        menu_digital_habilitado: !!cliente.menu_digital_habilitado
+        menu_digital_habilitado: !!cliente.menu_digital_habilitado,
+        domicilio_habilitado: !!cliente.domicilio_habilitado
       });
       setEditId(cliente.id);
       setShowForm(true);
@@ -288,6 +291,19 @@ const ClientesAdmin = () => {
                   </div>
                 </div>
                 <div className={styles.formGroup}>
+                  <label>Domicilios</label>
+                  <div className={styles.checkboxField}>
+                    <input
+                      id="domicilio_habilitado"
+                      name="domicilio_habilitado"
+                      type="checkbox"
+                      checked={formData.domicilio_habilitado}
+                      onChange={handleInputChange}
+                    />
+                    <label htmlFor="domicilio_habilitado">Este cliente tiene domicilios habilitado</label>
+                  </div>
+                </div>
+                <div className={styles.formGroup}>
                   <label>Estado</label>
                   <select name="estado" value={formData.estado} onChange={handleInputChange} className={styles.input}>
                     <option value="activo">activo</option>
@@ -324,6 +340,7 @@ const ClientesAdmin = () => {
             <th>Catálogo</th>
             <th>Fact. Electrónica</th>
             <th>Menú Digital</th>
+            <th>Domicilios</th>
             <th>Valor del Plan</th>
             <th>Estado</th>
             <th>Fecha Corte</th>
@@ -377,6 +394,11 @@ const ClientesAdmin = () => {
                 <td>
                   <span className={`${styles.badge} ${c.menu_digital_habilitado ? styles['badge-activo'] : styles['badge-inactivo']}`}>
                     {c.menu_digital_habilitado ? 'Habilitado' : 'No habilitado'}
+                  </span>
+                </td>
+                <td>
+                  <span className={`${styles.badge} ${c.domicilio_habilitado ? styles['badge-activo'] : styles['badge-inactivo']}`}>
+                    {c.domicilio_habilitado ? 'Habilitado' : 'No habilitado'}
                   </span>
                 </td>
                 <td>{c.valor_plan ? `$${Number(c.valor_plan).toLocaleString()}` : '-'}</td>

@@ -5,7 +5,7 @@ import { Modal, Form } from 'react-bootstrap';
 import { mesasService } from '../services/api';
 import { useMesasStore, useAuthStore } from '../stores';
 import {
-  IconGear, IconCash, IconRefresh, IconLogout,
+  IconGear, IconCash, IconRefresh, IconLogout, IconTruck,
   IconUsers, IconUser, IconMapPin, IconPlate, IconArrowSwap, IconAlert,
 } from '../components/Icons';
 import './Mesas.css';
@@ -178,6 +178,11 @@ export default function Mesas() {
             {usuario?.rol?.nombre === 'Caja' && (
               <button type="button" className="hdr-btn hdr-btn--accent" onClick={() => navigate('/caja')}>
                 <IconCash /> <span>Caja</span>
+              </button>
+            )}
+            {['Administrador', 'Gerente', 'Caja'].includes(usuario?.rol?.nombre) && (
+              <button type="button" className="hdr-btn" onClick={() => navigate('/domicilios')}>
+                <IconTruck /> <span>Domicilios</span>
               </button>
             )}
             <button type="button" className="hdr-btn" onClick={cargarMesas}>

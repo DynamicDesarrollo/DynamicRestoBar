@@ -41,10 +41,12 @@ class AuthController {
           'usuarios.sede_id',
           'usuarios.estado',
           'usuarios.cliente_id',
+          'usuarios.repartidor_id',
           'roles.nombre as rol_nombre',
           'sedes.estilo_catalogo as estilo_catalogo',
           'clientes.factura_electronica_habilitada',
-          'clientes.menu_digital_habilitado'
+          'clientes.menu_digital_habilitado',
+          'clientes.domicilio_habilitado'
         )
         .join('roles', 'usuarios.rol_id', 'roles.id')
         .leftJoin('sedes', 'usuarios.sede_id', 'sedes.id')
@@ -86,6 +88,8 @@ class AuthController {
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
           facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
           menuDigitalHabilitado: !!usuario.menu_digital_habilitado,
+          domicilioHabilitado: !!usuario.domicilio_habilitado,
+          repartidorId: usuario.repartidor_id || null,
         },
         process.env.JWT_SECRET || 'secret-key-change-in-prod',
         { expiresIn: '8h' }
@@ -122,6 +126,8 @@ class AuthController {
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
           facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
           menuDigitalHabilitado: !!usuario.menu_digital_habilitado,
+          domicilioHabilitado: !!usuario.domicilio_habilitado,
+          repartidorId: usuario.repartidor_id || null,
         },
       });
     } catch (error) {
@@ -168,13 +174,15 @@ class AuthController {
           'usuarios.rol_id',
           'usuarios.sede_id',
           'usuarios.cliente_id',
+          'usuarios.repartidor_id',
           'usuarios.estado',
           'roles.nombre as rol_nombre',
           'sedes.nombre as sede_nombre',
           'sedes.estilo_catalogo as estilo_catalogo',
           'clientes.nombre as cliente_nombre',
           'clientes.factura_electronica_habilitada',
-          'clientes.menu_digital_habilitado'
+          'clientes.menu_digital_habilitado',
+          'clientes.domicilio_habilitado'
         )
         .join('roles', 'usuarios.rol_id', 'roles.id')
         .leftJoin('sedes', 'usuarios.sede_id', 'sedes.id')
@@ -224,6 +232,8 @@ class AuthController {
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
           facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
           menuDigitalHabilitado: !!usuario.menu_digital_habilitado,
+          domicilioHabilitado: !!usuario.domicilio_habilitado,
+          repartidorId: usuario.repartidor_id || null,
         },
         process.env.JWT_SECRET || 'secret-key-change-in-prod',
         { expiresIn: '8h' }
@@ -249,6 +259,8 @@ class AuthController {
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
           facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
           menuDigitalHabilitado: !!usuario.menu_digital_habilitado,
+          domicilioHabilitado: !!usuario.domicilio_habilitado,
+          repartidorId: usuario.repartidor_id || null,
         },
       });
     } catch (error) {
@@ -296,10 +308,12 @@ class AuthController {
           'usuarios.sede_id',
           'usuarios.estado',
           'usuarios.cliente_id',
+          'usuarios.repartidor_id',
           'roles.nombre as rol_nombre',
           'sedes.estilo_catalogo as estilo_catalogo',
           'clientes.factura_electronica_habilitada',
-          'clientes.menu_digital_habilitado'
+          'clientes.menu_digital_habilitado',
+          'clientes.domicilio_habilitado'
         )
         .where('usuarios.id', decoded.userId)
         .andWhere('usuarios.deleted_at', null)
@@ -323,6 +337,8 @@ class AuthController {
           estiloCatalogo: usuario.estilo_catalogo || 'clasico',
           facturaElectronicaHabilitada: !!usuario.factura_electronica_habilitada,
           menuDigitalHabilitado: !!usuario.menu_digital_habilitado,
+          domicilioHabilitado: !!usuario.domicilio_habilitado,
+          repartidorId: usuario.repartidor_id || null,
         },
         process.env.JWT_SECRET || 'secret-key-change-in-prod',
         { expiresIn: '8h' }

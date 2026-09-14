@@ -14,7 +14,7 @@ const RUTAS_POR_ROL = {
   'Mesero': '/mesas',
   'Bar': '/kds',
   'Caja': '/caja',
-  'Repartidor': '/mesas',
+  'Repartidor': '/domicilios',
   'Gerente': '/admin',
 };
 

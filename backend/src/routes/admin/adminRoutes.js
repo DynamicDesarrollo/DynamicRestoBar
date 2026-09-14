@@ -175,4 +175,13 @@ const FacturasElectronicasController = require('../../controllers/admin/Facturas
 router.get('/facturas-electronicas', FacturasElectronicasController.listar);
 router.post('/facturas-electronicas/:id/reenviar', FacturasElectronicasController.reenviar);
 
+// ========================================
+// RUTAS DE REPARTIDORES (personal de domicilios)
+// ========================================
+const RepartidoresController = require('../../controllers/admin/RepartidoresController');
+router.get('/repartidores', RepartidoresController.getRepartidores);
+router.post('/repartidores', RepartidoresController.crearRepartidor);
+router.put('/repartidores/:id', RepartidoresController.actualizarRepartidor);
+router.delete('/repartidores/:id', RepartidoresController.eliminarRepartidor);
+
 module.exports = router;

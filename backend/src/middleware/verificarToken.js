@@ -43,6 +43,7 @@ const verificarToken = (req, res, next) => {
         sedeId,
         sede_id: sedeId,
         cliente_id: decoded.cliente_id,
+        repartidorId: decoded.repartidorId ?? null,
       };
 
       next();

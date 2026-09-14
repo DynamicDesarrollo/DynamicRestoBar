@@ -9,6 +9,7 @@ import Mesas from './pages/Mesas';
 import Orden from './pages/Orden';
 import Kds from './pages/Kds';
 import Caja from './pages/Caja';
+import Domicilios from './pages/Domicilios';
 import Dashboard from './pages/admin/Dashboard';
 import ConfiguracionMesas from './pages/admin/components/ConfiguracionMesas';
 import ConfiguracionProductos from './pages/admin/components/ConfiguracionProductos';
@@ -26,6 +27,7 @@ import ConfiguracionUsuarios from './pages/admin/components/ConfiguracionUsuario
 import ConfiguracionImpresoras from './pages/admin/components/ConfiguracionImpresoras';
 import ConfiguracionComprobantes from './pages/admin/components/ConfiguracionComprobantes';
 import ConfiguracionMenuDigital from './pages/admin/components/ConfiguracionMenuDigital';
+import ConfiguracionRepartidores from './pages/admin/components/ConfiguracionRepartidores';
 import './App.css';
 
 function App() {
@@ -87,6 +89,16 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['Caja']}>
               <Caja />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Domicilios - Administrador, Gerente, Caja y Repartidor */}
+        <Route
+          path="/domicilios"
+          element={
+            <ProtectedRoute requiredRoles={['Administrador', 'Gerente', 'Caja', 'Repartidor']}>
+              <Domicilios />
             </ProtectedRoute>
           }
         />
@@ -185,6 +197,14 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={['Administrador', 'Gerente']}>
               <ConfiguracionMenuDigital />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/repartidores"
+          element={
+            <ProtectedRoute requiredRoles={['Administrador', 'Gerente']}>
+              <ConfiguracionRepartidores />
             </ProtectedRoute>
           }
         />

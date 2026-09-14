@@ -6,7 +6,7 @@ import logo from '../../image/LogoRestoBar.png';
 import {
   IconGrid, IconBuilding, IconTable, IconPlate, IconBox, IconChefHat,
   IconBarChart, IconTrendingUp, IconPrinter, IconUser, IconMenu,
-  IconLogout, IconWallet, IconReceipt, IconQrCode,
+  IconLogout, IconWallet, IconReceipt, IconQrCode, IconTruck,
 } from '../../components/Icons';
 import './AdminLayout.css';
 
@@ -83,6 +83,13 @@ const AdminLayout = ({ children }) => {
       items: [
         { path: '/admin/comprobantes', label: 'Ingresos y Egresos', Icon: IconReceipt },
         { path: '/admin/informes', label: 'Informes', Icon: IconTrendingUp },
+      ],
+    },
+    {
+      title: 'Domicilios',
+      items: [
+        { path: '/domicilios', label: 'Domicilios', Icon: IconTruck },
+        { path: '/admin/repartidores', label: 'Repartidores', Icon: IconUser },
       ],
     },
     {

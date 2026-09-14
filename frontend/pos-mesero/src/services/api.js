@@ -146,6 +146,21 @@ export const canalesService = {
   getAll: () => apiClient.get('/canales'),
 };
 
+export const domiciliosService = {
+  listar: (params) => apiClient.get('/domicilios', { params }),
+  crear: (data) => apiClient.post('/domicilios', data),
+  asignarRepartidor: (id, repartidor_id) => apiClient.patch(`/domicilios/${id}/asignar`, { repartidor_id }),
+  actualizarEstado: (id, estado) => apiClient.patch(`/domicilios/${id}/estado`, { estado }),
+  registrarPago: (id, data) => apiClient.post(`/domicilios/${id}/pagar`, data),
+};
+
+export const repartidoresService = {
+  listar: (params) => apiClient.get('/admin/repartidores', { params }),
+  crear: (data) => apiClient.post('/admin/repartidores', data),
+  actualizar: (id, data) => apiClient.put(`/admin/repartidores/${id}`, data),
+  eliminar: (id) => apiClient.delete(`/admin/repartidores/${id}`),
+};
+
 export const clientesService = {
   listar: () => apiClient.get('/clientes'),
   crear: (data) => apiClient.post('/clientes', data),

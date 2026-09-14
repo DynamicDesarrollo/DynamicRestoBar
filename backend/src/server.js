@@ -20,6 +20,8 @@ const canalesRoutes = require('./routes/canalesRoutes');
 const activacionRoutes = require('./routes/activacionRoutes');
 const bridgeRoutes = require('./routes/bridgeRoutes');
 const menuDigitalPublicoRoutes = require('./routes/menuDigitalPublicoRoutes');
+const domiciliosRoutes = require('./routes/domiciliosRoutes');
+const domiciliosPublicoRoutes = require('./routes/domiciliosPublicoRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -32,6 +34,10 @@ const allowedOrigins = [
   process.env.FRONTEND_URL_POS || 'http://localhost:3001',
   process.env.FRONTEND_URL_KDS || 'http://localhost:3002',
   process.env.FRONTEND_URL_ADMIN || 'http://localhost:3003',
+  // App standalone del repartidor (login real, JWT) — a diferencia del menú
+  // digital y el seguimiento de domicilios (públicos, sin credentials), esta
+  // sí necesita quedar en el allowlist estricto.
+  process.env.FRONTEND_URL_DOMICILIOS || 'http://localhost:5174',
 ];
 
 // Origen de red local (localhost o IP privada), para que fuera de producción
@@ -91,11 +97,15 @@ const corsOptions = {
 // el allowlist fijo de allowedOrigins, así que se salta ese CORS estricto y
 // usa uno propio abierto a cualquier origen. Es seguro porque el endpoint no
 // usa cookies/sesión (sin credentials) y valida tenant/sede/mesa él mismo.
+// El seguimiento de domicilios (comensal, sin login) es igual de público que
+// el menú digital — mismo carve-out, mismo motivo.
+const RUTAS_PUBLICAS_ABIERTAS = ['/api/v1/menu-digital', '/api/v1/domicilios-publico'];
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api/v1/menu-digital')) return next();
+  if (RUTAS_PUBLICAS_ABIERTAS.some((ruta) => req.path.startsWith(ruta))) return next();
   return cors(corsOptions)(req, res, next);
 });
 app.use('/api/v1/menu-digital', cors({ origin: true }));
+app.use('/api/v1/domicilios-publico', cors({ origin: true }));
 
 // Parsers
 app.use(express.json({ limit: '10mb' }));
@@ -200,6 +210,9 @@ app.use('/api/v1/activar-cuenta', activacionRoutes);
 app.use('/api/v1/bridge', bridgeRoutes);
 // Menú digital público (comensal, sin login) — ver comentario en el router.
 app.use('/api/v1/menu-digital', menuDigitalPublicoRoutes);
+app.use('/api/v1/domicilios', domiciliosRoutes);
+// Seguimiento de domicilio público (comensal, sin login).
+app.use('/api/v1/domicilios-publico', domiciliosPublicoRoutes);
 const sedesRoutes = require('./routes/sedesRoutes');
 app.use('/api/v1/sedes', sedesRoutes);
 // Pagos de clientes (facturación del SaaS: solo super-admin)
@@ -213,6 +226,10 @@ app.use('/api/v1/token-activacion', tokenActivacionRoutes);
 // ========================================
 // SOCKET.IO
 // ========================================
+
+// Throttle de escritura a domicilio_tracking por entrega — el socket puede
+// emitir posición cada 1-2s, pero no hace falta persistir cada ping.
+const ultimaPersistenciaTracking = new Map();
 
 io.on('connection', (socket) => {
   console.log(`✅ Usuario conectado: ${socket.id}`);
@@ -229,6 +246,59 @@ io.on('connection', (socket) => {
     const room = `estacion-${data.estacionId}`;
     socket.join(room);
     console.log(`   └─ Socket ${socket.id} unido a ${room}`);
+  });
+
+  // El repartidor (autenticado, ya sabe su propio entregaId) se une directo.
+  socket.on('join-domicilio-conductor', (data) => {
+    const room = `domicilio-${data.entregaId}`;
+    socket.join(room);
+    console.log(`   └─ Socket ${socket.id} (repartidor) unido a ${room}`);
+  });
+
+  // El comensal (público, sin login) solo puede unirse si conoce el
+  // tracking_token de SU entrega — nunca se le deja unir por id directo.
+  socket.on('join-domicilio-seguimiento', async (data) => {
+    try {
+      const entrega = await db('domicilio_entregas')
+        .where('tracking_token', data?.token)
+        .whereNull('deleted_at')
+        .first();
+      if (!entrega) return;
+      const room = `domicilio-${entrega.id}`;
+      socket.join(room);
+      console.log(`   └─ Socket ${socket.id} (seguimiento) unido a ${room}`);
+    } catch (err) {
+      console.error('❌ Error uniendo a sala de seguimiento:', err.message);
+    }
+  });
+
+  // El repartidor emite su posición mientras va en camino; se retransmite en
+  // vivo a la sala y, cada ~20s por entrega, se guarda como breadcrumb en
+  // domicilio_tracking (para que quien recargue la página de seguimiento
+  // tenga un último punto conocido antes de que conecte el socket).
+  socket.on('domicilio:posicion', async (data) => {
+    const { entregaId, lat, lng } = data || {};
+    if (!entregaId || typeof lat !== 'number' || typeof lng !== 'number') return;
+
+    const room = `domicilio-${entregaId}`;
+    io.to(room).emit('domicilio:posicion', { lat, lng, hora: new Date().toISOString() });
+
+    const ahora = Date.now();
+    const ultimoGuardado = ultimaPersistenciaTracking.get(entregaId) || 0;
+    if (ahora - ultimoGuardado < 20000) return;
+    ultimaPersistenciaTracking.set(entregaId, ahora);
+
+    try {
+      await db('domicilio_tracking').insert({
+        domicilio_entrega_id: entregaId,
+        latitud: lat,
+        longitud: lng,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+    } catch (err) {
+      console.error('❌ Error guardando tracking de domicilio:', err.message);
+    }
   });
 
   socket.on('disconnect', () => {

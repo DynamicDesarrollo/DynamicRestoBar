@@ -1,0 +1,187 @@
+/* ==========================================================================
+   DYNAMIC RESTOBAR — DOMICILIOS
+   Usa los tokens compartidos en styles/restobar-tokens.css, igual que
+   Mesas.css/Caja.css.
+   ========================================================================== */
+
+.domicilios-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--rb-charcoal-950);
+  color: var(--rb-cream-100);
+  font-family: var(--rb-font-body);
+}
+
+.domicilios-header {
+  background: var(--rb-charcoal-900);
+  border-bottom: 1px solid var(--rb-charcoal-700);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.domicilios-header__inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.domicilios-header__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.domicilios-header__sub {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  color: var(--rb-cream-500);
+}
+
+.domicilios-header__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.domicilios-content {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px 24px 40px;
+}
+
+.domicilios-empty {
+  color: var(--rb-cream-500);
+  text-align: center;
+  padding: 40px 0;
+}
+
+.domicilios-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.domicilios-card {
+  background: var(--rb-charcoal-900);
+  border: 1px solid var(--rb-charcoal-700);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.domicilios-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.domicilios-card__total {
+  font-weight: 700;
+  color: var(--rb-gold-300);
+}
+
+.domicilios-card__linea {
+  margin: 0 0 4px;
+  font-size: 0.88rem;
+  color: var(--rb-cream-300);
+}
+
+.domicilios-card__ref {
+  margin: 0 0 4px;
+  font-size: 0.8rem;
+  color: var(--rb-cream-500);
+}
+
+.domicilios-card__repartidor {
+  color: var(--rb-cream-500);
+  font-size: 0.82rem;
+}
+
+.domicilios-card__acciones {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.domicilios-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.domicilios-badge--pendiente { background: rgba(201, 154, 70, 0.16); color: var(--rb-gold-300); }
+.domicilios-badge--confirmada { background: rgba(99, 179, 237, 0.16); color: #63b3ed; }
+.domicilios-badge--en_camino { background: rgba(99, 179, 237, 0.16); color: #63b3ed; }
+.domicilios-badge--entregada { background: rgba(72, 187, 120, 0.16); color: #68d391; }
+.domicilios-badge--fallida,
+.domicilios-badge--anulada { background: rgba(226, 86, 75, 0.16); color: #f3b6b0; }
+
+.domicilios-select {
+  background: var(--rb-charcoal-800);
+  color: var(--rb-cream-100);
+  border: 1px solid var(--rb-charcoal-700);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
+/* ---------- Modal: nuevo domicilio ---------- */
+
+.domicilios-nuevo {
+  display: flex;
+  gap: 16px;
+  min-height: 60vh;
+}
+
+.domicilios-nuevo__catalogo {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+.domicilios-nuevo__panel {
+  width: 320px;
+  shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.domicilios-nuevo__subtitulo {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.domicilios-nuevo__items {
+  max-height: 160px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--rb-charcoal-700);
+  padding-bottom: 10px;
+}
+
+.domicilios-nuevo__item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 3px 0;
+  color: var(--rb-cream-300);
+}
+
+.domicilios-nuevo__total {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin: 10px 0;
+  text-align: right;
+}
